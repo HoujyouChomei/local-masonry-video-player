@@ -1,0 +1,110 @@
+// electron/core/services/playlist-service.ts
+
+import { PlaylistRepository } from '../repositories/playlist-repository';
+import { VideoService } from './video-service';
+import { Playlist } from '../../../src/shared/types/playlist';
+import { VideoFile } from '../../../src/shared/types/video';
+import { VideoRepository } from '../repositories/video-repository';
+import crypto from 'crypto';
+import { VideoMapper } from './video-mapper';
+import { FileIntegrityService } from './file-integrity-service';
+import { BrowserWindow } from 'electron';
+
+export class PlaylistService {
+  private playlistRepo = new PlaylistRepository();
+  private videoService = new VideoService();
+  private videoRepo = new VideoRepository();
+  private mapper = new VideoMapper();
+  private integrityService = new FileIntegrityService();
+
+  getAll(): Playlist[] {
+    return this.playlistRepo.getAll();
+  }
+
+  create(name: string): Playlist | null {
+    let finalName = name;
+    let counter = 1;
+
+    while (this.playlistRepo.existsByName(finalName)) {
+      finalName = `${name} (${counter})`;
+      counter++;
+    }
+
+    const id = crypto.randomUUID();
+    const now = Date.now();
+
+    const newPlaylist: Playlist = {
+      id,
+      name: finalName,
+      videoPaths: [],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    this.playlistRepo.create(newPlaylist);
+    return newPlaylist;
+  }
+
+  delete(id: string): Playlist[] {
+    this.playlistRepo.delete(id);
+    return this.playlistRepo.getAll();
+  }
+
+  updateName(id: string, name: string): Playlist | null {
+    this.playlistRepo.updateName(id, name);
+    return this.playlistRepo.getById(id);
+  }
+
+  // ▼▼▼ 変更: async に変更し、ensureVideoExists を await する ▼▼▼
+  async addVideo(playlistId: string, videoPath: string): Promise<Playlist | null> {
+    const videoId = await this.videoService.ensureVideoExists(videoPath);
+    this.playlistRepo.addVideo(playlistId, videoId);
+    return this.playlistRepo.getById(playlistId);
+  }
+
+  removeVideo(playlistId: string, videoPath: string): Playlist | null {
+    const video = this.videoRepo.findByPath(videoPath);
+    if (video) {
+      this.playlistRepo.removeVideo(playlistId, video.id);
+    }
+    return this.playlistRepo.getById(playlistId);
+  }
+
+  reorder(playlistId: string, videoPaths: string[]): Playlist | null {
+    const videos = this.videoRepo.findManyByPaths(videoPaths);
+    const pathToIdMap = new Map(videos.map((v) => [v.path, v.id]));
+
+    const videoIds: string[] = [];
+    for (const p of videoPaths) {
+      const id = pathToIdMap.get(p);
+      if (id) videoIds.push(id);
+    }
+
+    this.playlistRepo.reorderVideos(playlistId, videoIds);
+    return this.playlistRepo.getById(playlistId);
+  }
+
+  async getVideos(playlistId: string): Promise<VideoFile[]> {
+    const playlist = this.playlistRepo.getById(playlistId);
+    if (!playlist) return [];
+
+    const paths = playlist.videoPaths;
+    if (paths.length === 0) return [];
+
+    const hasChanges = await this.integrityService.verifyAndRecover(paths);
+
+    const rows = this.videoRepo.findManyByPaths(paths);
+
+    if (hasChanges) {
+      const mainWindow = BrowserWindow.getAllWindows()[0];
+      mainWindow?.webContents.send('on-video-update', { type: 'update', path: '' });
+    }
+
+    const rowMap = new Map(rows.map((r) => [r.path, r]));
+    const sortedRows = paths
+      .map((path) => rowMap.get(path))
+      .filter((r): r is NonNullable<typeof r> => !!r && r.status === 'available');
+
+    return this.mapper.toEntities(sortedRows);
+  }
+}

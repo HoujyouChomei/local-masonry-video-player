@@ -1,0 +1,43 @@
+/* src/widgets/video-grid/ui/video-grid.css */
+
+/* --- Modern (Default): 16px gap --- */
+.my-masonry-grid {
+  display: flex;
+  margin-left: -16px; /* gutter size offset */
+  width: auto;
+}
+.my-masonry-grid_column {
+  padding-left: 16px; /* gutter size */
+  background-clip: padding-box;
+}
+
+/* --- Mosaic: 0px gap (No spacing) --- */
+.my-masonry-grid-mosaic {
+  display: flex;
+  margin-left: 0;
+  width: auto;
+}
+.my-masonry-grid_column-mosaic {
+  padding-left: 0;
+  background-clip: padding-box;
+}
+
+/* --- Selection Mode Styles --- */
+
+/* 暗転処理 (filter) はパフォーマンス優先のため廃止 */
+/* カーソルのみ変更 */
+.is-selection-mode .video-card {
+  cursor: pointer;
+}
+
+/* 選択されたカード: ボーダーで強調 */
+.is-selection-mode .video-card[data-selected='true'] {
+  box-shadow: 0 0 0 3px theme('colors.primary.DEFAULT');
+  z-index: 10;
+}
+
+/* 選択モード中は動画カード内のホバーアクション（再生ボタン等）を無効化 */
+.is-selection-mode .video-card .group-hover\:opacity-100 {
+  opacity: 0 !important;
+  pointer-events: none;
+}

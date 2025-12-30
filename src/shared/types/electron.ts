@@ -1,0 +1,145 @@
+// src/shared/types/electron.ts
+
+import { VideoFile, SortOption } from './video';
+import { Playlist } from './playlist';
+
+export interface SearchOptions {
+  folderPath?: string;
+  playlistId?: string;
+  isFavorite?: boolean;
+}
+
+export type GridStyle = 'modern' | 'mosaic';
+
+export interface AppSettings {
+  folderPath: string;
+  columnCount: number;
+  sortOption: SortOption;
+  libraryFolders: string[];
+  isSidebarOpen: boolean;
+
+  rootMargin: number;
+  debounceTime: number;
+  chunkSize: number;
+
+  autoPlayNext: boolean;
+  enableHardwareDecoding: boolean;
+  expandedPaths: string[];
+  playOnHoverOnly: boolean;
+  volume: number;
+  isMuted: boolean;
+
+  layoutMode: 'masonry' | 'list';
+
+  gridStyle: GridStyle;
+
+  ffmpegPath: string;
+  ffprobePath: string;
+
+  enableExperimentalNormalize: boolean;
+
+  enableLargeVideoRestriction: boolean;
+  largeVideoThreshold: number; // MB単位
+}
+
+export interface DirectoryEntry {
+  name: string;
+  path: string;
+}
+
+export interface Tag {
+  id: string;
+  name: string;
+  created_at: number;
+  count?: number;
+}
+
+export type VideoUpdateEvent = {
+  type: 'add' | 'delete' | 'update' | 'thumbnail';
+  path: string;
+};
+
+// API Interface
+export interface IElectronAPI {
+  // Videos
+  getVideos: (folderPath: string) => Promise<VideoFile[]>;
+
+  searchVideos: (query: string, tagIds: string[], options: SearchOptions) => Promise<VideoFile[]>;
+
+  // Settings
+  getSettings: () => Promise<AppSettings>;
+  saveSettings: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<boolean>;
+
+  // Dialogs
+  selectFolder: () => Promise<string | null>;
+  selectFile: () => Promise<string | null>;
+
+  // External Tools Validation
+  validateFFmpegPath: (path: string) => Promise<boolean>;
+  validateFFprobePath: (path: string) => Promise<boolean>;
+
+  // Favorites
+  getFavorites: () => Promise<string[]>;
+  getFavoriteVideos: () => Promise<VideoFile[]>;
+  toggleFavorite: (path: string) => Promise<string[]>;
+
+  // File Ops
+  getSubdirectories: (dirPath: string) => Promise<DirectoryEntry[]>;
+  deleteVideo: (path: string) => Promise<boolean>;
+  relaunchApp: () => Promise<void>;
+  revealInExplorer: (filePath: string) => Promise<void>;
+  openPath: (filePath: string) => Promise<void>; // ▼▼▼ 追加 ▼▼▼
+  renameVideo: (oldPath: string, newFileName: string) => Promise<VideoFile | null>;
+  moveVideos: (videoPaths: string[], targetFolderPath: string) => Promise<number>;
+
+  downloadVideo: (url: string, targetFolderPath: string) => Promise<VideoFile | null>;
+  normalizeVideo: (path: string) => Promise<VideoFile | null>;
+
+  getVideoDetails: (path: string) => Promise<VideoFile | null>;
+
+  // Harvest
+  harvestMetadata: (videoId: string) => Promise<void>;
+
+  // Playlists
+  getPlaylists: () => Promise<Playlist[]>;
+  createPlaylist: (name: string) => Promise<Playlist>;
+  deletePlaylist: (id: string) => Promise<Playlist[]>;
+  updatePlaylistMeta: (id: string, name: string) => Promise<Playlist>;
+  addVideoToPlaylist: (playlistId: string, videoPath: string) => Promise<Playlist>;
+  removeVideoFromPlaylist: (playlistId: string, videoPath: string) => Promise<Playlist>;
+  reorderPlaylist: (playlistId: string, newVideoPaths: string[]) => Promise<Playlist>;
+  getPlaylistVideos: (playlistId: string) => Promise<VideoFile[]>;
+
+  // UI Controls
+  setFullScreen: (enable: boolean) => Promise<void>;
+
+  // Sorting & Metadata
+  saveFolderOrder: (folderPath: string, videoPaths: string[]) => Promise<void>;
+  getFolderOrder: (folderPath: string) => Promise<string[]>;
+  updateVideoMetadata: (
+    path: string,
+    duration: number,
+    width: number,
+    height: number
+  ) => Promise<void>;
+
+  // Tags
+  createTag: (name: string) => Promise<Tag>;
+  getTagsActive: () => Promise<Tag[]>;
+  getTagsByFolder: (folderPath: string) => Promise<Tag[]>;
+  getTagsAll: () => Promise<Tag[]>;
+  getVideoTags: (videoId: string) => Promise<Tag[]>;
+  assignTag: (videoId: string, tagId: string) => Promise<Tag[]>;
+  unassignTag: (videoId: string, tagId: string) => Promise<Tag[]>;
+  getVideosByTag: (tagIds: string[]) => Promise<VideoFile[]>;
+
+  assignTagToVideos: (videoIds: string[], tagId: string) => Promise<void>;
+  unassignTagFromVideos: (videoIds: string[], tagId: string) => Promise<void>;
+
+  // Events
+  onVideoUpdate: (callback: (event: VideoUpdateEvent) => void) => () => void;
+
+  // Drag & Drop
+  startDrag: (files: string | string[]) => void;
+  getFilePath: (file: File) => string;
+}

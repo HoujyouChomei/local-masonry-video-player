@@ -1,0 +1,62 @@
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# Testing
+/coverage
+
+# Next.js
+/.next/
+/out/
+
+# Electron (Build outputs)
+/dist
+/dist-electron
+/release
+
+# Build & OS Files
+.DS_Store
+*.pem
+Thumbs.db
+
+# Environment variables (Sensitive data)
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vercel (If used later)
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# VS Code (Editor settings)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/tasks.json
+
+# Cypress (If used later)
+cypress/videos
+cypress/screenshots
+
+public/licenses.json
+
+# Local scripts & Tools
+repomix-output.xml
+run-repomix.bat
+run-tests.bat
+start-dev.bat
+public/licenses.json

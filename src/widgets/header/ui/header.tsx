@@ -1,0 +1,187 @@
+// src/widgets/header/ui/header.tsx
+
+'use client';
+
+import React, { useEffect, useRef, useCallback } from 'react';
+import { PanelLeft, Eye, MousePointer2, LayoutDashboard, List } from 'lucide-react';
+import { useSettingsStore } from '@/shared/stores/settings-store';
+import { useUIStore } from '@/shared/stores/ui-store';
+import { useSelectionStore } from '@/shared/stores/selection-store';
+import { ColumnCounter } from '@/features/change-columns/ui/column-counter';
+import { SortMenu } from '@/features/sort-videos/ui/sort-menu';
+import { FavoritesToggle } from '@/features/filter-favorites/ui/favorites-toggle';
+import { SearchBar } from '@/features/search-videos/ui/search-bar';
+import { SettingsPanel } from '@/features/settings-panel/ui/settings-panel';
+import { SelectionHeader } from './selection-header';
+import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+
+export const Header = () => {
+  const isSidebarOpen = useSettingsStore((s) => s.isSidebarOpen);
+  const toggleSidebar = useSettingsStore((s) => s.toggleSidebar);
+  const playOnHoverOnly = useSettingsStore((s) => s.playOnHoverOnly);
+  const togglePlayOnHoverOnly = useSettingsStore((s) => s.togglePlayOnHoverOnly);
+  const layoutMode = useSettingsStore((s) => s.layoutMode);
+  const setLayoutMode = useSettingsStore((s) => s.setLayoutMode);
+
+  const viewMode = useUIStore((s) => s.viewMode);
+  const isHeaderVisible = useUIStore((s) => s.isHeaderVisible);
+  const setHeaderVisible = useUIStore((s) => s.setHeaderVisible);
+
+  const isSelectionMode = useSelectionStore((s) => s.isSelectionMode);
+  const exitSelectionMode = useSelectionStore((s) => s.exitSelectionMode);
+
+  const isVisibleRef = useRef(isHeaderVisible);
+
+  // ▼▼▼ 修正: StateではなくRefで管理することで、Headerの再レンダリングを防ぐ ▼▼▼
+  const isSettingsPanelOpenRef = useRef(false);
+
+  // 設定パネルからの通知を受け取るコールバック
+  const handleSettingsStateChange = useCallback((isOpen: boolean) => {
+    isSettingsPanelOpenRef.current = isOpen;
+
+    // 開いた瞬間は強制的にヘッダーを表示状態にする（ちらつき防止）
+    // ※ ここで setHeaderVisible を呼ぶと再レンダリングされるが、必要なタイミングのみに限定される
+    if (isOpen && !isVisibleRef.current) {
+      useUIStore.getState().setHeaderVisible(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    isVisibleRef.current = isHeaderVisible;
+  }, [isHeaderVisible]);
+
+  const isGlobalMode = viewMode === 'all-favorites';
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      // ▼▼▼ 修正: 設定パネルが開いているときは自動非表示をスキップ ▼▼▼
+      if (isSettingsPanelOpenRef.current) return;
+
+      let shouldShow = false;
+
+      if (window.scrollY < 10) {
+        shouldShow = true;
+      } else {
+        const threshold = 100;
+        if (e.clientY < threshold) {
+          shouldShow = true;
+        } else {
+          shouldShow = false;
+        }
+      }
+
+      if (shouldShow !== isVisibleRef.current) {
+        setHeaderVisible(shouldShow);
+        isVisibleRef.current = shouldShow;
+      }
+    };
+
+    const handleScroll = () => {
+      // ▼▼▼ 修正: 設定パネルが開いているときはスキップ ▼▼▼
+      if (isSettingsPanelOpenRef.current) return;
+
+      if (window.scrollY < 10 && !isVisibleRef.current) {
+        setHeaderVisible(true);
+        isVisibleRef.current = true;
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isSelectionMode) {
+        e.preventDefault();
+        exitSelectionMode();
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [setHeaderVisible, isSelectionMode, exitSelectionMode]);
+
+  const toggleLayoutMode = () => {
+    setLayoutMode(layoutMode === 'masonry' ? 'list' : 'masonry');
+  };
+
+  return (
+    <header
+      className={cn(
+        'border-border/40 bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 flex h-16 border-b backdrop-blur transition-transform duration-300',
+        !isHeaderVisible && !isSelectionMode && '-translate-y-full',
+        isSelectionMode ? 'border-indigo-900/50 px-0' : 'items-center justify-between px-6'
+      )}
+    >
+      {isSelectionMode ? (
+        <SelectionHeader />
+      ) : (
+        <>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleSidebar}
+              className={cn(isSidebarOpen && 'bg-accent text-accent-foreground')}
+              title="Toggle Sidebar (Ctrl+B)"
+            >
+              <PanelLeft className="h-5 w-5" />
+            </Button>
+          </div>
+
+          <div className="flex flex-1 items-center justify-center px-4 md:px-8">
+            <SearchBar className="max-w-md" />
+          </div>
+
+          <div className="flex items-center gap-4">
+            {!isGlobalMode && <FavoritesToggle />}
+
+            <SortMenu />
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleLayoutMode}
+              title={
+                layoutMode === 'masonry'
+                  ? 'Current: Masonry (Switch to List)'
+                  : 'Current: List (Switch to Masonry)'
+              }
+            >
+              {layoutMode === 'masonry' ? (
+                <LayoutDashboard className="h-5 w-5" />
+              ) : (
+                <List className="h-5 w-5" />
+              )}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={togglePlayOnHoverOnly}
+              className={cn(playOnHoverOnly && 'text-primary bg-primary/10')}
+              title={playOnHoverOnly ? 'Mode: Play on Hover' : 'Mode: Play in View'}
+            >
+              {playOnHoverOnly ? (
+                <MousePointer2 className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </Button>
+
+            <Separator orientation="vertical" className="h-6" />
+
+            <ColumnCounter />
+
+            <SettingsPanel onStateChange={handleSettingsStateChange} />
+          </div>
+        </>
+      )}
+    </header>
+  );
+};
