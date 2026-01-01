@@ -20,7 +20,7 @@ interface VideoGridItemProps {
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
   onPointerLeave: (e: React.PointerEvent) => void;
-  onDragStart: () => void; // 追加
+  onDragStart: () => void;
 }
 
 export const VideoGridItem = React.memo(
@@ -44,13 +44,14 @@ export const VideoGridItem = React.memo(
 
     const actions = showActions ? (
       <>
+        {/* ▼▼▼ 変更: videoIdを渡す ▼▼▼ */}
         <DeleteVideoButton
-          filePath={video.path}
+          videoId={video.id}
           size="sm"
           className="h-7 w-7 text-white/70 hover:text-red-500"
           iconSize={14}
         />
-        <FavoriteButton filePath={video.path} size="sm" className="h-7 w-7" />
+        <FavoriteButton videoId={video.id} size="sm" className="h-7 w-7" />
       </>
     ) : null;
 
@@ -62,7 +63,6 @@ export const VideoGridItem = React.memo(
         gridStyle={gridStyle}
         onClick={onClick}
         isModalOpen={isModalOpen}
-        // ▼▼▼ 修正: 変数名を正しく指定 ▼▼▼
         actionsSlot={actions}
         contextMenuSlot={contextMenu}
         isSelectionMode={isSelectionMode}

@@ -123,24 +123,26 @@ export class VideoRepository {
       .all() as VideoRow[];
   }
 
-  getFavoritePaths(): string[] {
+  // ▼▼▼ 変更: パスではなくIDのリストを返すように変更 ▼▼▼
+  getFavoriteIds(): string[] {
     const rows = this.db
       .prepare(
         `
-      SELECT path FROM videos 
+      SELECT id FROM videos 
       WHERE is_favorite = 1 AND status = 'available'
     `
       )
-      .all() as { path: string }[];
-    return rows.map((r) => r.path);
+      .all() as { id: string }[];
+    return rows.map((r) => r.id);
   }
 
-  toggleFavorite(path: string): void {
-    const row = this.findByPath(path);
+  // ▼▼▼ 変更: IDベースでトグルするように変更 ▼▼▼
+  toggleFavoriteById(id: string): void {
+    const row = this.findById(id);
     if (!row) return;
 
     const newVal = row.is_favorite === 1 ? 0 : 1;
-    this.db.prepare('UPDATE videos SET is_favorite = ? WHERE path = ?').run(newVal, path);
+    this.db.prepare('UPDATE videos SET is_favorite = ? WHERE id = ?').run(newVal, id);
   }
 
   deleteByPath(path: string): void {

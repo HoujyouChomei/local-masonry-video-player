@@ -43,7 +43,7 @@ export const MultiVideoMenuItems = ({
 
   const isPlaylistMode = viewMode === 'playlist' && !!selectedPlaylistId;
 
-  // キャッシュから選択中の動画パスを解決するヘルパー
+  // キャッシュからパスを解決 (移動用)
   const resolveSelectedPaths = useCallback((): string[] => {
     const allQueries = queryClient.getQueryCache().findAll();
     const paths = new Map<string, string>();
@@ -70,20 +70,20 @@ export const MultiVideoMenuItems = ({
   };
 
   const executeAddToPlaylist = (playlistId: string) => {
-    const paths = resolveSelectedPaths();
-    if (paths.length > 0) addToPlaylist({ playlistId, filePaths: paths });
+    // ▼▼▼ 変更: selectedVideoIds を渡す ▼▼▼
+    if (selectedVideoIds.length > 0) addToPlaylist({ playlistId, videoIds: selectedVideoIds });
   };
 
   const executeCreateAndAdd = () => {
-    const paths = resolveSelectedPaths();
-    if (paths.length > 0) createAndAdd({ name: 'New Playlist', filePaths: paths });
+    // ▼▼▼ 変更: selectedVideoIds を渡す ▼▼▼
+    if (selectedVideoIds.length > 0) createAndAdd({ name: 'New Playlist', videoIds: selectedVideoIds });
   };
 
   const executeRemoveFromPlaylist = () => {
     if (selectedPlaylistId) {
-      const paths = resolveSelectedPaths();
-      if (paths.length > 0) {
-        removeFromPlaylist({ playlistId: selectedPlaylistId, filePaths: paths });
+      // ▼▼▼ 変更: selectedVideoIds を渡す ▼▼▼
+      if (selectedVideoIds.length > 0) {
+        removeFromPlaylist({ playlistId: selectedPlaylistId, videoIds: selectedVideoIds });
       }
     }
   };

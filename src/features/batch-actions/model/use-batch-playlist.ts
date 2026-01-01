@@ -6,16 +6,17 @@ import {
   createPlaylistApi,
   removeVideoFromPlaylistApi,
 } from '@/shared/api/electron';
-import { useSelectionStore } from '@/shared/stores/selection-store'; // 修正
+import { useSelectionStore } from '@/shared/stores/selection-store';
 
 export const useBatchPlaylist = () => {
   const queryClient = useQueryClient();
-  const { clearSelection, exitSelectionMode } = useSelectionStore(); // 修正
+  const { clearSelection, exitSelectionMode } = useSelectionStore();
 
   const { mutate: addToPlaylist, isPending: isAdding } = useMutation({
-    mutationFn: async ({ playlistId, filePaths }: { playlistId: string; filePaths: string[] }) => {
-      for (const path of filePaths) {
-        await addVideoToPlaylistApi(playlistId, path);
+    // ▼▼▼ 変更: videoIds ▼▼▼
+    mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
+      for (const id of videoIds) {
+        await addVideoToPlaylistApi(playlistId, id);
       }
     },
     onSuccess: (_, variables) => {
@@ -28,12 +29,13 @@ export const useBatchPlaylist = () => {
   });
 
   const { mutate: createAndAdd, isPending: isCreating } = useMutation({
-    mutationFn: async ({ name, filePaths }: { name: string; filePaths: string[] }) => {
+    // ▼▼▼ 変更: videoIds ▼▼▼
+    mutationFn: async ({ name, videoIds }: { name: string; videoIds: string[] }) => {
       const newPlaylist = await createPlaylistApi(name);
       if (!newPlaylist) throw new Error('Failed to create playlist');
 
-      for (const path of filePaths) {
-        await addVideoToPlaylistApi(newPlaylist.id, path);
+      for (const id of videoIds) {
+        await addVideoToPlaylistApi(newPlaylist.id, id);
       }
       return newPlaylist;
     },
@@ -53,11 +55,12 @@ export const useBatchPlaylist = () => {
 
 export const useBatchRemoveFromPlaylist = () => {
   const queryClient = useQueryClient();
-  const { clearSelection, exitSelectionMode } = useSelectionStore(); // 修正
+  const { clearSelection, exitSelectionMode } = useSelectionStore();
 
   const { mutate: removeFromPlaylist, isPending } = useMutation({
-    mutationFn: async ({ playlistId, filePaths }: { playlistId: string; filePaths: string[] }) => {
-      const promises = filePaths.map((path) => removeVideoFromPlaylistApi(playlistId, path));
+    // ▼▼▼ 変更: videoIds ▼▼▼
+    mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
+      const promises = videoIds.map((id) => removeVideoFromPlaylistApi(playlistId, id));
       await Promise.all(promises);
     },
     onSuccess: (_, variables) => {

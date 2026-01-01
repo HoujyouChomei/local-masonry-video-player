@@ -23,22 +23,22 @@ contextBridge.exposeInMainWorld('electron', {
 
   getFavorites: () => ipcRenderer.invoke('get-favorites'),
   getFavoriteVideos: () => ipcRenderer.invoke('get-favorite-videos'),
-  toggleFavorite: (path: string) => ipcRenderer.invoke('toggle-favorite', path),
+  toggleFavorite: (videoId: string) => ipcRenderer.invoke('toggle-favorite', videoId),
 
   getSubdirectories: (dirPath: string): Promise<DirectoryEntry[]> =>
     ipcRenderer.invoke('get-subdirectories', dirPath),
 
-  deleteVideo: (path: string) => ipcRenderer.invoke('delete-video', path),
+  deleteVideo: (id: string) => ipcRenderer.invoke('delete-video', id),
 
   relaunchApp: () => ipcRenderer.invoke('relaunch-app'),
 
-  revealInExplorer: (filePath: string) => ipcRenderer.invoke('reveal-in-explorer', filePath),
+  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+  revealInExplorer: (videoId: string) => ipcRenderer.invoke('reveal-in-explorer', videoId),
 
-  // ▼▼▼ 追加 ▼▼▼
   openPath: (filePath: string) => ipcRenderer.invoke('open-path', filePath),
 
-  renameVideo: (oldPath: string, newFileName: string): Promise<VideoFile | null> =>
-    ipcRenderer.invoke('rename-video', oldPath, newFileName),
+  renameVideo: (id: string, newFileName: string): Promise<VideoFile | null> =>
+    ipcRenderer.invoke('rename-video', id, newFileName),
 
   moveVideos: (videoPaths: string[], targetFolderPath: string): Promise<number> =>
     ipcRenderer.invoke('move-videos', videoPaths, targetFolderPath),
@@ -61,12 +61,19 @@ contextBridge.exposeInMainWorld('electron', {
   deletePlaylist: (id: string): Promise<Playlist[]> => ipcRenderer.invoke('delete-playlist', id),
   updatePlaylistMeta: (id: string, name: string): Promise<Playlist> =>
     ipcRenderer.invoke('update-playlist-meta', id, name),
-  addVideoToPlaylist: (playlistId: string, videoPath: string): Promise<Playlist> =>
-    ipcRenderer.invoke('add-video-to-playlist', playlistId, videoPath),
-  removeVideoFromPlaylist: (playlistId: string, videoPath: string): Promise<Playlist> =>
-    ipcRenderer.invoke('remove-video-from-playlist', playlistId, videoPath),
-  reorderPlaylist: (playlistId: string, newVideoPaths: string[]): Promise<Playlist> =>
-    ipcRenderer.invoke('reorder-playlist', playlistId, newVideoPaths),
+  
+  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+  addVideoToPlaylist: (playlistId: string, videoId: string): Promise<Playlist> =>
+    ipcRenderer.invoke('add-video-to-playlist', playlistId, videoId),
+  
+  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+  removeVideoFromPlaylist: (playlistId: string, videoId: string): Promise<Playlist> =>
+    ipcRenderer.invoke('remove-video-from-playlist', playlistId, videoId),
+  
+  // ▼▼▼ 変更: 引数をID配列に ▼▼▼
+  reorderPlaylist: (playlistId: string, newVideoIds: string[]): Promise<Playlist> =>
+    ipcRenderer.invoke('reorder-playlist', playlistId, newVideoIds),
+
   getPlaylistVideos: (playlistId: string): Promise<VideoFile[]> =>
     ipcRenderer.invoke('get-playlist-videos', playlistId),
 
@@ -77,12 +84,13 @@ contextBridge.exposeInMainWorld('electron', {
   getFolderOrder: (folderPath: string): Promise<string[]> =>
     ipcRenderer.invoke('get-folder-order', folderPath),
 
+  // ▼▼▼ 変更: path -> videoId ▼▼▼
   updateVideoMetadata: (
-    path: string,
+    videoId: string,
     duration: number,
     width: number,
     height: number
-  ): Promise<void> => ipcRenderer.invoke('update-video-metadata', path, duration, width, height),
+  ): Promise<void> => ipcRenderer.invoke('update-video-metadata', videoId, duration, width, height),
 
   // Tag API
   createTag: (name: string): Promise<Tag> => ipcRenderer.invoke('create-tag', name),

@@ -12,13 +12,22 @@ type WorkerMessage =
   | { type: 'file-changed'; path: string };
 
 export class FileWatcherService {
+  private static instance: FileWatcherService; // Singleton Instance
+
   private worker: Worker | null = null;
   private videoService: VideoService;
   private ffmpegService = new FFmpegService();
 
-  constructor() {
+  private constructor() {
     this.videoService = new VideoService();
     this.initWorker();
+  }
+
+  public static getInstance(): FileWatcherService {
+    if (!FileWatcherService.instance) {
+      FileWatcherService.instance = new FileWatcherService();
+    }
+    return FileWatcherService.instance;
   }
 
   private initWorker() {

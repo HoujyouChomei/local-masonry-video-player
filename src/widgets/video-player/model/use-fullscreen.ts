@@ -19,12 +19,15 @@ export const useFullscreen = (isOpen: boolean) => {
 
   // モーダルが閉じたときにフルスクリーンを解除する
   useEffect(() => {
-    if (!isOpen && isFullscreenRef.current) {
+    if (!isOpen && isFullscreen) {
       setFullScreenApi(false);
-      setIsFullscreen(false);
-      isFullscreenRef.current = false;
+      // ▼▼▼ 修正: setStateを非同期にしてカスケード更新警告を回避 ▼▼▼
+      setTimeout(() => {
+        setIsFullscreen(false);
+        isFullscreenRef.current = false;
+      }, 0);
     }
-  }, [isOpen]);
+  }, [isOpen, isFullscreen]);
 
   // アンマウント時のクリーンアップ
   useEffect(() => {

@@ -67,6 +67,7 @@ vi.mock('./library-scanner', () => {
 const integrityMocks = vi.hoisted(() => ({
   processNewFile: vi.fn(),
   markAsMissing: vi.fn(),
+  markAsMissingById: vi.fn(),
   verifyAndRecover: vi.fn(),
 }));
 
@@ -75,6 +76,7 @@ vi.mock('./file-integrity-service', () => {
     FileIntegrityService: class {
       processNewFile = integrityMocks.processNewFile;
       markAsMissing = integrityMocks.markAsMissing;
+      markAsMissingById = integrityMocks.markAsMissingById;
       verifyAndRecover = integrityMocks.verifyAndRecover;
     },
   };
@@ -88,9 +90,16 @@ vi.mock('fs/promises', () => ({
 }));
 import fs from 'fs/promises';
 
+// Shell Mock (hoisted)
+const shellMocks = vi.hoisted(() => ({
+  trashItem: vi.fn(),
+  showItemInFolder: vi.fn(),
+}));
+
 vi.mock('electron', () => ({
   shell: {
-    trashItem: vi.fn(),
+    trashItem: shellMocks.trashItem,
+    showItemInFolder: shellMocks.showItemInFolder,
   },
 }));
 import { shell } from 'electron';
@@ -124,30 +133,35 @@ describe('VideoService', () => {
   });
 
   describe('renameVideo', () => {
-    it('should rename file and update DB via IntegrityRepo', async () => {
+    it('should rename file and update DB via IntegrityRepo (ID-based)', async () => {
+      const id = '1';
       const oldPath = path.join(dummyFolder, 'old.mp4');
       const newName = 'new';
       const newPath = path.join(dummyFolder, 'new.mp4');
 
-      repoMocks.findByPath.mockReturnValue({ id: '1', path: oldPath });
+      // ID検索でパスを解決
+      repoMocks.findById.mockReturnValue({ id, path: oldPath });
       vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 12345 } as any);
-      repoMocks.findById.mockReturnValue({ id: '1', path: newPath });
 
-      await service.renameVideo(oldPath, newName);
+      await service.renameVideo(id, newName);
 
       expect(fs.rename).toHaveBeenCalledWith(oldPath, newPath);
-      expect(integrityRepoMocks.updatePath).toHaveBeenCalledWith('1', newPath, 12345);
+      expect(integrityRepoMocks.updatePath).toHaveBeenCalledWith(id, newPath, 12345);
     });
   });
 
   describe('deleteVideo', () => {
-    it('should trash file and mark as missing via IntegrityService', async () => {
+    it('should trash file and mark as missing via IntegrityService (ID-based)', async () => {
+      const id = '1';
       const filePath = path.join(dummyFolder, 'del.mp4');
 
-      await service.deleteVideo(filePath);
+      // ID検索でパスを解決
+      repoMocks.findById.mockReturnValue({ id, path: filePath });
+
+      await service.deleteVideo(id);
 
       expect(shell.trashItem).toHaveBeenCalledWith(filePath);
-      expect(integrityMocks.markAsMissing).toHaveBeenCalledWith(filePath);
+      expect(integrityMocks.markAsMissingById).toHaveBeenCalledWith(id);
     });
   });
 
@@ -165,9 +179,28 @@ describe('VideoService', () => {
   });
 
   describe('updateMetadata', () => {
-    it('should call VideoMetadataRepository.updateMetadata', async () => {
-      await service.updateMetadata('/v.mp4', 100, 1920, 1080);
-      expect(metaRepoMocks.updateMetadata).toHaveBeenCalledWith('/v.mp4', 100, 1920, 1080);
+    it('should call VideoMetadataRepository.updateMetadata with resolved path', async () => {
+      const id = 'meta-1';
+      const path = '/v.mp4';
+      repoMocks.findById.mockReturnValue({ id, path });
+
+      await service.updateMetadata(id, 100, 1920, 1080);
+
+      expect(repoMocks.findById).toHaveBeenCalledWith(id);
+      expect(metaRepoMocks.updateMetadata).toHaveBeenCalledWith(path, 100, 1920, 1080);
+    });
+  });
+
+  describe('revealInExplorer', () => {
+    it('should resolve path from ID and call shell.showItemInFolder', async () => {
+      const id = 'reveal-1';
+      const path = '/path/to/reveal.mp4';
+      repoMocks.findById.mockReturnValue({ id, path });
+
+      await service.revealInExplorer(id);
+
+      expect(repoMocks.findById).toHaveBeenCalledWith(id);
+      expect(shell.showItemInFolder).toHaveBeenCalledWith(path);
     });
   });
 

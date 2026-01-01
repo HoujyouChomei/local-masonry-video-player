@@ -41,7 +41,6 @@ import { toast } from 'sonner';
 interface SingleVideoMenuItemsProps {
   video: VideoFile;
   onRename: () => void;
-  // ▼▼▼ 追加: 削除アクションのコールバック ▼▼▼
   onDelete: () => void;
   enablePlaybackControls: boolean;
 }
@@ -49,7 +48,7 @@ interface SingleVideoMenuItemsProps {
 export const SingleVideoMenuItems = ({
   video,
   onRename,
-  onDelete, // 追加
+  onDelete,
   enablePlaybackControls,
 }: SingleVideoMenuItemsProps) => {
   const { data: playlists } = usePlaylists();
@@ -58,7 +57,7 @@ export const SingleVideoMenuItems = ({
   const { mutate: createAndAdd } = useCreateAndAddToPlaylist();
 
   const { isFavorite, toggleFavorite } = useFavorites();
-  const isFav = isFavorite(video.path);
+  const isFav = isFavorite(video.id);
 
   const { viewMode, selectedPlaylistId } = useUIStore();
   const { autoPlayNext, toggleAutoPlayNext, enableExperimentalNormalize } = useSettingsStore();
@@ -109,7 +108,8 @@ export const SingleVideoMenuItems = ({
         </>
       )}
 
-      <ContextMenuItem onSelect={() => revealInExplorerApi(video.path)}>
+      {/* ▼▼▼ 修正: video.id を渡す ▼▼▼ */}
+      <ContextMenuItem onSelect={() => revealInExplorerApi(video.id)}>
         <FolderSearch className="mr-2 h-4 w-4" />
         Reveal in Explorer
       </ContextMenuItem>
@@ -120,7 +120,7 @@ export const SingleVideoMenuItems = ({
 
       <ContextMenuSeparator />
 
-      <ContextMenuItem onSelect={() => toggleFavorite(video.path)}>
+      <ContextMenuItem onSelect={() => toggleFavorite(video.id)}>
         <Heart className="mr-2 h-4 w-4" fill={isFav ? 'currentColor' : 'none'} />
         {isFav ? 'Remove from Favorites' : 'Add to Favorites'}
       </ContextMenuItem>
@@ -134,7 +134,8 @@ export const SingleVideoMenuItems = ({
         </ContextMenuSubTrigger>
         <ContextMenuSubContent className="w-48">
           <ContextMenuItem
-            onSelect={() => createAndAdd(video.path)}
+            // ▼▼▼ 変更: video.id ▼▼▼
+            onSelect={() => createAndAdd(video.id)}
             className="text-primary font-medium"
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -147,7 +148,8 @@ export const SingleVideoMenuItems = ({
             playlists.map((playlist) => (
               <ContextMenuItem
                 key={playlist.id}
-                onSelect={() => addToPlaylist({ playlistId: playlist.id, videoPath: video.path })}
+                // ▼▼▼ 変更: videoId ▼▼▼
+                onSelect={() => addToPlaylist({ playlistId: playlist.id, videoId: video.id })}
               >
                 {playlist.name}
               </ContextMenuItem>
@@ -164,7 +166,8 @@ export const SingleVideoMenuItems = ({
         <ContextMenuItem
           onSelect={() => {
             if (selectedPlaylistId) {
-              removeFromPlaylist({ playlistId: selectedPlaylistId, videoPath: video.path });
+              // ▼▼▼ 変更: videoId ▼▼▼
+              removeFromPlaylist({ playlistId: selectedPlaylistId, videoId: video.id });
             }
           }}
           className="text-destructive focus:text-destructive focus:bg-destructive/10"
@@ -189,7 +192,6 @@ export const SingleVideoMenuItems = ({
 
       <ContextMenuSeparator />
 
-      {/* ▼▼▼ 修正: ContextMenuItem を使用してクリック時にメニューを閉じる ▼▼▼ */}
       <ContextMenuItem
         onSelect={onDelete}
         className="text-destructive focus:text-destructive focus:bg-destructive/10"

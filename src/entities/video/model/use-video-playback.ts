@@ -149,7 +149,8 @@ export const useVideoPlayback = ({
     }
 
     if (shouldUpdateDB) {
-      updateVideoMetadataApi(video.path, vid.duration, vid.videoWidth, vid.videoHeight);
+      // ▼▼▼ 修正: path -> id ▼▼▼
+      updateVideoMetadataApi(video.id, vid.duration, vid.videoWidth, vid.videoHeight);
     }
   };
 

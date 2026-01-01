@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useBatchMove } from '@/features/batch-actions/model/use-batch-move';
-import { downloadVideoApi } from '@/shared/api/electron'; // 追加
+import { downloadVideoApi, getFilePathApi } from '@/shared/api/electron'; // ▼▼▼ 追加: getFilePathApi ▼▼▼
 import { toast } from 'sonner';
 
 const VIDEO_EXTENSIONS = new Set([
@@ -109,7 +109,8 @@ export const useExternalDrop = () => {
         const videoPaths: string[] = [];
 
         for (const file of files) {
-          const path = window.electron.getFilePath(file);
+          // ▼▼▼ 修正: window.electron -> getFilePathApi ▼▼▼
+          const path = getFilePathApi(file);
           if (path && isVideoFile(file.name)) {
             videoPaths.push(path);
           }

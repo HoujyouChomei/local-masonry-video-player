@@ -40,7 +40,6 @@ interface VideoGridLayoutProps {
   onFetchMore: () => void;
 
   // Interactions
-  // ▼▼▼ 変更: 型定義を更新 (video, e) のみ受け取る ▼▼▼
   onVideoClick: (video: VideoFile, e: React.MouseEvent) => void;
   onPointerDown: (video: VideoFile, e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
@@ -148,7 +147,8 @@ export const VideoGridLayout = ({
         <RenameVideoDialog
           isOpen={!!videoToRename}
           onOpenChange={(isOpen) => !isOpen && onRenameClose()}
-          videoPath={videoToRename.path}
+          // ▼▼▼ 変更: videoIdを渡す ▼▼▼
+          videoId={videoToRename.id}
           videoName={videoToRename.name}
         />
       )}

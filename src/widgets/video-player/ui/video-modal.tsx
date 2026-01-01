@@ -155,8 +155,10 @@ export const VideoModal = () => {
         <RenameVideoDialog
           isOpen={isRenameOpen}
           onOpenChange={setIsRenameOpen}
-          videoPath={selectedVideo.path}
+          videoId={selectedVideo.id}
           videoName={selectedVideo.name}
+          // ▼▼▼ 修正: 以下の行を削除しました (videoPath はもう存在しません) ▼▼▼
+          // videoPath={selectedVideo.path} 
         />
       )}
     </div>

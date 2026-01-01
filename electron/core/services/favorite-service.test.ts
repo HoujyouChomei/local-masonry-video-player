@@ -5,36 +5,30 @@ import { FavoriteService } from './favorite-service';
 
 // Mocks
 const repoMocks = vi.hoisted(() => ({
-  getFavoritePaths: vi.fn(),
+  getFavoriteIds: vi.fn(), // getFavoritePaths -> getFavoriteIds
   getFavorites: vi.fn(),
-  toggleFavorite: vi.fn(),
-}));
-
-const videoServiceMocks = vi.hoisted(() => ({
-  ensureVideoExists: vi.fn(),
+  toggleFavoriteById: vi.fn(), // toggleFavorite -> toggleFavoriteById
 }));
 
 // VideoRepository Mock
 vi.mock('../repositories/video-repository', () => {
   return {
     VideoRepository: class {
-      getFavoritePaths = repoMocks.getFavoritePaths;
+      getFavoriteIds = repoMocks.getFavoriteIds;
       getFavorites = repoMocks.getFavorites;
-      toggleFavorite = repoMocks.toggleFavorite;
+      toggleFavoriteById = repoMocks.toggleFavoriteById;
     },
   };
 });
 
-// VideoService Mock
+// VideoService Mock (もう使用しないが、依存解決のため残す場合は空実装)
 vi.mock('./video-service', () => {
   return {
-    VideoService: class {
-      ensureVideoExists = videoServiceMocks.ensureVideoExists;
-    },
+    VideoService: class {},
   };
 });
 
-// ▼▼▼ 追加: Electron Mock ▼▼▼
+// Electron Mock
 vi.mock('electron', () => ({
   app: {
     getPath: vi.fn().mockReturnValue('/mock/user/data'),
@@ -44,7 +38,7 @@ vi.mock('electron', () => ({
   },
 }));
 
-// ▼▼▼ 追加: fs Mock ▼▼▼
+// fs Mock
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
@@ -62,21 +56,21 @@ describe('FavoriteService', () => {
     service = new FavoriteService();
   });
 
-  it('should get favorite paths', async () => {
-    repoMocks.getFavoritePaths.mockReturnValue(['/v/fav.mp4']);
+  it('should get favorite IDs', async () => {
+    repoMocks.getFavoriteIds.mockReturnValue(['id-1', 'id-2']);
     const result = await service.getFavorites();
-    expect(result).toEqual(['/v/fav.mp4']);
+    expect(result).toEqual(['id-1', 'id-2']);
   });
 
-  it('should toggle favorite (ensure exists first)', async () => {
-    const videoPath = '/v/fav.mp4';
-    repoMocks.getFavoritePaths.mockReturnValue(['/v/fav.mp4']);
+  it('should toggle favorite by ID', async () => {
+    const videoId = 'id-1';
+    repoMocks.getFavoriteIds.mockReturnValue(['id-1']);
 
-    const result = await service.toggleFavorite(videoPath);
+    const result = await service.toggleFavorite(videoId);
 
-    expect(videoServiceMocks.ensureVideoExists).toHaveBeenCalledWith(videoPath);
-    expect(repoMocks.toggleFavorite).toHaveBeenCalledWith(videoPath);
+    // ensureVideoExists の呼び出しチェックは削除 (IDベースのため不要になった)
+    expect(repoMocks.toggleFavoriteById).toHaveBeenCalledWith(videoId);
 
-    expect(result).toEqual(['/v/fav.mp4']);
+    expect(result).toEqual(['id-1']);
   });
 });

@@ -1,0 +1,98 @@
+// electron/core/services/video-library-service.ts
+
+import fs from 'fs/promises';
+import { LibraryScanner } from './library-scanner';
+import { FileWatcherService } from './file-watcher-service';
+import { FileMoveService } from './file-move-service';
+import { FFmpegService } from './ffmpeg-service';
+import { FileIntegrityService } from './file-integrity-service';
+import { VideoRepository } from '../repositories/video-repository';
+import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
+import { VideoSearchRepository, SearchOptions } from '../repositories/video-search-repository';
+import { FolderRepository } from '../repositories/folder-repository'; // 追加
+import { VideoMapper } from './video-mapper';
+import { VideoFile } from '../../../src/shared/types/video';
+
+export class VideoLibraryService {
+  private scanner = new LibraryScanner();
+  private watcher = FileWatcherService.getInstance();
+  private moveService = new FileMoveService();
+  private ffmpegService = new FFmpegService();
+  private integrityService = new FileIntegrityService();
+  private videoRepo = new VideoRepository();
+  private integrityRepo = new VideoIntegrityRepository();
+  private searchRepo = new VideoSearchRepository();
+  private folderRepo = new FolderRepository(); // 追加
+  private mapper = new VideoMapper();
+
+  /**
+   * 指定フォルダをスキャンし、監視を開始する
+   */
+  async loadAndWatch(folderPath: string): Promise<VideoFile[]> {
+    const videos = await this.scanner.scan(folderPath);
+    this.watcher.watch(folderPath);
+    return videos;
+  }
+
+  /**
+   * 動画ファイルを移動し、DBのパス情報を更新する
+   */
+  async moveVideos(videoPaths: string[], targetFolderPath: string): Promise<number> {
+    const results = await this.moveService.moveVideos(videoPaths, targetFolderPath);
+    let successCount = 0;
+
+    for (const result of results) {
+      if (result.success) {
+        successCount++;
+        try {
+          const video = this.videoRepo.findByPath(result.oldPath);
+          if (video) {
+            const stat = await fs.stat(result.newPath);
+            const mtime = Math.floor(stat.mtimeMs);
+            this.integrityRepo.updatePath(video.id, result.newPath, mtime);
+            console.log(`[DB] Updated path for ID ${video.id}: ${result.newPath}`);
+          }
+        } catch (e) {
+          console.error(`[DB] Failed to update DB for moved video: ${result.oldPath}`, e);
+        }
+      }
+    }
+    return successCount;
+  }
+
+  /**
+   * 動画を正規化(再エンコード)し、ライブラリに登録する
+   */
+  async normalizeVideo(filePath: string): Promise<VideoFile | null> {
+    const outputPath = await this.ffmpegService.normalizeVideo(filePath);
+    if (!outputPath) return null;
+    return this.integrityService.processNewFile(outputPath);
+  }
+
+  /**
+   * 動画検索を実行する
+   */
+  searchVideos(query: string, tagIds: string[], options: SearchOptions): VideoFile[] {
+    try {
+      const rows = this.searchRepo.search(query, tagIds, options);
+      return this.mapper.toEntities(rows);
+    } catch (error) {
+      console.error('[VideoLibraryService] Search failed:', error);
+      return [];
+    }
+  }
+
+  /**
+   * フォルダ内の動画の並び順を保存する
+   */
+  saveFolderOrder(folderPath: string, videoPaths: string[]): void {
+    this.folderRepo.saveSortOrder(folderPath, videoPaths);
+  }
+
+  /**
+   * フォルダ内の動画の並び順を取得する
+   */
+  getFolderOrder(folderPath: string): string[] {
+    return this.folderRepo.getSortOrder(folderPath);
+  }
+}

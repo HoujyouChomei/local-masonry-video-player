@@ -7,7 +7,10 @@ import { VideoRepository } from './video-repository';
 const mockRun = vi.fn();
 const mockGet = vi.fn();
 const mockAll = vi.fn();
-const mockPrepare = vi.fn(() => ({
+
+// 修正: ESLint警告を抑制
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const mockPrepare = vi.fn((_sql: string) => ({
   run: mockRun,
   get: mockGet,
   all: mockAll,
@@ -24,6 +27,15 @@ describe('VideoRepository (Mocked DB)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // デフォルトの実装をリセット
+    // 修正: ESLint警告を抑制
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    mockPrepare.mockImplementation((_sql: string) => ({
+      run: mockRun,
+      get: mockGet,
+      all: mockAll,
+    }));
+
     repo = new VideoRepository();
   });
 
@@ -62,17 +74,44 @@ describe('VideoRepository (Mocked DB)', () => {
       );
     });
 
-    it('getFavorites should return favorite videos', () => {
-      mockAll.mockReturnValue([{ id: '1', path: '/fav.mp4' }]);
+    it('getFavorites should return favorite videos (Rows)', () => {
+      mockAll.mockReturnValue([{ id: '1', path: '/fav.mp4', is_favorite: 1 }]);
       const result = repo.getFavorites();
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('is_favorite = 1'));
       expect(result).toHaveLength(1);
     });
 
-    it('toggleFavorite should flip is_favorite flag', () => {
-      mockGet.mockReturnValue({ id: '1', path: '/test.mp4', is_favorite: 0 });
-      repo.toggleFavorite('/test.mp4');
-      expect(mockRun).toHaveBeenCalledWith(1, '/test.mp4');
+    it('getFavoriteIds should return list of IDs', () => {
+      mockAll.mockReturnValue([{ id: '1' }, { id: '2' }]);
+      const result = repo.getFavoriteIds();
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT id FROM videos'));
+      expect(result).toEqual(['1', '2']);
+    });
+
+    it('toggleFavoriteById should flip is_favorite flag by ID', () => {
+      // Setup: 既存レコードの取得モック
+      mockPrepare.mockImplementation((sql: string) => {
+        if (sql.includes('SELECT * FROM videos WHERE id = ?')) {
+          return {
+            get: vi.fn().mockReturnValue({ id: '1', path: '/test.mp4', is_favorite: 0 }),
+            run: mockRun,
+            all: mockAll,
+          };
+        }
+        if (sql.includes('UPDATE videos SET is_favorite = ?')) {
+          return {
+            run: mockRun,
+            get: mockGet,
+            all: mockAll,
+          };
+        }
+        return { run: mockRun, get: mockGet, all: mockAll };
+      });
+
+      repo.toggleFavoriteById('1');
+
+      // 0 -> 1 に更新されることを確認
+      expect(mockRun).toHaveBeenCalledWith(1, '1');
     });
   });
 });

@@ -6,25 +6,23 @@ import { handleFavorites } from './favorites';
 
 // 1. Hoisted Mocks
 const mocks = vi.hoisted(() => ({
-  toggleFavorite: vi.fn(),
-  getFavoritePaths: vi.fn(),
+  toggleFavoriteById: vi.fn(),
+  getFavoriteIds: vi.fn(),
   getFavorites: vi.fn(),
-  findByPath: vi.fn(),
 }));
 
 // 2. Repository Mock
 vi.mock('../core/repositories/video-repository', () => {
   return {
     VideoRepository: class {
-      toggleFavorite = mocks.toggleFavorite;
-      getFavoritePaths = mocks.getFavoritePaths;
+      toggleFavoriteById = mocks.toggleFavoriteById;
+      getFavoriteIds = mocks.getFavoriteIds;
       getFavorites = mocks.getFavorites;
-      findByPath = mocks.findByPath;
     },
   };
 });
 
-// 3. Electron ipcMain & app (修正)
+// 3. Electron ipcMain & app
 const ipcHandlers = new Map<string, (...args: any[]) => any>();
 vi.mock('electron', () => ({
   ipcMain: {
@@ -32,11 +30,9 @@ vi.mock('electron', () => ({
       ipcHandlers.set(channel, listener);
     }),
   },
-  // ▼▼▼ 追加 ▼▼▼
   app: {
     getPath: vi.fn().mockReturnValue('/mock/user/data'),
   },
-  // FavoriteService -> LibraryScanner -> ThumbnailService -> fs
 }));
 
 // 4. Local Server
@@ -44,7 +40,7 @@ vi.mock('../lib/local-server', () => ({
   getServerPort: () => 3000,
 }));
 
-// 5. fs (Sync) for ThumbnailService (追加)
+// 5. fs
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
@@ -67,28 +63,27 @@ describe('Favorites Handlers (Repository Mock)', () => {
     handleFavorites();
   });
 
-  it('should toggle favorite status', async () => {
-    const videoPath = '/video1.mp4';
+  it('should toggle favorite status by ID', async () => {
+    const videoId = 'video-123';
 
-    mocks.getFavoritePaths.mockReturnValueOnce(['/video1.mp4']).mockReturnValueOnce([]);
-
-    mocks.findByPath.mockReturnValue({ id: '1' });
+    // 1回目はIDが含まれる状態、2回目は空の状態を返すシミュレーション
+    mocks.getFavoriteIds.mockReturnValueOnce(['video-123']).mockReturnValueOnce([]);
 
     // Toggle ON
-    const result1 = await invoke('toggle-favorite', videoPath);
+    const result1 = await invoke('toggle-favorite', videoId);
 
-    expect(mocks.toggleFavorite).toHaveBeenCalledWith(videoPath);
-    expect(result1).toEqual(['/video1.mp4']);
+    expect(mocks.toggleFavoriteById).toHaveBeenCalledWith(videoId);
+    expect(result1).toEqual(['video-123']);
 
     // Toggle OFF
-    const result2 = await invoke('toggle-favorite', videoPath);
+    const result2 = await invoke('toggle-favorite', videoId);
     expect(result2).toEqual([]);
   });
 
-  it('should return favorites list', async () => {
-    mocks.getFavoritePaths.mockReturnValue(['/fav.mp4']);
+  it('should return favorites list (IDs)', async () => {
+    mocks.getFavoriteIds.mockReturnValue(['fav-id-1']);
 
     const favorites = await invoke('get-favorites');
-    expect(favorites).toEqual(['/fav.mp4']);
+    expect(favorites).toEqual(['fav-id-1']);
   });
 });

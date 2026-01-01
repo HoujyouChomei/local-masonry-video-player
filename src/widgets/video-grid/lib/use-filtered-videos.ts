@@ -3,17 +3,16 @@
 import { useMemo } from 'react';
 import { VideoFile, SortOption } from '@/shared/types/video';
 import { sortVideos } from '@/features/sort-videos/lib/utils';
-// useSearchStore は不要になったため削除
 
 interface UseFilteredVideosProps {
   videos: VideoFile[] | undefined;
   sortOption: SortOption;
   showFavoritesOnly: boolean;
-  favorites: string[];
+  favorites: string[]; // IDのリスト
   isGlobalMode: boolean;
   isPlaylistMode: boolean;
   isTagMode: boolean;
-  isSearching: boolean; // 追加: useVideoSourceから受け取る
+  isSearching: boolean;
   customOrder?: string[];
 }
 
@@ -25,7 +24,7 @@ export const useFilteredVideos = ({
   isGlobalMode,
   isPlaylistMode,
   isTagMode,
-  isSearching, // 追加
+  isSearching,
   customOrder,
 }: UseFilteredVideosProps) => {
   return useMemo(() => {
@@ -36,11 +35,9 @@ export const useFilteredVideos = ({
     // 1. お気に入りフィルタ
     // GlobalMode/PlaylistMode以外で適用
     if (!isGlobalMode && !isPlaylistMode && showFavoritesOnly) {
-      result = result.filter((v) => favorites.includes(v.path));
+      // ▼▼▼ 修正: v.path ではなく v.id で照合する ▼▼▼
+      result = result.filter((v) => favorites.includes(v.id));
     }
-
-    // ▼▼▼ 削除: フロントエンドでのキーワードフィルタリング ▼▼▼
-    // (すべてバックエンドで行うため不要)
 
     // 2. ソート
     if (isPlaylistMode && sortOption === 'custom') {

@@ -17,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { useSelectionStore } from '@/shared/stores/selection-store'; // 追加
+import { useSelectionStore } from '@/shared/stores/selection-store';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useVideoGridState } from '@/widgets/video-grid/model/use-video-grid-state';
 import { usePlaylists } from '@/entities/playlist/model/use-playlists';
@@ -49,7 +49,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export const SelectionHeader = () => {
-  // 修正: useSelectionStore
   const { selectedVideoIds, exitSelectionMode, selectAll, clearSelection } = useSelectionStore();
 
   const { viewMode, selectedPlaylistId } = useUIStore();
@@ -57,6 +56,7 @@ export const SelectionHeader = () => {
   const folderPath = useSettingsStore((s) => s.folderPath);
   const { allSortedVideos } = useVideoGridState(folderPath);
 
+  // 移動にはパスが必要なので維持
   const selectedPaths = allSortedVideos
     .filter((v) => selectedVideoIds.includes(v.id))
     .map((v) => v.path);
@@ -87,8 +87,8 @@ export const SelectionHeader = () => {
   };
 
   const executeDelete = () => {
-    if (selectedPaths.length > 0) {
-      batchDelete(selectedPaths);
+    if (selectedVideoIds.length > 0) {
+      batchDelete(selectedVideoIds);
       setIsDeleteAlertOpen(false);
     }
   };
@@ -100,8 +100,9 @@ export const SelectionHeader = () => {
   };
 
   const executeRemoveFromPlaylist = () => {
-    if (selectedPlaylistId && selectedPaths.length > 0) {
-      removeFromPlaylist({ playlistId: selectedPlaylistId, filePaths: selectedPaths });
+    if (selectedPlaylistId && selectedVideoIds.length > 0) {
+      // ▼▼▼ 変更: selectedVideoIds ▼▼▼
+      removeFromPlaylist({ playlistId: selectedPlaylistId, videoIds: selectedVideoIds });
     }
   };
 
@@ -110,7 +111,6 @@ export const SelectionHeader = () => {
   return (
     <>
       <div className="animate-in slide-in-from-top-2 flex h-full w-full items-center justify-between bg-indigo-950/90 px-6 text-white duration-200">
-        {/* Left: Selection Controls */}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -137,12 +137,10 @@ export const SelectionHeader = () => {
           </Button>
         </div>
 
-        {/* Center: Count */}
         <div className="flex items-center justify-center font-mono text-sm font-semibold tracking-wide text-indigo-100">
           <span className="rounded-full bg-white/10 px-3 py-1">{count} selected</span>
         </div>
 
-        {/* Right: Actions & Cancel */}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -183,7 +181,8 @@ export const SelectionHeader = () => {
               )}
 
               <DropdownMenuItem
-                onSelect={() => createAndAdd({ name: 'New Playlist', filePaths: selectedPaths })}
+                // ▼▼▼ 変更: selectedVideoIds ▼▼▼
+                onSelect={() => createAndAdd({ name: 'New Playlist', videoIds: selectedVideoIds })}
                 className="text-primary font-medium"
               >
                 <Plus className="mr-2 h-4 w-4" /> Create New Playlist
@@ -195,7 +194,8 @@ export const SelectionHeader = () => {
                 playlists.map((pl) => (
                   <DropdownMenuItem
                     key={pl.id}
-                    onSelect={() => addToPlaylist({ playlistId: pl.id, filePaths: selectedPaths })}
+                    // ▼▼▼ 変更: selectedVideoIds ▼▼▼
+                    onSelect={() => addToPlaylist({ playlistId: pl.id, videoIds: selectedVideoIds })}
                   >
                     {pl.name}
                   </DropdownMenuItem>

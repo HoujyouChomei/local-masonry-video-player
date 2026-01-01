@@ -34,7 +34,8 @@ export const useVideoMetadata = (video: VideoFile) => {
     setLocalDuration(newDuration);
 
     // Electron経由でDBに保存 (Harvesting)
-    updateVideoMetadataApi(video.path, newDuration, width, height);
+    // ▼▼▼ 修正: path -> id ▼▼▼
+    updateVideoMetadataApi(video.id, newDuration, width, height);
   };
 
   return {

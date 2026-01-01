@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState } from 'react'; // useEffect は削除
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
@@ -20,14 +20,15 @@ import { AlertCircle } from 'lucide-react';
 interface RenameVideoDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  videoPath: string;
-  videoName: string;
+  videoId: string; // Added
+  videoName: string; // Display & Initial Value
+  // videoPath は不要になったため削除
 }
 
 export const RenameVideoDialog = ({
   isOpen,
   onOpenChange,
-  videoPath,
+  videoId,
   videoName,
 }: RenameVideoDialogProps) => {
   const initialName = videoName.includes('.')
@@ -35,17 +36,13 @@ export const RenameVideoDialog = ({
     : videoName;
 
   const [newFileName, setNewFileName] = useState(initialName);
-  // const [error, setError] = ... は削除 (State管理不要)
   const { renameVideo, isPending } = useRenameVideo();
 
-  // ▼▼▼ 修正: useEffectをやめ、レンダリング時に計算する (Derived State) ▼▼▼
-  // これにより再レンダリングの連鎖を防ぎ、常に最新の状態を反映できます
   const error = (() => {
     const trimmed = newFileName.trim();
     if (!trimmed) {
       return 'Filename cannot be empty.';
     }
-    // Windows/Unix共通の禁止文字: < > : " / \ | ? *
     if (/[<>:"/\\|?*]/.test(newFileName)) {
       return 'Filename contains invalid characters (< > : " / \\ | ? *).';
     }
@@ -54,8 +51,9 @@ export const RenameVideoDialog = ({
 
   const handleSave = () => {
     if (newFileName.trim() && !error && !isPending) {
+      // ▼▼▼ 変更: IDを渡す ▼▼▼
       renameVideo(
-        { oldPath: videoPath, newFileName: newFileName.trim() },
+        { id: videoId, newFileName: newFileName.trim() },
         {
           onSuccess: () => onOpenChange(false),
         }

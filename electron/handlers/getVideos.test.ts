@@ -17,6 +17,10 @@ const mocks = vi.hoisted(() => ({
   findByInode: vi.fn(),
   updateHash: vi.fn(),
   markAsMissing: vi.fn(), // LibraryScanner uses this
+
+  // FileWatcherService methods
+  watch: vi.fn(),
+  stop: vi.fn(),
 }));
 
 // Electron Mock
@@ -39,7 +43,7 @@ vi.mock('../core/repositories/video-repository', () => {
   };
 });
 
-// ▼▼▼ 追加: VideoIntegrityRepository Mock ▼▼▼
+// VideoIntegrityRepository Mock
 vi.mock('../core/repositories/video-integrity-repository', () => {
   return {
     VideoIntegrityRepository: class {
@@ -47,6 +51,18 @@ vi.mock('../core/repositories/video-integrity-repository', () => {
       findByInode = mocks.findByInode;
       updateHash = mocks.updateHash;
       markAsMissing = mocks.markAsMissing;
+    },
+  };
+});
+
+// ▼▼▼ 修正: FileWatcherService Mock (Singleton対応) ▼▼▼
+vi.mock('../core/services/file-watcher-service', () => {
+  return {
+    FileWatcherService: {
+      getInstance: vi.fn().mockReturnValue({
+        watch: mocks.watch,
+        stop: mocks.stop,
+      }),
     },
   };
 });
@@ -95,14 +111,15 @@ vi.mock('../core/services/ffmpeg-service', () => ({
   },
 }));
 
-describe('getVideos (Repository Mock)', () => {
+describe('getVideos (Handler)', () => {
   const dummyFolderPath = '/test/videos';
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('should scan files and upsert to repository', async () => {
+  it('should scan files, upsert to repository, and start watching', async () => {
+    // Setup fs mocks
     const mockDirents = [{ name: 'movie1.mp4', isFile: () => true }];
     const mockStats = {
       size: 1000,
@@ -114,9 +131,13 @@ describe('getVideos (Repository Mock)', () => {
     vi.mocked(fs.readdir).mockResolvedValue(mockDirents as any);
     vi.mocked(fs.stat).mockResolvedValue(mockStats as any);
 
+    // Setup Repository mocks
     mocks.findPathsByDirectory.mockReturnValue([]);
     mocks.findByInode.mockReturnValue([]);
 
+    // LibraryScanner calls findManyByPaths twice:
+    // 1. To check existing records for the chunk
+    // 2. To return final results
     const expectedRecord = {
       id: 'mock-id',
       path: path.join(dummyFolderPath, 'movie1.mp4'),
@@ -127,13 +148,16 @@ describe('getVideos (Repository Mock)', () => {
       status: 'available',
     };
 
+    // First call returns empty (nothing in DB yet), Second call returns the inserted record
     mocks.findManyByPaths.mockReturnValueOnce([]).mockReturnValueOnce([expectedRecord]);
 
+    // Execute
     const videos = await getVideos(dummyFolderPath);
 
+    // Verify
     expect(fs.readdir).toHaveBeenCalledWith(dummyFolderPath, expect.anything());
 
-    // 修正: mocks.upsertMany は VideoIntegrityRepository のメソッドとして呼ばれる
+    // Should call upsertMany
     expect(mocks.upsertMany).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({
@@ -141,10 +165,14 @@ describe('getVideos (Repository Mock)', () => {
           size: 1000,
         }),
       ]),
-      []
+      [] // No updates in this case
     );
 
+    // Should return videos
     expect(videos).toHaveLength(1);
     expect(videos[0].path).toContain('movie1.mp4');
+
+    // Should start watcher
+    expect(mocks.watch).toHaveBeenCalledWith(dummyFolderPath);
   });
 });

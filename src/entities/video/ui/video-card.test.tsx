@@ -11,6 +11,7 @@ import { VideoFile } from '../../../shared/types/video';
 // 1. Hoisted State & Functions
 const mocks = vi.hoisted(() => ({
   setDraggedFilePath: vi.fn(),
+  setDraggedVideoId: vi.fn(), // 追加
   startDrag: vi.fn(),
   // Mutable State Containers
   selectionState: {
@@ -30,18 +31,25 @@ const mocks = vi.hoisted(() => ({
     playOnHoverOnly: false,
     gridStyle: 'modern' as const,
     debounceTime: 800,
+    // 追加
+    enableLargeVideoRestriction: true,
+    largeVideoThreshold: 1024,
   },
   uiState: {
     scrollDirection: 'none' as const,
   },
   dragStoreState: {
     setDraggedFilePath: vi.fn(),
+    setDraggedVideoId: vi.fn(), // 追加
     draggedFilePath: null as string | string[] | null,
+    draggedVideoId: null as string | string[] | null, // 追加
+    clearDrag: vi.fn(),
   },
 }));
 
 // Connect hoisted fn to the one inside state object
 mocks.dragStoreState.setDraggedFilePath = mocks.setDraggedFilePath;
+mocks.dragStoreState.setDraggedVideoId = mocks.setDraggedVideoId;
 
 // 2. Mock window.electron
 Object.defineProperty(window, 'electron', {
@@ -70,7 +78,7 @@ vi.mock('@/shared/stores/selection-store', () => {
   return { useSelectionStore };
 });
 
-vi.mock('@/entities/settings/model/store', () => {
+vi.mock('@/shared/stores/settings-store', () => {
   const useSettingsStore = <U,>(selector: StoreSelector<typeof mocks.settingsState, U>) =>
     selector(mocks.settingsState);
   useSettingsStore.getState = () => mocks.settingsState;
@@ -209,7 +217,9 @@ describe('VideoCard', () => {
 
       fireEvent.dragStart(card);
 
+      // Path と ID 両方がセットされることを確認
       expect(mocks.setDraggedFilePath).toHaveBeenCalledWith(mockVideo.path);
+      expect(mocks.setDraggedVideoId).toHaveBeenCalledWith(mockVideo.id);
       expect(mocks.startDrag).toHaveBeenCalledWith(mockVideo.path);
     });
 
@@ -244,8 +254,10 @@ describe('VideoCard', () => {
       fireEvent.dragStart(card);
 
       const expectedPaths = ['/path/to/v1.mp4', '/path/to/v2.mp4', '/path/to/v3.mp4'];
+      const expectedIds = ['v1', 'v2', 'v3'];
 
       expect(mocks.setDraggedFilePath).toHaveBeenCalledWith(expectedPaths);
+      expect(mocks.setDraggedVideoId).toHaveBeenCalledWith(expectedIds);
       expect(mocks.startDrag).toHaveBeenCalledWith(expectedPaths);
     });
 
@@ -270,6 +282,7 @@ describe('VideoCard', () => {
 
       // Should only drag itself
       expect(mocks.startDrag).toHaveBeenCalledWith(mockVideo.path);
+      expect(mocks.setDraggedVideoId).toHaveBeenCalledWith(mockVideo.id);
     });
   });
 });

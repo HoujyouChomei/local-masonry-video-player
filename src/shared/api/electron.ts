@@ -1,12 +1,14 @@
 // src/shared/api/electron.ts
 
+import { getApiClient } from './client-factory';
 import { VideoFile } from '@/shared/types/video';
-import { AppSettings, DirectoryEntry, Tag, SearchOptions } from '@/shared/types/electron';
+import { AppSettings, DirectoryEntry, Tag, SearchOptions, VideoUpdateEvent } from '@/shared/types/electron';
 import { Playlist } from '@/shared/types/playlist';
 
+// --- Videos ---
+
 export const fetchVideos = async (folderPath: string): Promise<VideoFile[]> => {
-  if (!window.electron) return [];
-  return window.electron.getVideos(folderPath);
+  return getApiClient().getVideos(folderPath);
 };
 
 export const searchVideosApi = async (
@@ -14,273 +16,235 @@ export const searchVideosApi = async (
   tagIds: string[],
   options: SearchOptions = {}
 ): Promise<VideoFile[]> => {
-  if (!window.electron) return [];
-  return window.electron.searchVideos(query, tagIds, options);
+  return getApiClient().searchVideos(query, tagIds, options);
 };
 
 export const fetchVideoDetailsApi = async (path: string): Promise<VideoFile | null> => {
-  if (!window.electron) return null;
-  return window.electron.getVideoDetails(path);
+  return getApiClient().getVideoDetails(path);
 };
 
 export const harvestMetadataApi = async (videoId: string): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.harvestMetadata(videoId);
+  return getApiClient().harvestMetadata(videoId);
 };
 
+export const updateVideoMetadataApi = async (
+  videoId: string,
+  duration: number,
+  width: number,
+  height: number
+): Promise<void> => {
+  return getApiClient().updateVideoMetadata(videoId, duration, width, height);
+};
+
+// --- Settings ---
+
 export const fetchSettings = async (): Promise<AppSettings> => {
-  if (!window.electron) {
-    return {
-      folderPath: '',
-      columnCount: 4,
-      sortOption: 'date-desc',
-      libraryFolders: [],
-      isSidebarOpen: true,
-      rootMargin: 1000,
-      debounceTime: 800,
-      chunkSize: 100,
-      autoPlayNext: false,
-      enableHardwareDecoding: false,
-      expandedPaths: [],
-      playOnHoverOnly: false,
-      volume: 1.0,
-      isMuted: false,
-      layoutMode: 'masonry',
-      gridStyle: 'modern',
-      ffmpegPath: '',
-      ffprobePath: '',
-      enableExperimentalNormalize: false,
-      enableLargeVideoRestriction: true,
-      largeVideoThreshold: 1024,
-    };
-  }
-  return window.electron.getSettings();
+  return getApiClient().getSettings();
 };
 
 export const saveSetting = async <K extends keyof AppSettings>(
   key: K,
   value: AppSettings[K]
 ): Promise<boolean> => {
-  if (!window.electron) return false;
-  return window.electron.saveSettings(key, value);
+  return getApiClient().saveSettings(key, value);
 };
 
-export const relaunchAppApi = async (): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.relaunchApp();
-};
+// --- Dialogs & System ---
 
 export const selectFolder = async (): Promise<string | null> => {
-  if (!window.electron) return null;
-  return window.electron.selectFolder();
+  return getApiClient().selectFolder();
 };
 
 export const selectFileApi = async (): Promise<string | null> => {
-  if (!window.electron) return null;
-  return window.electron.selectFile();
+  return getApiClient().selectFile();
 };
 
 export const validateFFmpegPathApi = async (path: string): Promise<boolean> => {
-  if (!window.electron) return false;
-  return window.electron.validateFFmpegPath(path);
+  return getApiClient().validateFFmpegPath(path);
 };
 
 export const validateFFprobePathApi = async (path: string): Promise<boolean> => {
-  if (!window.electron) return false;
-  return window.electron.validateFFprobePath(path);
+  return getApiClient().validateFFprobePath(path);
 };
 
+export const relaunchAppApi = async (): Promise<void> => {
+  return getApiClient().relaunchApp();
+};
+
+export const setFullScreenApi = async (enable: boolean): Promise<void> => {
+  return getApiClient().setFullScreen(enable);
+};
+
+// --- Favorites ---
+
 export const fetchFavorites = async (): Promise<string[]> => {
-  if (!window.electron) return [];
-  return window.electron.getFavorites();
+  return getApiClient().getFavorites();
 };
 
 export const fetchFavoriteVideos = async (): Promise<VideoFile[]> => {
-  if (!window.electron) return [];
-  return window.electron.getFavoriteVideos();
+  return getApiClient().getFavoriteVideos();
 };
 
-export const toggleFavoriteApi = async (path: string): Promise<string[]> => {
-  if (!window.electron) return [];
-  return window.electron.toggleFavorite(path);
+export const toggleFavoriteApi = async (videoId: string): Promise<string[]> => {
+  return getApiClient().toggleFavorite(videoId);
 };
+
+// --- File Operations ---
 
 export const fetchSubdirectories = async (dirPath: string): Promise<DirectoryEntry[]> => {
-  if (!window.electron) return [];
-  return window.electron.getSubdirectories(dirPath);
+  return getApiClient().getSubdirectories(dirPath);
 };
 
-export const deleteVideoApi = async (path: string): Promise<boolean> => {
-  if (!window.electron) return false;
-  return window.electron.deleteVideo(path);
+export const deleteVideoApi = async (id: string): Promise<boolean> => {
+  return getApiClient().deleteVideo(id);
 };
 
-export const revealInExplorerApi = async (filePath: string): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.revealInExplorer(filePath);
+export const revealInExplorerApi = async (videoId: string): Promise<void> => {
+  return getApiClient().revealInExplorer(videoId);
 };
 
-// ▼▼▼ 追加 ▼▼▼
 export const openPathApi = async (filePath: string): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.openPath(filePath);
+  return getApiClient().openPath(filePath);
 };
 
 export const renameVideoApi = async (
-  oldPath: string,
+  id: string,
   newFileName: string
 ): Promise<VideoFile | null> => {
-  if (!window.electron) return null;
-  return window.electron.renameVideo(oldPath, newFileName);
+  return getApiClient().renameVideo(id, newFileName);
 };
 
 export const moveVideosApi = async (
   videoPaths: string[],
   targetFolderPath: string
 ): Promise<number> => {
-  if (!window.electron) return 0;
-  return window.electron.moveVideos(videoPaths, targetFolderPath);
+  return getApiClient().moveVideos(videoPaths, targetFolderPath);
 };
 
 export const downloadVideoApi = async (
   url: string,
   targetFolderPath: string
 ): Promise<VideoFile | null> => {
-  if (!window.electron) return null;
-  return window.electron.downloadVideo(url, targetFolderPath);
+  return getApiClient().downloadVideo(url, targetFolderPath);
 };
 
 export const normalizeVideoApi = async (path: string): Promise<VideoFile | null> => {
-  if (!window.electron) return null;
-  return window.electron.normalizeVideo(path);
+  return getApiClient().normalizeVideo(path);
 };
 
+// --- Playlists ---
+
 export const fetchPlaylists = async (): Promise<Playlist[]> => {
-  if (!window.electron) return [];
-  return window.electron.getPlaylists();
+  return getApiClient().getPlaylists();
 };
 
 export const createPlaylistApi = async (name: string): Promise<Playlist | null> => {
-  if (!window.electron) return null;
-  return window.electron.createPlaylist(name);
+  return getApiClient().createPlaylist(name);
 };
 
 export const deletePlaylistApi = async (id: string): Promise<Playlist[]> => {
-  if (!window.electron) return [];
-  return window.electron.deletePlaylist(id);
+  return getApiClient().deletePlaylist(id);
 };
 
 export const updatePlaylistMetaApi = async (id: string, name: string): Promise<Playlist | null> => {
-  if (!window.electron) return null;
-  return window.electron.updatePlaylistMeta(id, name);
+  return getApiClient().updatePlaylistMeta(id, name);
 };
 
 export const addVideoToPlaylistApi = async (
   playlistId: string,
-  videoPath: string
+  videoId: string
 ): Promise<Playlist | null> => {
-  if (!window.electron) return null;
-  return window.electron.addVideoToPlaylist(playlistId, videoPath);
+  return getApiClient().addVideoToPlaylist(playlistId, videoId);
 };
 
 export const removeVideoFromPlaylistApi = async (
   playlistId: string,
-  videoPath: string
+  videoId: string
 ): Promise<Playlist | null> => {
-  if (!window.electron) return null;
-  return window.electron.removeVideoFromPlaylist(playlistId, videoPath);
+  return getApiClient().removeVideoFromPlaylist(playlistId, videoId);
 };
 
 export const reorderPlaylistApi = async (
   playlistId: string,
-  newVideoPaths: string[]
+  newVideoIds: string[]
 ): Promise<Playlist | null> => {
-  if (!window.electron) return null;
-  return window.electron.reorderPlaylist(playlistId, newVideoPaths);
+  return getApiClient().reorderPlaylist(playlistId, newVideoIds);
 };
 
 export const fetchPlaylistVideosApi = async (playlistId: string): Promise<VideoFile[]> => {
-  if (!window.electron) return [];
-  return window.electron.getPlaylistVideos(playlistId);
+  return getApiClient().getPlaylistVideos(playlistId);
 };
+
+// --- Sorting ---
 
 export const saveFolderOrderApi = async (
   folderPath: string,
   videoPaths: string[]
 ): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.saveFolderOrder(folderPath, videoPaths);
+  return getApiClient().saveFolderOrder(folderPath, videoPaths);
 };
 
 export const fetchFolderOrderApi = async (folderPath: string): Promise<string[]> => {
-  if (!window.electron) return [];
-  return window.electron.getFolderOrder(folderPath);
+  return getApiClient().getFolderOrder(folderPath);
 };
 
-export const setFullScreenApi = async (enable: boolean): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.setFullScreen(enable);
-};
-
-export const updateVideoMetadataApi = async (
-  path: string,
-  duration: number,
-  width: number,
-  height: number
-): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.updateVideoMetadata(path, duration, width, height);
-};
+// --- Tags ---
 
 export const createTagApi = async (name: string): Promise<Tag | null> => {
-  if (!window.electron) return null;
-  return window.electron.createTag(name);
+  return getApiClient().createTag(name);
 };
 
 export const fetchTagsActiveApi = async (): Promise<Tag[]> => {
-  if (!window.electron) return [];
-  return window.electron.getTagsActive();
+  return getApiClient().getTagsActive();
 };
 
 export const fetchTagsByFolderApi = async (folderPath: string): Promise<Tag[]> => {
-  if (!window.electron) return [];
-  return window.electron.getTagsByFolder(folderPath);
+  return getApiClient().getTagsByFolder(folderPath);
 };
 
 export const fetchTagsAllApi = async (): Promise<Tag[]> => {
-  if (!window.electron) return [];
-  return window.electron.getTagsAll();
+  return getApiClient().getTagsAll();
 };
 
 export const fetchVideoTagsApi = async (videoId: string): Promise<Tag[]> => {
-  if (!window.electron) return [];
-  return window.electron.getVideoTags(videoId);
+  return getApiClient().getVideoTags(videoId);
 };
 
 export const assignTagApi = async (videoId: string, tagId: string): Promise<Tag[]> => {
-  if (!window.electron) return [];
-  return window.electron.assignTag(videoId, tagId);
+  return getApiClient().assignTag(videoId, tagId);
 };
 
 export const unassignTagApi = async (videoId: string, tagId: string): Promise<Tag[]> => {
-  if (!window.electron) return [];
-  return window.electron.unassignTag(videoId, tagId);
+  return getApiClient().unassignTag(videoId, tagId);
 };
 
 export const fetchVideosByTagApi = async (tagIds: string[]): Promise<VideoFile[]> => {
-  if (!window.electron) return [];
-  return window.electron.getVideosByTag(tagIds);
+  return getApiClient().getVideosByTag(tagIds);
 };
 
 export const assignTagToVideosApi = async (videoIds: string[], tagId: string): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.assignTagToVideos(videoIds, tagId);
+  return getApiClient().assignTagToVideos(videoIds, tagId);
 };
 
 export const unassignTagFromVideosApi = async (
   videoIds: string[],
   tagId: string
 ): Promise<void> => {
-  if (!window.electron) return;
-  return window.electron.unassignTagFromVideos(videoIds, tagId);
+  return getApiClient().unassignTagFromVideos(videoIds, tagId);
+};
+
+// --- Events ---
+
+export const onVideoUpdateApi = (callback: (event: VideoUpdateEvent) => void): () => void => {
+  return getApiClient().onVideoUpdate(callback);
+};
+
+// --- Drag & Drop ---
+
+export const startDragApi = (files: string | string[]): void => {
+  getApiClient().startDrag(files);
+};
+
+export const getFilePathApi = (file: File): string => {
+  return getApiClient().getFilePath(file);
 };

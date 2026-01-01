@@ -9,17 +9,14 @@ import { useUIStore } from '@/shared/stores/ui-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { VideoFile } from '@/shared/types/video';
 
-// ▼▼▼ 変更: allSortedVideos を引数に追加 ▼▼▼
 export const useVideoGridInteractions = (folderPath: string, allSortedVideos: VideoFile[]) => {
   const openVideo = useVideoPlayerStore((state) => state.openVideo);
 
-  // UI Store
   const selectedPlaylistId = useUIStore((s) => s.selectedPlaylistId);
   const isGlobalMode = useUIStore((s) => s.viewMode === 'all-favorites');
   const isPlaylistMode = useUIStore((s) => s.viewMode === 'playlist');
   const isTagMode = useUIStore((s) => s.viewMode === 'tag-results');
 
-  // Selection Store
   const isSelectionMode = useSelectionStore((s) => s.isSelectionMode);
   const enterSelectionMode = useSelectionStore((s) => s.enterSelectionMode);
   const exitSelectionMode = useSelectionStore((s) => s.exitSelectionMode);
@@ -32,13 +29,11 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
 
   const [videoToRename, setVideoToRename] = useState<VideoFile | null>(null);
 
-  // ▼▼▼ 追加: 動画リストをRefで保持してハンドラの再生成を防ぐ ▼▼▼
   const videosRef = useRef(allSortedVideos);
   useEffect(() => {
     videosRef.current = allSortedVideos;
   }, [allSortedVideos]);
 
-  // --- Long Press & Drag Detection Logic ---
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressTriggeredRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -100,8 +95,6 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
     clearLongPressTimer();
   }, [clearLongPressTimer]);
 
-  // --- Click Logic ---
-  // ▼▼▼ 変更: 第2引数の allSortedVideos を削除し、Refを使用 ▼▼▼
   const handleVideoClick = useCallback(
     (video: VideoFile, e: React.MouseEvent) => {
       if (isLongPressTriggeredRef.current) {
@@ -111,7 +104,7 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
 
       if (isSelectionMode) {
         if (e.shiftKey) {
-          selectRange(video.id, videosRef.current); // Refを使用
+          selectRange(video.id, videosRef.current);
         } else {
           toggleSelection(video.id);
         }
@@ -119,24 +112,26 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
         if (e.ctrlKey || e.metaKey) {
           enterSelectionMode(video.id);
         } else {
-          openVideo(video, videosRef.current); // Refを使用
+          openVideo(video, videosRef.current);
         }
       }
     },
     [isSelectionMode, enterSelectionMode, toggleSelection, selectRange, openVideo]
   );
 
-  // --- Reorder Logic ---
   const handleReorder = useCallback(
     (newOrder: VideoFile[]) => {
       if (isGlobalMode || isTagMode || isSelectionMode) return;
 
-      const newPaths = newOrder.map((v) => v.path);
-
+      // プレイリストの場合はIDを渡す
       if (isPlaylistMode && selectedPlaylistId) {
-        reorderPlaylist({ playlistId: selectedPlaylistId, newVideoPaths: newPaths });
+        const newIds = newOrder.map((v) => v.id); // ▼▼▼ ID配列を作成 ▼▼▼
+        reorderPlaylist({ playlistId: selectedPlaylistId, newVideoIds: newIds }); // 変数名変更
         queryClient.setQueryData(['playlist-videos', selectedPlaylistId], newOrder);
       } else if (!isPlaylistMode) {
+        // 通常フォルダの場合は引き続きパスベース (ソート順はパスで保存されているため)
+        // ※ 将来的にはここもIDにするか検討だが、今回は対象外
+        const newPaths = newOrder.map((v) => v.path);
         saveFolderOrder({ folderPath, videoPaths: newPaths });
         queryClient.setQueryData(['folder-order', folderPath], newPaths);
       }

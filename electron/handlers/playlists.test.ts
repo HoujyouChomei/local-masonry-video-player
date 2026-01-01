@@ -17,11 +17,11 @@ const playlistMocks = vi.hoisted(() => ({
   reorderVideos: vi.fn(),
 }));
 
-const videoServiceMocks = vi.hoisted(() => ({
-  ensureVideoExists: vi.fn(),
+const videoRepoMocks = vi.hoisted(() => ({
+  findById: vi.fn(), // addVideoでの存在確認用
 }));
 
-// 2. Electron (修正)
+// 2. Electron
 const ipcHandlers = new Map<string, (...args: any[]) => any>();
 vi.mock('electron', () => ({
   ipcMain: {
@@ -29,7 +29,6 @@ vi.mock('electron', () => ({
       ipcHandlers.set(channel, listener);
     }),
   },
-  // ▼▼▼ 追加 ▼▼▼
   app: {
     getPath: vi.fn().mockReturnValue('/mock/user/data'),
   },
@@ -52,21 +51,28 @@ vi.mock('../core/repositories/playlist-repository', () => {
   };
 });
 
-// 4. Service Mock
-vi.mock('../core/services/video-service', () => {
+// 4. Video Repository Mock (for ID check)
+vi.mock('../core/repositories/video-repository', () => {
   return {
-    VideoService: class {
-      ensureVideoExists = videoServiceMocks.ensureVideoExists;
+    VideoRepository: class {
+      findById = videoRepoMocks.findById;
     },
   };
 });
 
-// 5. Local Server
+// 5. Service Mock (VideoService is no longer used for addVideo path check)
+vi.mock('../core/services/video-service', () => {
+  return {
+    VideoService: class {},
+  };
+});
+
+// 6. Local Server
 vi.mock('../lib/local-server', () => ({
   getServerPort: () => 3000,
 }));
 
-// 6. fs (Sync) for ThumbnailService
+// 7. fs
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
@@ -106,16 +112,18 @@ describe('Playlist Handlers (Repository Mock)', () => {
     expect(result.name).toBe('My List (1)');
   });
 
-  it('should add video to playlist', async () => {
+  it('should add video to playlist by ID', async () => {
     const mockPlaylist = { id: 'pl-1', name: 'List', videoPaths: ['/v1.mp4'] };
+    const videoId = 'vid-1';
 
-    videoServiceMocks.ensureVideoExists.mockReturnValue('vid-1');
+    // ID存在確認 (findById)
+    videoRepoMocks.findById.mockReturnValue({ id: videoId, path: '/v1.mp4' });
     playlistMocks.getById.mockReturnValue(mockPlaylist);
 
-    const result = await invoke('add-video-to-playlist', 'pl-1', '/v1.mp4');
+    const result = await invoke('add-video-to-playlist', 'pl-1', videoId);
 
-    expect(videoServiceMocks.ensureVideoExists).toHaveBeenCalledWith('/v1.mp4');
-    expect(playlistMocks.addVideo).toHaveBeenCalledWith('pl-1', 'vid-1');
+    expect(videoRepoMocks.findById).toHaveBeenCalledWith(videoId);
+    expect(playlistMocks.addVideo).toHaveBeenCalledWith('pl-1', videoId);
     expect(result).toEqual(mockPlaylist);
   });
 });

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchTagsActiveApi,
-  fetchTagsByFolderApi, // 追加
+  fetchTagsByFolderApi,
   fetchTagsAllApi,
   fetchVideoTagsApi,
   createTagApi,
@@ -12,12 +12,8 @@ import {
   fetchVideosByTagApi,
 } from '@/shared/api/electron';
 
-// --- Queries ---
+// ... (Queriesは変更なし) ...
 
-/**
- * サイドバー表示用: 有効な動画があるタグのみ取得
- * folderPath が指定されている場合はそのフォルダ内のみ
- */
 export const useSidebarTags = (folderPath: string, isGlobal: boolean) => {
   return useQuery({
     queryKey: ['tags', 'sidebar', isGlobal ? 'global' : folderPath],
@@ -47,10 +43,9 @@ export const useVideoTags = (videoId: string) => {
   });
 };
 
-// ▼▼▼ 修正: string[] を受け取るように変更 ▼▼▼
 export const useVideosByTag = (tagIds: string[]) => {
   return useQuery({
-    queryKey: ['tag-videos', tagIds], // 配列をキーに含める
+    queryKey: ['tag-videos', tagIds],
     queryFn: () => (tagIds.length > 0 ? fetchVideosByTagApi(tagIds) : Promise.resolve([])),
     enabled: tagIds.length > 0,
   });
@@ -78,7 +73,7 @@ export const useAssignTag = () => {
     onSuccess: (_, variables) => {
       const { videoId } = variables;
       queryClient.invalidateQueries({ queryKey: ['video-tags', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] }); // アクティブタグ更新
+      queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] });
       queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
     },
   });
@@ -91,10 +86,12 @@ export const useUnassignTag = () => {
     mutationFn: ({ videoId, tagId }: { videoId: string; tagId: string }) =>
       unassignTagApi(videoId, tagId),
     onSuccess: (_, variables) => {
-      const { videoId, tagId } = variables;
+      const { videoId } = variables;
       queryClient.invalidateQueries({ queryKey: ['video-tags', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] }); // アクティブタグ更新
-      queryClient.invalidateQueries({ queryKey: ['tag-videos', tagId] });
+      queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] });
+      // ▼▼▼ 修正: tagIdを指定せず、tag-videosキーを持つ全てのクエリを無効化する ▼▼▼
+      // これにより ['tag-videos', ['tagA', 'tagB']] のような配列キーのキャッシュも更新される
+      queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
     },
   });
 };

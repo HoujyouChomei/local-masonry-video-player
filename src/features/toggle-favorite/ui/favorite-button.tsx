@@ -4,24 +4,23 @@
 
 import React from 'react';
 import { Heart } from 'lucide-react';
-// ★ 削除: framer-motion imports
 import { useFavorites } from '../model/use-favorite';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 interface FavoriteButtonProps {
-  filePath: string;
+  videoId: string; // Changed from filePath to videoId
   className?: string;
   size?: 'sm' | 'default' | 'lg';
 }
 
-export const FavoriteButton = ({ filePath, className, size = 'default' }: FavoriteButtonProps) => {
+export const FavoriteButton = ({ videoId, className, size = 'default' }: FavoriteButtonProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const active = isFavorite(filePath);
+  const active = isFavorite(videoId);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite(filePath);
+    toggleFavorite(videoId);
   };
 
   return (
@@ -36,7 +35,6 @@ export const FavoriteButton = ({ filePath, className, size = 'default' }: Favori
       )}
       title={active ? 'Remove from Favorites' : 'Add to Favorites'}
     >
-      {/* ★ 修正: motion.div を削除し、直接アイコンを描画 */}
       <Heart
         className={cn(
           size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5',

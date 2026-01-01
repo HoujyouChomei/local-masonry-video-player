@@ -79,17 +79,18 @@ export interface IElectronAPI {
   validateFFprobePath: (path: string) => Promise<boolean>;
 
   // Favorites
-  getFavorites: () => Promise<string[]>;
+  getFavorites: () => Promise<string[]>; // ID list
   getFavoriteVideos: () => Promise<VideoFile[]>;
-  toggleFavorite: (path: string) => Promise<string[]>;
+  toggleFavorite: (videoId: string) => Promise<string[]>; // ID list
 
   // File Ops
   getSubdirectories: (dirPath: string) => Promise<DirectoryEntry[]>;
-  deleteVideo: (path: string) => Promise<boolean>;
+  deleteVideo: (id: string) => Promise<boolean>;
   relaunchApp: () => Promise<void>;
-  revealInExplorer: (filePath: string) => Promise<void>;
-  openPath: (filePath: string) => Promise<void>; // ▼▼▼ 追加 ▼▼▼
-  renameVideo: (oldPath: string, newFileName: string) => Promise<VideoFile | null>;
+  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+  revealInExplorer: (videoId: string) => Promise<void>;
+  openPath: (filePath: string) => Promise<void>;
+  renameVideo: (id: string, newFileName: string) => Promise<VideoFile | null>;
   moveVideos: (videoPaths: string[], targetFolderPath: string) => Promise<number>;
 
   downloadVideo: (url: string, targetFolderPath: string) => Promise<VideoFile | null>;
@@ -105,9 +106,10 @@ export interface IElectronAPI {
   createPlaylist: (name: string) => Promise<Playlist>;
   deletePlaylist: (id: string) => Promise<Playlist[]>;
   updatePlaylistMeta: (id: string, name: string) => Promise<Playlist>;
-  addVideoToPlaylist: (playlistId: string, videoPath: string) => Promise<Playlist>;
-  removeVideoFromPlaylist: (playlistId: string, videoPath: string) => Promise<Playlist>;
-  reorderPlaylist: (playlistId: string, newVideoPaths: string[]) => Promise<Playlist>;
+  // ▼▼▼ 変更 ▼▼▼
+  addVideoToPlaylist: (playlistId: string, videoId: string) => Promise<Playlist>;
+  removeVideoFromPlaylist: (playlistId: string, videoId: string) => Promise<Playlist>;
+  reorderPlaylist: (playlistId: string, newVideoIds: string[]) => Promise<Playlist>;
   getPlaylistVideos: (playlistId: string) => Promise<VideoFile[]>;
 
   // UI Controls
@@ -116,8 +118,9 @@ export interface IElectronAPI {
   // Sorting & Metadata
   saveFolderOrder: (folderPath: string, videoPaths: string[]) => Promise<void>;
   getFolderOrder: (folderPath: string) => Promise<string[]>;
+  // ▼▼▼ 変更: path -> videoId ▼▼▼
   updateVideoMetadata: (
-    path: string,
+    videoId: string,
     duration: number,
     width: number,
     height: number

@@ -11,7 +11,7 @@ import {
   reorderPlaylistApi,
 } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { useUIStore } from '@/shared/stores/ui-store'; // 追加
+import { useUIStore } from '@/shared/stores/ui-store';
 import { Playlist } from '../../../shared/types/playlist';
 import { VideoFile } from '@/shared/types/video';
 
@@ -40,7 +40,7 @@ export const useCreatePlaylist = () => {
 
 export const useDeletePlaylist = () => {
   const queryClient = useQueryClient();
-  const { selectedPlaylistId, setViewMode } = useUIStore(); // UI Store
+  const { selectedPlaylistId, setViewMode } = useUIStore();
 
   return useMutation({
     mutationFn: (id: string) => deletePlaylistApi(id),
@@ -60,8 +60,9 @@ export const useAddToPlaylist = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ playlistId, videoPath }: { playlistId: string; videoPath: string }) =>
-      addVideoToPlaylistApi(playlistId, videoPath),
+    // ▼▼▼ 変更: videoId ▼▼▼
+    mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
+      addVideoToPlaylistApi(playlistId, videoId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
         queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
@@ -82,8 +83,9 @@ export const useRemoveFromPlaylist = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ playlistId, videoPath }: { playlistId: string; videoPath: string }) =>
-      removeVideoFromPlaylistApi(playlistId, videoPath),
+    // ▼▼▼ 変更: videoId ▼▼▼
+    mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
+      removeVideoFromPlaylistApi(playlistId, videoId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
         queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
@@ -129,8 +131,9 @@ export const useReorderPlaylist = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ playlistId, newVideoPaths }: { playlistId: string; newVideoPaths: string[] }) =>
-      reorderPlaylistApi(playlistId, newVideoPaths),
+    // ▼▼▼ 変更: newVideoIds ▼▼▼
+    mutationFn: ({ playlistId, newVideoIds }: { playlistId: string; newVideoIds: string[] }) =>
+      reorderPlaylistApi(playlistId, newVideoIds),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
         queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
@@ -145,15 +148,16 @@ export const useReorderPlaylist = () => {
 
 export const useCreateAndAddToPlaylist = () => {
   const queryClient = useQueryClient();
-  const { setEditingPlaylistId } = useUIStore(); // UI Store
-  const { setSidebarOpen } = useSettingsStore(); // Settings Store
+  const { setEditingPlaylistId } = useUIStore();
+  const { setSidebarOpen } = useSettingsStore();
 
   return useMutation({
-    mutationFn: async (videoPath: string) => {
+    // ▼▼▼ 変更: videoId ▼▼▼
+    mutationFn: async (videoId: string) => {
       const newPlaylist = await createPlaylistApi('New Playlist');
       if (!newPlaylist) throw new Error('Failed to create playlist');
 
-      const updatedPlaylist = await addVideoToPlaylistApi(newPlaylist.id, videoPath);
+      const updatedPlaylist = await addVideoToPlaylistApi(newPlaylist.id, videoId);
       return updatedPlaylist || newPlaylist;
     },
     onSuccess: (playlist) => {

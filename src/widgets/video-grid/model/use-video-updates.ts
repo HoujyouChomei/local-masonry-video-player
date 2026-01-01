@@ -4,12 +4,15 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { VideoFile } from '@/shared/types/video';
 import { VideoUpdateEvent } from '@/shared/types/electron';
+// ▼▼▼ 追加 ▼▼▼
+import { onVideoUpdateApi } from '@/shared/api/electron';
 
 export const useVideoUpdates = (folderPath: string) => {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    const unsubscribe = window.electron.onVideoUpdate((event: VideoUpdateEvent) => {
+    // ▼▼▼ 修正: window.electron -> onVideoUpdateApi ▼▼▼
+    const unsubscribe = onVideoUpdateApi((event: VideoUpdateEvent) => {
       // console.log('[Frontend] Video Update Event:', event);
 
       if (event.type === 'thumbnail') {
@@ -32,7 +35,6 @@ export const useVideoUpdates = (folderPath: string) => {
 
         updateThumbnailInCache(['videos', folderPath]);
         updateThumbnailInCache(['all-favorites-videos']);
-        // ▼▼▼ 追加: タグ検索結果のサムネイルも更新 ▼▼▼
         updateThumbnailInCache(['tag-videos']);
 
         return;
@@ -66,8 +68,7 @@ export const useVideoUpdates = (folderPath: string) => {
           return oldData.filter((v) => v.path !== event.path);
         });
 
-        // 5. ▼▼▼ 追加: タグ検索結果 ('tag-videos') から除外 ▼▼▼
-        // setQueriesData (複数形) を使い、キャッシュされている全てのタグ検索結果から削除
+        // 5. タグ検索結果 ('tag-videos') から除外
         queryClient.setQueriesData<VideoFile[]>({ queryKey: ['tag-videos'] }, (oldData) => {
           if (!oldData) return [];
           return oldData.filter((v) => v.path !== event.path);
@@ -87,9 +88,7 @@ export const useVideoUpdates = (folderPath: string) => {
         queryClient.invalidateQueries({ queryKey: ['playlists'] });
         queryClient.invalidateQueries({ queryKey: ['playlist-videos'] });
 
-        // ▼▼▼ 追加: タグ検索結果も更新 ▼▼▼
         queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
-        // タグ一覧も更新
         queryClient.invalidateQueries({ queryKey: ['tags'] });
       }
     });

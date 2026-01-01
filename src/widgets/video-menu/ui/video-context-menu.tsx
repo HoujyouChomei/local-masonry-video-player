@@ -6,9 +6,8 @@ import React, { useState, useCallback } from 'react';
 import { ContextMenuContent } from '@/components/ui/context-menu';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { VideoFile } from '@/shared/types/video';
-import { useQueryClient } from '@tanstack/react-query';
+// import { useQueryClient } from '@tanstack/react-query'; // 不要になったため削除
 import { useBatchDelete } from '@/features/batch-actions/model/use-batch-delete';
-// ▼▼▼ 追加: useDeleteVideo (単一削除用) ▼▼▼
 import { useDeleteVideo } from '@/features/delete-video/model/use-delete-video';
 
 // Sub Components
@@ -43,48 +42,25 @@ export const VideoContextMenu = ({
 
   const isMultiSelectMenu = isSelectionMode && selectedVideoIds.includes(video.id);
 
-  // --- Dialog States for Multi-Select ---
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
   const [isBatchDeleteAlertOpen, setIsBatchDeleteAlertOpen] = useState(false);
-
-  // --- Dialog State for Single-Select ---
-  // ▼▼▼ 追加: 単一削除確認ダイアログの状態 ▼▼▼
   const [isSingleDeleteAlertOpen, setIsSingleDeleteAlertOpen] = useState(false);
 
-  // --- Logic ---
   const { batchDelete, isPending: isBatchDeleting } = useBatchDelete();
-  const { deleteVideo, isPending: isSingleDeleting } = useDeleteVideo(); // 単一削除用フック
-  const queryClient = useQueryClient();
+  const { deleteVideo, isPending: isSingleDeleting } = useDeleteVideo();
+  // const queryClient = useQueryClient(); // 削除
 
   const handleBatchDelete = useCallback(() => {
-    const allQueries = queryClient.getQueryCache().findAll();
-    const pathsToDelete: string[] = [];
-
-    for (const query of allQueries) {
-      const data = query.state.data;
-      if (Array.isArray(data)) {
-        for (const item of data) {
-          if (item && typeof item === 'object' && 'id' in item && 'path' in item) {
-            const v = item as VideoFile;
-            if (selectedVideoIds.includes(v.id)) {
-              pathsToDelete.push(v.path);
-            }
-          }
-        }
-      }
-    }
-
-    const uniquePaths = Array.from(new Set(pathsToDelete));
-
-    if (uniquePaths.length > 0) {
-      batchDelete(uniquePaths);
+    // ▼▼▼ 変更: パス解決ロジックを削除し、IDをそのまま渡す ▼▼▼
+    if (selectedVideoIds.length > 0) {
+      batchDelete(selectedVideoIds);
     }
     setIsBatchDeleteAlertOpen(false);
-  }, [queryClient, selectedVideoIds, batchDelete]);
+  }, [selectedVideoIds, batchDelete]);
 
-  // ▼▼▼ 追加: 単一削除実行ハンドラ ▼▼▼
   const handleSingleDelete = () => {
-    deleteVideo(video.path);
+    // ▼▼▼ 変更: IDを渡す ▼▼▼
+    deleteVideo(video.id);
     setIsSingleDeleteAlertOpen(false);
   };
 
@@ -100,16 +76,14 @@ export const VideoContextMenu = ({
           <SingleVideoMenuItems
             video={video}
             onRename={onRename}
-            // ▼▼▼ 追加: 削除メニュー選択時のコールバック ▼▼▼
             onDelete={() => setIsSingleDeleteAlertOpen(true)}
             enablePlaybackControls={enablePlaybackControls}
           />
         )}
       </ContextMenuContent>
 
-      {/* --- Dialogs (Rendered outside ContextMenuContent) --- */}
+      {/* --- Dialogs --- */}
 
-      {/* 1. Multi-Select Dialogs */}
       {isMultiSelectMenu && (
         <>
           <BatchTagDialog
@@ -142,8 +116,6 @@ export const VideoContextMenu = ({
         </>
       )}
 
-      {/* 2. Single-Select Delete Dialog (Added) */}
-      {/* ▼▼▼ 追加: コンテキストメニューが閉じた後も表示され続ける ▼▼▼ */}
       {!isMultiSelectMenu && (
         <AlertDialog open={isSingleDeleteAlertOpen} onOpenChange={setIsSingleDeleteAlertOpen}>
           <AlertDialogContent onClick={(e) => e.stopPropagation()}>

@@ -5,6 +5,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useVideoModalPlayer } from './use-video-modal-player';
+import { VideoUpdateEvent } from '@/shared/types/electron'; // 追加
 
 // --- Types for Mocks ---
 interface MockStoreState {
@@ -36,11 +37,18 @@ interface MockSettingsState {
 const mockSetFullScreen = vi.fn();
 const mockHarvestMetadata = vi.fn();
 const mockFetchVideoDetails = vi.fn();
+// ▼▼▼ 追加: イベントリスナー用モック ▼▼▼
+const mockOnVideoUpdate = vi.fn();
 
 vi.mock('@/shared/api/electron', () => ({
   setFullScreenApi: (enable: boolean) => mockSetFullScreen(enable),
   harvestMetadataApi: (id: string) => mockHarvestMetadata(id),
   fetchVideoDetailsApi: (path: string) => mockFetchVideoDetails(path),
+  // ▼▼▼ 修正: 型定義を追加 (any -> VideoUpdateEvent) ▼▼▼
+  onVideoUpdateApi: (cb: (event: VideoUpdateEvent) => void) => {
+    mockOnVideoUpdate(cb);
+    return () => {}; // unsubscribe function
+  },
 }));
 
 // Stores
@@ -66,7 +74,6 @@ vi.mock('@/features/video-player/model/store', () => ({
   useVideoPlayerStore: () => storeState,
 }));
 
-// ▼▼▼ 修正: パスを新しい場所に更新 (entities -> shared) ▼▼▼
 vi.mock('@/shared/stores/settings-store', () => ({
   useSettingsStore: () => settingsState,
 }));
@@ -101,15 +108,6 @@ describe('useVideoModalPlayer Integration Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-
-    // ▼▼▼ 追加: window.electron のモック ▼▼▼
-    Object.defineProperty(window, 'electron', {
-      value: {
-        onVideoUpdate: vi.fn().mockReturnValue(() => {}), // unsubscribe 関数を返す
-      },
-      writable: true,
-    });
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     storeState.selectedVideo = null;
     storeState.playlist = [];

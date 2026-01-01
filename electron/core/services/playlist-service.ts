@@ -55,31 +55,23 @@ export class PlaylistService {
     return this.playlistRepo.getById(id);
   }
 
-  // ▼▼▼ 変更: async に変更し、ensureVideoExists を await する ▼▼▼
-  async addVideo(playlistId: string, videoPath: string): Promise<Playlist | null> {
-    const videoId = await this.videoService.ensureVideoExists(videoPath);
+  // ▼▼▼ 変更: videoIdを受け取る。存在確認のみ行う ▼▼▼
+  async addVideo(playlistId: string, videoId: string): Promise<Playlist | null> {
+    const video = this.videoRepo.findById(videoId);
+    if (!video) return null; // IDが存在しない場合は何もしない
+
     this.playlistRepo.addVideo(playlistId, videoId);
     return this.playlistRepo.getById(playlistId);
   }
 
-  removeVideo(playlistId: string, videoPath: string): Playlist | null {
-    const video = this.videoRepo.findByPath(videoPath);
-    if (video) {
-      this.playlistRepo.removeVideo(playlistId, video.id);
-    }
+  // ▼▼▼ 変更: videoIdを受け取る ▼▼▼
+  removeVideo(playlistId: string, videoId: string): Playlist | null {
+    this.playlistRepo.removeVideo(playlistId, videoId);
     return this.playlistRepo.getById(playlistId);
   }
 
-  reorder(playlistId: string, videoPaths: string[]): Playlist | null {
-    const videos = this.videoRepo.findManyByPaths(videoPaths);
-    const pathToIdMap = new Map(videos.map((v) => [v.path, v.id]));
-
-    const videoIds: string[] = [];
-    for (const p of videoPaths) {
-      const id = pathToIdMap.get(p);
-      if (id) videoIds.push(id);
-    }
-
+  // ▼▼▼ 変更: videoIdsを受け取る ▼▼▼
+  reorder(playlistId: string, videoIds: string[]): Playlist | null {
     this.playlistRepo.reorderVideos(playlistId, videoIds);
     return this.playlistRepo.getById(playlistId);
   }

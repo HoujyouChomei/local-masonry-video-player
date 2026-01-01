@@ -86,7 +86,16 @@ export const usePlayerControls = ({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ★ 勝手に追加していた入力フォーム判定コードを削除しました ★
+      // ▼▼▼ 修正: 入力要素への入力中はショートカットを無効化 ▼▼▼
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+      // ▲▲▲ 修正ここまで ▲▲▲
 
       if (e.key === 'Escape') {
         if (isFullscreen) {

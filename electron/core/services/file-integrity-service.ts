@@ -4,7 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { VideoRepository } from '../repositories/video-repository';
-import { VideoIntegrityRepository } from '../repositories/video-integrity-repository'; // 追加
+import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
 import { VideoFile } from '../../../src/shared/types/video';
 import { VideoMapper } from './video-mapper';
 import { calculateFileHash } from '../../lib/file-hash';
@@ -191,7 +191,7 @@ export class FileIntegrityService {
       (row) => row.last_scan_attempt_at !== null && row.status === 'available'
     );
     if (scannedButAvailable.length > 0) {
-      this.integrityRepo.markAsMissing(scannedButAvailable.map((r) => r.id)); // integrityRepoを使用
+      this.integrityRepo.markAsMissing(scannedButAvailable.map((r) => r.id));
       hasChanges = true;
     }
 
@@ -252,8 +252,8 @@ export class FileIntegrityService {
     }
 
     if (idsToMarkAttempted.length > 0) {
-      this.integrityRepo.markAsMissing(idsToMarkAttempted); // integrityRepoを使用
-      this.integrityRepo.markScanAttempted(idsToMarkAttempted); // integrityRepoを使用
+      this.integrityRepo.markAsMissing(idsToMarkAttempted);
+      this.integrityRepo.markScanAttempted(idsToMarkAttempted);
       hasChanges = true;
     }
 
@@ -261,6 +261,11 @@ export class FileIntegrityService {
   }
 
   async markAsMissing(filePath: string): Promise<void> {
-    this.integrityRepo.markAsMissingByPath(filePath); // integrityRepoを使用
+    this.integrityRepo.markAsMissingByPath(filePath);
+  }
+
+  // ▼▼▼ 追加: IDベースでMissingにするメソッド ▼▼▼
+  async markAsMissingById(id: string): Promise<void> {
+    this.integrityRepo.markAsMissing([id]);
   }
 }

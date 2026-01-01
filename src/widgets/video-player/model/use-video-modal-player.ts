@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { harvestMetadataApi, fetchVideoDetailsApi } from '@/shared/api/electron';
+// ▼▼▼ 追加: onVideoUpdateApi ▼▼▼
+import { harvestMetadataApi, fetchVideoDetailsApi, onVideoUpdateApi } from '@/shared/api/electron';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { useFullscreen } from './use-fullscreen';
 import { usePlayerPlayback } from './use-player-playback';
@@ -50,7 +51,8 @@ export const useVideoModalPlayer = () => {
   useEffect(() => {
     if (!playback.isOpen || !selectedVideo) return;
 
-    const unsubscribe = window.electron.onVideoUpdate(async (event: VideoUpdateEvent) => {
+    // ▼▼▼ 修正: window.electron -> onVideoUpdateApi ▼▼▼
+    const unsubscribe = onVideoUpdateApi(async (event: VideoUpdateEvent) => {
       if (event.type === 'update' && event.path === selectedVideo.path) {
         try {
           const updatedVideo = await fetchVideoDetailsApi(event.path);

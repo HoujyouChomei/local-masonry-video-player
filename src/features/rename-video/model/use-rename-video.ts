@@ -6,7 +6,7 @@ import { renameVideoApi } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 
 interface RenameVideoVariables {
-  oldPath: string;
+  id: string; // Changed from oldPath
   newFileName: string;
 }
 
@@ -15,31 +15,34 @@ export const useRenameVideo = () => {
   const folderPath = useSettingsStore((state) => state.folderPath);
 
   const { mutate: renameVideo, isPending } = useMutation({
-    mutationFn: ({ oldPath, newFileName }: RenameVideoVariables) =>
-      renameVideoApi(oldPath, newFileName),
+    // ▼▼▼ 変更: IDを渡す ▼▼▼
+    mutationFn: ({ id, newFileName }: RenameVideoVariables) => renameVideoApi(id, newFileName),
 
     onSuccess: (updatedVideoFile, variables) => {
       if (!updatedVideoFile) return;
 
-      const { oldPath } = variables;
+      const { id } = variables;
 
       // 1. フォルダビューのキャッシュを更新
       queryClient.setQueryData<VideoFile[]>(['videos', folderPath], (oldData) => {
         if (!oldData) return [];
-        return oldData.map((video) => (video.path === oldPath ? updatedVideoFile : video));
+        return oldData.map((video) => (video.id === id ? updatedVideoFile : video));
       });
 
-      // 2. グローバルお気に入りビューのキャッシュを更新 (もしあれば)
+      // 2. グローバルお気に入りビュー
       queryClient.setQueryData<VideoFile[]>(['all-favorites-videos'], (oldData) => {
         if (!oldData) return [];
-        return oldData.map((video) => (video.path === oldPath ? updatedVideoFile : video));
+        return oldData.map((video) => (video.id === id ? updatedVideoFile : video));
       });
 
-      // 3. お気に入りパスリストのキャッシュを更新 (もしお気に入りならパスを置き換える)
-      queryClient.setQueryData<string[]>(['favorites'], (oldData) => {
-        if (!oldData || !oldData.includes(oldPath)) return oldData;
-        return oldData.map((path) => (path === oldPath ? updatedVideoFile.path : path));
-      });
+      // 3. お気に入りリスト (IDリストなので更新不要だが、念のため)
+      // IDは不変なのでパス変更による影響はない
+
+      // 4. その他のビュー (Playlist, Tag, Search) も必要に応じて更新
+      // 一括で無効化する方が安全
+      queryClient.invalidateQueries({ queryKey: ['playlist-videos'] });
+      queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
+      queryClient.invalidateQueries({ queryKey: ['search'] });
     },
   });
 

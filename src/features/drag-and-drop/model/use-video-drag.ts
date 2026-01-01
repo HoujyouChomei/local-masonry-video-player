@@ -2,6 +2,8 @@ import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useDragStore } from '@/shared/stores/drag-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
+// ▼▼▼ 追加 ▼▼▼
+import { startDragApi } from '@/shared/api/electron';
 
 interface UseVideoDragProps {
   videoPath: string;
@@ -19,7 +21,8 @@ export const useVideoDrag = ({ videoPath, videoId }: UseVideoDragProps) => {
       const { isSelectionMode, selectedVideoIds } = useSelectionStore.getState();
       const isSelected = selectedVideoIds.includes(videoId);
 
-      let dragPayload: string | string[] = videoPath;
+      let dragPayloadPath: string | string[] = videoPath;
+      let dragPayloadId: string | string[] = videoId; // IDも用意
 
       // 選択モードかつ選択中のアイテムをドラッグした場合、選択されている全アイテムを対象にする
       if (isSelectionMode && isSelected) {
@@ -39,27 +42,31 @@ export const useVideoDrag = ({ videoPath, videoId }: UseVideoDragProps) => {
         }
 
         // 選択中のIDに対応するパスを収集
+        // IDは selectedVideoIds そのまま
         const paths = selectedVideoIds
           .map((id) => allKnownVideos.get(id))
           .filter((p): p is string => !!p);
 
         if (paths.length > 0) {
-          dragPayload = paths;
+          dragPayloadPath = paths;
+          dragPayloadId = selectedVideoIds; // 選択されたIDリスト
         }
       }
 
-      // アプリ内ドロップ用（Sidebar等）にDragStoreへセット
-      useDragStore.getState().setDraggedFilePath(dragPayload);
+      // アプリ内ドロップ用にPathとID両方をセット
+      useDragStore.getState().setDraggedFilePath(dragPayloadPath);
+      useDragStore.getState().setDraggedVideoId(dragPayloadId);
 
       // OSネイティブのドラッグを開始（外部アプリへのドロップ用）
-      window.electron.startDrag(dragPayload);
+      // ▼▼▼ 修正: window.electron -> startDragApi ▼▼▼
+      startDragApi(dragPayloadPath);
     },
     [videoPath, videoId, queryClient]
   );
 
   const handleDragEnd = useCallback(() => {
     // ドラッグ終了時にストアをリセット
-    useDragStore.getState().setDraggedFilePath(null);
+    useDragStore.getState().clearDrag();
   }, []);
 
   return { handleDragStart, handleDragEnd };

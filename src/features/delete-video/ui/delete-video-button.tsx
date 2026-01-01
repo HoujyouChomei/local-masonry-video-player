@@ -21,7 +21,7 @@ import { useDeleteVideo } from '../model/use-delete-video';
 import { cn } from '@/lib/utils';
 
 interface DeleteVideoButtonProps {
-  filePath: string;
+  videoId: string; // Changed from filePath
   className?: string;
   size?: 'sm' | 'default' | 'lg';
   iconSize?: number;
@@ -29,7 +29,7 @@ interface DeleteVideoButtonProps {
 }
 
 export const DeleteVideoButton = ({
-  filePath,
+  videoId,
   className,
   size = 'default',
   iconSize,
@@ -39,7 +39,7 @@ export const DeleteVideoButton = ({
   const [open, setOpen] = useState(false);
 
   const handleDelete = () => {
-    deleteVideo(filePath);
+    deleteVideo(videoId);
     setOpen(false);
   };
 
@@ -47,8 +47,6 @@ export const DeleteVideoButton = ({
     e.stopPropagation();
   };
 
-  // childrenがある場合（ContextMenu等）は、メニューが閉じてアンカーが消えるのを防ぐため
-  // 画面中央に出るAlertDialogを使用する
   if (children) {
     return (
       <AlertDialog open={open} onOpenChange={setOpen}>
@@ -82,7 +80,6 @@ export const DeleteVideoButton = ({
     );
   }
 
-  // Overlayアイコンボタンの場合は、マウス移動を減らすためPopoverを使用する
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>

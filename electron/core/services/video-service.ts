@@ -1,7 +1,6 @@
 // electron/core/services/video-service.ts
 
 import fs from 'fs/promises';
-// import { statSync } from 'fs'; // 削除済み (前回の修正で非同期化したため)
 import path from 'path';
 import crypto from 'crypto';
 import { shell } from 'electron';
@@ -68,29 +67,28 @@ export class VideoService {
     }
   }
 
-  // ▼▼▼ 修正: バリデーションを追加 ▼▼▼
-  async renameVideo(oldPath: string, newFileName: string): Promise<VideoFile | null> {
+  // ▼▼▼ 修正: 引数を (id, newFileName) に変更 ▼▼▼
+  async renameVideo(id: string, newFileName: string): Promise<VideoFile | null> {
     // 1. バリデーション
     if (!newFileName || newFileName.trim() === '') {
       throw new Error('Filename cannot be empty');
     }
 
-    // Windows/Unix共通の禁止文字 + 制御文字
-    // < > : " / \ | ? *
     const invalidChars = /[<>:"/\\|?*\x00-\x1F]/;
     if (invalidChars.test(newFileName)) {
       throw new Error('Filename contains invalid characters');
     }
 
-    const videoRow = this.videoRepo.findByPath(oldPath);
+    // 2. IDから動画情報を取得
+    const videoRow = this.videoRepo.findById(id);
     if (!videoRow) {
-      console.warn(`Rename skipped: video not found in DB (${oldPath})`);
+      console.warn(`Rename skipped: video not found in DB (ID: ${id})`);
       return null;
     }
 
+    const oldPath = videoRow.path;
     const dir = path.dirname(oldPath);
     const oldExt = path.extname(oldPath);
-    // 拡張子の二重付与防止 & 拡張子維持
     const finalFileName = newFileName.endsWith(oldExt) ? newFileName : `${newFileName}${oldExt}`;
     const newPath = path.join(dir, finalFileName);
 
@@ -102,6 +100,7 @@ export class VideoService {
       const stat = await fs.stat(newPath);
       const mtime = Math.floor(stat.mtimeMs);
 
+      // パス更新はRepoで行う
       this.integrityRepo.updatePath(videoRow.id, newPath, mtime);
 
       const updatedRow = this.videoRepo.findById(videoRow.id);
@@ -112,7 +111,17 @@ export class VideoService {
     }
   }
 
-  async deleteVideo(filePath: string): Promise<boolean> {
+  // ▼▼▼ 修正: 引数を (id) に変更 ▼▼▼
+  async deleteVideo(id: string): Promise<boolean> {
+    // 1. IDからパスを取得
+    const videoRow = this.videoRepo.findById(id);
+    if (!videoRow) {
+      console.warn(`Delete skipped: video not found (ID: ${id})`);
+      return false;
+    }
+
+    const filePath = videoRow.path;
+
     try {
       try {
         await shell.trashItem(filePath);
@@ -120,7 +129,8 @@ export class VideoService {
         console.warn('File already deleted or access denied.', e);
       }
 
-      await this.integrityService.markAsMissing(filePath);
+      // IDベースでMissingにする
+      await this.integrityService.markAsMissingById(id);
       return true;
     } catch (error) {
       console.error(`Failed to delete video: ${filePath}`, error);
@@ -142,13 +152,30 @@ export class VideoService {
     }
   }
 
+  // ▼▼▼ 修正: IDを受け取りパスを解決して更新する ▼▼▼
   async updateMetadata(
-    path: string,
+    id: string,
     duration: number,
     width: number,
     height: number
   ): Promise<void> {
-    this.metaRepo.updateMetadata(path, duration, width, height);
+    const videoRow = this.videoRepo.findById(id);
+    if (!videoRow) {
+      // console.warn(`[VideoService] Metadata update skipped. Video ID not found: ${id}`);
+      return;
+    }
+    // Repoはパスベースのまま利用 (将来的にRepoもIDベースにしても良いが、現状はこれでOK)
+    this.metaRepo.updateMetadata(videoRow.path, duration, width, height);
+  }
+
+  // ▼▼▼ 追加: IDベースでのReveal ▼▼▼
+  async revealInExplorer(id: string): Promise<void> {
+    const videoRow = this.videoRepo.findById(id);
+    if (!videoRow) {
+      console.warn(`Reveal skipped: video not found (ID: ${id})`);
+      return;
+    }
+    shell.showItemInFolder(videoRow.path);
   }
 
   runGarbageCollection(): void {

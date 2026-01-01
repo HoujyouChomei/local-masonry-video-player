@@ -1,5 +1,6 @@
 // electron/core/repositories/video-search-repository.ts
 
+import path from 'path'; // 追加
 import { getDB } from '../../lib/db';
 import { VideoRow } from './video-repository';
 
@@ -98,9 +99,25 @@ export class VideoSearchRepository {
 
     // 3. スコープ条件
     if (options.folderPath) {
+      // ▼▼▼ 変更: 再帰検索を防止し、直下のファイルのみを対象にする ▼▼▼
+      
+      // 1. パスの末尾にセパレータを保証 (例: "C:\Videos" -> "C:\Videos\")
+      const folderPrefix = options.folderPath.endsWith(path.sep)
+        ? options.folderPath
+        : options.folderPath + path.sep;
+
       sql += ` AND v.path LIKE ?`;
-      params.push(`${options.folderPath}%`);
+      params.push(`${folderPrefix}%`);
+
+      // 2. プレフィックス以降の部分にセパレータが含まれていないことを確認 (直下判定)
+      // SQLiteの SUBSTR は 1-based index なので +1
+      const offset = folderPrefix.length + 1;
+      
+      sql += ` AND INSTR(SUBSTR(v.path, ?), ?) = 0`;
+      params.push(offset);
+      params.push(path.sep);
     }
+    
     if (options.playlistId) {
       sql += ` AND pi.playlist_id = ?`;
       params.push(options.playlistId);
