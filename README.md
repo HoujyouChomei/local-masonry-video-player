@@ -1,14 +1,20 @@
-[ English | [日本語](README_jp.md) ]
+# Local Masonry Video Player
 
-# Local Video Masonry
+![Electron](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 **A local video player optimized for browsing video assets and AI-generated videos.**
 
-
+https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
 ### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
 
-> **Note**: This application has been validated on Windows only.
+> **Note**: This application has been tested on Windows only.
 
 ## Features
 
@@ -47,12 +53,12 @@ Therefore, functionality is limited by default. To use all features, users must 
 2.  Extract the zip file and save `ffmpeg.exe` and `ffprobe.exe` (found in the `bin` folder) to a location of your choice.
 3.  Open the app's `Settings` > `External Tools` section and specify the paths for both files.
 
-## Data Collection Specification
+### How Data Collection Works
 
 The application collects video metadata in the background.
 
-*   **Search Indexing**: To enable search for a specific video, **you must open the folder containing the video within the app at least once.**
-*   **Reflection Lag**: There may be a lag of a few seconds to a few minutes before detailed information (AI prompts, FPS, etc.) appears.
+*   **Search Indexing**: To enable search for a specific video, the folder containing it needs to be opened within the app at least once.**
+*   **Rebinding Logic**: There may be a lag of a few seconds to a few minutes before detailed information (AI prompts, FPS, etc.) appears.
 
 ## Shortcuts
 
@@ -118,7 +124,7 @@ If this occurs, try one of the following solutions:
 ### File Integrity & Recovery
 *   **Monitoring System**: Runs `chokidar` in a Worker thread to detect file system changes.
 *   **Missing Handling**: When a file is moved or deleted, the record is not immediately deleted but kept as `missing`.
-*   **Automatic Recovery (Rebinding Logic)**:
+*   **Automatic Recovery**:
     *   **Inode Tracking**: Updates paths automatically by verifying file system Inode numbers for moves within the same volume.
     *   **Hash Verification**: Verifies identity using file size and partial hashes to restore metadata when moved to a different volume or if the Inode changes.
 
@@ -134,6 +140,32 @@ If this occurs, try one of the following solutions:
 This application runs in portable mode. It does not use the registry; settings and the database are saved in the `userData` folder within the same directory as the executable.
 
 *   **To Remove**: Simply delete the downloaded/extracted folder. This removes all data.
+
+## Building from Source
+
+*   Node.js (v22.x recommended / Tested on v22.17.0)
+
+1.  **Clone and enter the repository**
+    ```bash
+    git clone https://github.com/HoujyouChomei/local-masonry-video-player.git
+    cd local-masonry-video-player
+    ```
+
+2.  **Install dependencies**
+    ```bash
+    npm install
+    ```
+
+3.  **Run in Development Mode**
+    ```bash
+    npm run dev
+    ```
+
+4.  **Build for Production**
+    (Output will be in the `release` folder)
+    ```bash
+    npm run dist
+    ```
 
 ## Feedback & Contribution
 
