@@ -59,7 +59,7 @@ Therefore, functionality is limited by default. To use all features, users must 
 
 The application collects video metadata in the background.
 
-*   **Search Indexing**: To enable search for a specific video, the folder containing it needs to be opened within the app at least once.**
+*   **Search Indexing**: To enable search for a specific video, the folder containing it needs to be opened within the app at least once.
 *   **Rebinding Logic**: There may be a lag of a few seconds to a few minutes before detailed information (AI prompts, FPS, etc.) appears.
 
 ## Shortcuts
