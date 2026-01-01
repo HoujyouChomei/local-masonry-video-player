@@ -1,7 +1,7 @@
 {
   "name": "local-masonry-video-player",
   "productName": "Local Masonry Video Player",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "main": "dist-electron/electron/main.js",
   "scripts": {
@@ -95,7 +95,10 @@
       "package.json"
     ],
     "win": {
-    "target": ["dir", "zip"] 
+      "target": [
+        "dir",
+        "zip"
+      ]
     },
     "mac": {
       "target": "dmg"
