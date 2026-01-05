@@ -1,6 +1,5 @@
 // src/features/settings-panel/ui/sections/performance-section.tsx
 
-import React from 'react';
 import { Zap, Check, Weight } from 'lucide-react'; // Weightを追加
 import { useSettingsStore } from '@/shared/stores/settings-store';
 // import { Slider } from '@/components/ui/slider'; // Hidden for development

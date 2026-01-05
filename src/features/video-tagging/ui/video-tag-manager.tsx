@@ -1,8 +1,6 @@
 // src/features/video-tagging/ui/video-tag-manager.tsx
 
-'use client';
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, Plus, Hash, Check } from 'lucide-react';
 import {
   useVideoTags,

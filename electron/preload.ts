@@ -3,10 +3,15 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent, webUtils } from 'electron';
 import { VideoFile } from '../src/shared/types/video';
 import { Playlist } from '../src/shared/types/playlist';
-import { DirectoryEntry, Tag, VideoUpdateEvent, SearchOptions } from '../src/shared/types/electron';
+import {
+  DirectoryEntry,
+  Tag,
+  VideoUpdateEvent,
+  SearchOptions,
+  ConnectionInfo,
+} from '../src/shared/types/electron';
 
 contextBridge.exposeInMainWorld('electron', {
-  // ... existing methods ...
   getVideos: (folderPath: string): Promise<VideoFile[]> =>
     ipcRenderer.invoke('get-videos', folderPath),
 
@@ -15,6 +20,8 @@ contextBridge.exposeInMainWorld('electron', {
 
   getSettings: () => ipcRenderer.invoke('get-settings'),
   saveSettings: (key: string, value: unknown) => ipcRenderer.invoke('save-settings', key, value),
+
+  resetAccessToken: () => ipcRenderer.invoke('reset-access-token'),
 
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   selectFile: () => ipcRenderer.invoke('select-file'),
@@ -28,11 +35,14 @@ contextBridge.exposeInMainWorld('electron', {
   getSubdirectories: (dirPath: string): Promise<DirectoryEntry[]> =>
     ipcRenderer.invoke('get-subdirectories', dirPath),
 
+  // ▼▼▼ 追加 ▼▼▼
+  getDirectoryTree: (dirPath: string): Promise<string[]> =>
+    ipcRenderer.invoke('get-directory-tree', dirPath),
+
   deleteVideo: (id: string) => ipcRenderer.invoke('delete-video', id),
 
   relaunchApp: () => ipcRenderer.invoke('relaunch-app'),
 
-  // ▼▼▼ 変更: 引数をIDに ▼▼▼
   revealInExplorer: (videoId: string) => ipcRenderer.invoke('reveal-in-explorer', videoId),
 
   openPath: (filePath: string) => ipcRenderer.invoke('open-path', filePath),
@@ -52,7 +62,6 @@ contextBridge.exposeInMainWorld('electron', {
   getVideoDetails: (path: string): Promise<VideoFile | null> =>
     ipcRenderer.invoke('get-video-details', path),
 
-  // Harvest
   harvestMetadata: (videoId: string): Promise<void> =>
     ipcRenderer.invoke('harvest-metadata', videoId),
 
@@ -61,16 +70,13 @@ contextBridge.exposeInMainWorld('electron', {
   deletePlaylist: (id: string): Promise<Playlist[]> => ipcRenderer.invoke('delete-playlist', id),
   updatePlaylistMeta: (id: string, name: string): Promise<Playlist> =>
     ipcRenderer.invoke('update-playlist-meta', id, name),
-  
-  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+
   addVideoToPlaylist: (playlistId: string, videoId: string): Promise<Playlist> =>
     ipcRenderer.invoke('add-video-to-playlist', playlistId, videoId),
-  
-  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+
   removeVideoFromPlaylist: (playlistId: string, videoId: string): Promise<Playlist> =>
     ipcRenderer.invoke('remove-video-from-playlist', playlistId, videoId),
-  
-  // ▼▼▼ 変更: 引数をID配列に ▼▼▼
+
   reorderPlaylist: (playlistId: string, newVideoIds: string[]): Promise<Playlist> =>
     ipcRenderer.invoke('reorder-playlist', playlistId, newVideoIds),
 
@@ -84,7 +90,6 @@ contextBridge.exposeInMainWorld('electron', {
   getFolderOrder: (folderPath: string): Promise<string[]> =>
     ipcRenderer.invoke('get-folder-order', folderPath),
 
-  // ▼▼▼ 変更: path -> videoId ▼▼▼
   updateVideoMetadata: (
     videoId: string,
     duration: number,
@@ -111,8 +116,8 @@ contextBridge.exposeInMainWorld('electron', {
   unassignTagFromVideos: (videoIds: string[], tagId: string): Promise<void> =>
     ipcRenderer.invoke('unassign-tag-from-videos', videoIds, tagId),
 
-  onVideoUpdate: (callback: (event: VideoUpdateEvent) => void) => {
-    const subscription = (_event: IpcRendererEvent, data: VideoUpdateEvent) => callback(data);
+  onVideoUpdate: (callback: (events: VideoUpdateEvent[]) => void) => {
+    const subscription = (_event: IpcRendererEvent, data: VideoUpdateEvent[]) => callback(data);
     ipcRenderer.on('on-video-update', subscription);
     return () => {
       ipcRenderer.removeListener('on-video-update', subscription);
@@ -129,4 +134,7 @@ contextBridge.exposeInMainWorld('electron', {
       return (file as any).path || '';
     }
   },
+
+  getConnectionInfo: (): Promise<ConnectionInfo | null> =>
+    ipcRenderer.invoke('get-connection-info'),
 });

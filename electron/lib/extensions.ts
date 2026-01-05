@@ -1,21 +1,15 @@
 // electron/lib/extensions.ts
 
-// Chromiumでネイティブ再生・サムネイル生成が可能な形式
-export const NATIVE_EXTENSIONS = new Set(['.mp4', '.webm', '.ogg']);
+import {
+  VIDEO_EXTENSIONS_NATIVE,
+  VIDEO_EXTENSIONS_ALL,
+} from '../../src/shared/constants/file-types';
 
-// FFmpegがあればサムネイル生成・管理可能な形式 (リストに追加・削除可能)
-// Note: .ts は TypeScript ファイルとの競合を避けるため除外しています
-export const EXTENDED_EXTENSIONS = new Set([
-  ...NATIVE_EXTENSIONS,
-  '.mkv',
-  '.flv',
-  '.avi',
-  '.mov',
-  '.wmv',
-  '.m4v',
-  '.3gp',
-  '.mpg',
-]);
+// Chromiumでネイティブ再生・サムネイル生成が可能な形式
+export const NATIVE_EXTENSIONS = new Set(VIDEO_EXTENSIONS_NATIVE);
+
+// FFmpegがあればサムネイル生成・管理可能な形式
+export const EXTENDED_EXTENSIONS = new Set(VIDEO_EXTENSIONS_ALL);
 
 /**
  * ファイルパスが対象の動画拡張子か判定する

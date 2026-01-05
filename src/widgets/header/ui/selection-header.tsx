@@ -1,8 +1,6 @@
 // src/widgets/header/ui/selection-header.tsx
 
-'use client';
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   X,
   CheckSquare,
@@ -47,6 +45,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
 
 export const SelectionHeader = () => {
   const { selectedVideoIds, exitSelectionMode, selectAll, clearSelection } = useSelectionStore();
@@ -74,6 +73,7 @@ export const SelectionHeader = () => {
   const [isTagDialogOpen, setIsTagDialogOpen] = useState(false);
 
   const isPlaylistMode = viewMode === 'playlist' && !!selectedPlaylistId;
+  const isMobile = useIsMobile(); // 追加
 
   const handleSelectAll = () => {
     const allIds = allSortedVideos.map((v) => v.id);
@@ -101,7 +101,6 @@ export const SelectionHeader = () => {
 
   const executeRemoveFromPlaylist = () => {
     if (selectedPlaylistId && selectedVideoIds.length > 0) {
-      // ▼▼▼ 変更: selectedVideoIds ▼▼▼
       removeFromPlaylist({ playlistId: selectedPlaylistId, videoIds: selectedVideoIds });
     }
   };
@@ -110,8 +109,13 @@ export const SelectionHeader = () => {
 
   return (
     <>
-      <div className="animate-in slide-in-from-top-2 flex h-full w-full items-center justify-between bg-indigo-950/90 px-6 text-white duration-200">
-        <div className="flex items-center gap-2">
+      <div
+        className={
+          // ▼▼▼ 修正: モバイル時のパディングを調整 (px-6 -> px-2 md:px-6) ▼▼▼
+          'animate-in slide-in-from-top-2 flex h-full w-full items-center justify-between bg-indigo-950/90 px-2 text-white duration-200 md:px-6'
+        }
+      >
+        <div className="flex items-center gap-1 md:gap-2">
           <Button
             variant="ghost"
             size="sm"
@@ -121,7 +125,8 @@ export const SelectionHeader = () => {
             title="Select All Items"
           >
             <CheckSquare size={16} />
-            Select All
+            {/* モバイルではテキストを隠してアイコンのみにする */}
+            <span className="hidden sm:inline">Select All</span>
           </Button>
 
           <Button
@@ -133,26 +138,30 @@ export const SelectionHeader = () => {
             title="Deselect All"
           >
             <SquareDashed size={16} />
-            Clear
+            <span className="hidden sm:inline">Clear</span>
           </Button>
         </div>
 
-        <div className="flex items-center justify-center font-mono text-sm font-semibold tracking-wide text-indigo-100">
+        {/* ▼▼▼ 修正: モバイル時は選択カウントを非表示 (hidden md:flex) ▼▼▼ */}
+        <div className="hidden items-center justify-center font-mono text-sm font-semibold tracking-wide text-indigo-100 md:flex">
           <span className="rounded-full bg-white/10 px-3 py-1">{count} selected</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={executeMove}
-            className="h-9 gap-2 text-indigo-100 hover:bg-white/10 hover:text-white disabled:opacity-50"
-            disabled={count === 0 || isAnyActionPending}
-            title="Move to Folder"
-          >
-            <FolderInput size={18} />
-            <span className="hidden sm:inline">Move</span>
-          </Button>
+        <div className="flex items-center gap-1 md:gap-2">
+          {/* ▼▼▼ 修正: モバイル時は Move ボタンを非表示 ▼▼▼ */}
+          {!isMobile && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={executeMove}
+              className="h-9 gap-2 text-indigo-100 hover:bg-white/10 hover:text-white disabled:opacity-50"
+              disabled={count === 0 || isAnyActionPending}
+              title="Move to Folder"
+            >
+              <FolderInput size={18} />
+              <span className="hidden sm:inline">Move</span>
+            </Button>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -181,7 +190,6 @@ export const SelectionHeader = () => {
               )}
 
               <DropdownMenuItem
-                // ▼▼▼ 変更: selectedVideoIds ▼▼▼
                 onSelect={() => createAndAdd({ name: 'New Playlist', videoIds: selectedVideoIds })}
                 className="text-primary font-medium"
               >
@@ -194,8 +202,9 @@ export const SelectionHeader = () => {
                 playlists.map((pl) => (
                   <DropdownMenuItem
                     key={pl.id}
-                    // ▼▼▼ 変更: selectedVideoIds ▼▼▼
-                    onSelect={() => addToPlaylist({ playlistId: pl.id, videoIds: selectedVideoIds })}
+                    onSelect={() =>
+                      addToPlaylist({ playlistId: pl.id, videoIds: selectedVideoIds })
+                    }
                   >
                     {pl.name}
                   </DropdownMenuItem>
@@ -220,21 +229,25 @@ export const SelectionHeader = () => {
             <span className="hidden sm:inline">Tag</span>
           </Button>
 
-          <Separator orientation="vertical" className="mx-2 h-6 bg-indigo-800/50" />
+          {/* ▼▼▼ 修正: モバイル時は Delete ボタンとセパレーターを非表示 ▼▼▼ */}
+          {!isMobile && (
+            <>
+              <Separator orientation="vertical" className="mx-2 h-6 bg-indigo-800/50" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDeleteAlertOpen(true)}
+                className="h-9 gap-2 text-red-300 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50"
+                disabled={count === 0 || isAnyActionPending}
+                title="Delete Selected"
+              >
+                <Trash2 size={18} />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </>
+          )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsDeleteAlertOpen(true)}
-            className="h-9 gap-2 text-red-300 hover:bg-red-500/20 hover:text-red-200 disabled:opacity-50"
-            disabled={count === 0 || isAnyActionPending}
-            title="Delete Selected"
-          >
-            <Trash2 size={18} />
-            <span className="hidden sm:inline">Delete</span>
-          </Button>
-
-          <Separator orientation="vertical" className="mx-2 h-6 bg-indigo-800/50" />
+          <Separator orientation="vertical" className="mx-1 h-6 bg-indigo-800/50 md:mx-2" />
 
           <Button
             variant="ghost"
@@ -245,7 +258,7 @@ export const SelectionHeader = () => {
             title="Cancel Selection Mode (Esc)"
           >
             <X size={16} />
-            <span className="font-medium">Cancel</span>
+            <span className="hidden font-medium sm:inline">Cancel</span>
           </Button>
         </div>
       </div>

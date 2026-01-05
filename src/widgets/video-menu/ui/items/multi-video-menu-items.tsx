@@ -1,8 +1,6 @@
 // src/widgets/video-menu/ui/items/multi-video-menu-items.tsx
 
-'use client';
-
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FolderInput, ListPlus, Tag, Trash2, Plus, ListX } from 'lucide-react';
 import {
@@ -21,6 +19,7 @@ import {
 import { usePlaylists } from '@/entities/playlist/model/use-playlists';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { VideoFile } from '@/shared/types/video';
+import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
 
 interface MultiVideoMenuItemsProps {
   onOpenTagDialog: () => void;
@@ -42,6 +41,7 @@ export const MultiVideoMenuItems = ({
   const { viewMode, selectedPlaylistId } = useUIStore();
 
   const isPlaylistMode = viewMode === 'playlist' && !!selectedPlaylistId;
+  const isMobile = useIsMobile(); // 追加
 
   // キャッシュからパスを解決 (移動用)
   const resolveSelectedPaths = useCallback((): string[] => {
@@ -70,18 +70,16 @@ export const MultiVideoMenuItems = ({
   };
 
   const executeAddToPlaylist = (playlistId: string) => {
-    // ▼▼▼ 変更: selectedVideoIds を渡す ▼▼▼
     if (selectedVideoIds.length > 0) addToPlaylist({ playlistId, videoIds: selectedVideoIds });
   };
 
   const executeCreateAndAdd = () => {
-    // ▼▼▼ 変更: selectedVideoIds を渡す ▼▼▼
-    if (selectedVideoIds.length > 0) createAndAdd({ name: 'New Playlist', videoIds: selectedVideoIds });
+    if (selectedVideoIds.length > 0)
+      createAndAdd({ name: 'New Playlist', videoIds: selectedVideoIds });
   };
 
   const executeRemoveFromPlaylist = () => {
     if (selectedPlaylistId) {
-      // ▼▼▼ 変更: selectedVideoIds を渡す ▼▼▼
       if (selectedVideoIds.length > 0) {
         removeFromPlaylist({ playlistId: selectedPlaylistId, videoIds: selectedVideoIds });
       }
@@ -98,10 +96,13 @@ export const MultiVideoMenuItems = ({
 
       <ContextMenuSeparator />
 
-      <ContextMenuItem onSelect={executeMove}>
-        <FolderInput className="mr-2 h-4 w-4" />
-        Move to Folder...
-      </ContextMenuItem>
+      {/* ▼▼▼ 修正: モバイル時は Move を非表示 ▼▼▼ */}
+      {!isMobile && (
+        <ContextMenuItem onSelect={executeMove}>
+          <FolderInput className="mr-2 h-4 w-4" />
+          Move to Folder...
+        </ContextMenuItem>
+      )}
 
       <ContextMenuSub>
         <ContextMenuSubTrigger>
@@ -147,15 +148,19 @@ export const MultiVideoMenuItems = ({
         Add Tags...
       </ContextMenuItem>
 
-      <ContextMenuSeparator />
-
-      <ContextMenuItem
-        onSelect={onOpenDeleteAlert}
-        className="text-destructive focus:text-destructive focus:bg-destructive/10"
-      >
-        <Trash2 className="mr-2 h-4 w-4" />
-        Delete Selected
-      </ContextMenuItem>
+      {/* ▼▼▼ 修正: モバイル時は Delete を非表示 ▼▼▼ */}
+      {!isMobile && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={onOpenDeleteAlert}
+            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete Selected
+          </ContextMenuItem>
+        </>
+      )}
     </>
   );
 };

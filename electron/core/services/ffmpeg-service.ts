@@ -259,7 +259,9 @@ export class FFmpegService {
       if (fs.existsSync(outputPath)) {
         try {
           fs.unlinkSync(outputPath);
-        } catch {}
+        } catch {
+          // ignore
+        }
       }
       return null;
     }

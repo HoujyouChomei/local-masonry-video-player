@@ -1,8 +1,5 @@
 // src/features/select-folder/ui/select-folder-button.tsx
 
-'use client';
-
-import React from 'react';
 import { FolderOpen } from 'lucide-react';
 import { selectFolder } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';

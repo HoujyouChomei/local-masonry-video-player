@@ -1,8 +1,5 @@
 // src/features/filter-favorites/ui/global-favorites-button.tsx
 
-'use client';
-
-import React from 'react';
 import { Star } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store'; // 変更
 import { Button } from '@/components/ui/button';

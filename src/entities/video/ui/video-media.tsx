@@ -1,4 +1,4 @@
-'use client';
+// src/entities/video/ui/video-media.tsx
 
 import React from 'react';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,7 @@ import { useVideoPlayback } from '../model/use-video-playback';
 import { VideoCardOverlay } from './video-card-overlay';
 import { Button } from '@/components/ui/button';
 import { Play, Pause } from 'lucide-react';
+import { useIsMobile } from '@/shared/lib/use-is-mobile'; // Added
 
 interface VideoMediaProps {
   video: VideoFile;
@@ -56,6 +57,8 @@ export const VideoMedia = React.memo(
       isModalOpen,
       setAspectRatio,
     });
+
+    const isMobile = useIsMobile(); // Added
 
     const thumbnailUrl = video.thumbnailSrc;
     const shouldRenderImage = true;
@@ -110,7 +113,6 @@ export const VideoMedia = React.memo(
         )}
 
         {shouldRenderImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={thumbnailUrl}
             alt=""
@@ -131,7 +133,8 @@ export const VideoMedia = React.memo(
           <div className="absolute inset-0 h-full w-full bg-white/5 transition-opacity" />
         )}
 
-        {!isSelectionMode && (
+        {/* ▼▼▼ 修正: モバイル時(!isMobile)はオーバーレイを表示しない ▼▼▼ */}
+        {!isSelectionMode && !isMobile && (
           <VideoCardOverlay
             video={video}
             duration={duration}

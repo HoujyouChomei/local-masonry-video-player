@@ -1,6 +1,6 @@
 // src/widgets/video-player/ui/video-metadata-panel.tsx
 
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { VideoFile } from '@/shared/types/video';

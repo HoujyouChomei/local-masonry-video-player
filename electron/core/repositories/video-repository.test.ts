@@ -8,8 +8,6 @@ const mockRun = vi.fn();
 const mockGet = vi.fn();
 const mockAll = vi.fn();
 
-// 修正: ESLint警告を抑制
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const mockPrepare = vi.fn((_sql: string) => ({
   run: mockRun,
   get: mockGet,
@@ -28,8 +26,6 @@ describe('VideoRepository (Mocked DB)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // デフォルトの実装をリセット
-    // 修正: ESLint警告を抑制
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     mockPrepare.mockImplementation((_sql: string) => ({
       run: mockRun,
       get: mockGet,

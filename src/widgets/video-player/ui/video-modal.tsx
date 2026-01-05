@@ -1,8 +1,6 @@
 // src/widgets/video-player/ui/video-modal.tsx
 
-'use client';
-
-import React, { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,6 +10,9 @@ import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { RenameVideoDialog } from '@/features/rename-video/ui/rename-video-dialog';
 import { VideoModalFooter } from './video-modal-footer';
 import { VideoMetadataPanel } from './video-metadata-panel';
+// ▼▼▼ 追加インポート ▼▼▼
+import { useVideoPlayerStore } from '@/features/video-player/model/store';
+import { isNativeVideo, getStreamUrl } from '@/shared/lib/video-extensions';
 
 export const VideoModal = () => {
   const {
@@ -35,33 +36,72 @@ export const VideoModal = () => {
     handleVideoClick,
     handleVideoEnded,
     handleError,
-    // 追加
     isInfoPanelOpen,
     toggleInfoPanel,
+    isContentHidden,
+    // Touch Handlers
+    handleTouchStart,
+    handleTouchEnd,
   } = useVideoModalPlayer();
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
 
+  // ▼▼▼ 追加: 次の動画のURLを特定するロジック ▼▼▼
+  const { playlist } = useVideoPlayerStore();
+
+  const nextVideoUrl = useMemo(() => {
+    if (!selectedVideo || playlist.length === 0) return undefined;
+
+    const currentIndex = playlist.findIndex((v) => v.id === selectedVideo.id);
+    if (currentIndex === -1) return undefined;
+
+    const nextIndex = (currentIndex + 1) % playlist.length;
+    const nextVideo = playlist[nextIndex];
+
+    // URL決定ロジック:
+    // 1. ネイティブ対応、またはWeb版(http...)なら src をそのまま使用
+    //    (Web版のHttpClientは src に適切なURLとトークンをセット済み)
+    if (isNativeVideo(nextVideo.path) || nextVideo.src.startsWith('http')) {
+      return nextVideo.src;
+    }
+
+    // 2. Electron版で非ネイティブならストリーム用URLを生成 (トランスコード用)
+    return getStreamUrl(nextVideo.thumbnailSrc, nextVideo.path);
+  }, [selectedVideo, playlist]);
+  // ▲▲▲ 追加ここまで ▲▲▲
+
   if (!isOpen || !selectedVideo) return null;
 
+  const shouldBeFullscreen = isFullscreen;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className={cn(
+        'fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-200',
+        isContentHidden ? 'pointer-events-none opacity-0' : 'opacity-100'
+      )}
+    >
       {/* Backdrop */}
       <div onClick={closeVideo} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
 
-      {/* Wrapper: 中央配置と相対位置の基準。サイズはメインモーダルと同じにする。 */}
-      <div className={cn('relative', isFullscreen ? 'h-full w-full' : 'mx-4 w-full max-w-6xl')}>
+      {/* Wrapper */}
+      <div
+        className={cn('relative', shouldBeFullscreen ? 'h-full w-full' : 'mx-4 w-full max-w-6xl')}
+      >
         <ContextMenu>
           <ContextMenuTrigger asChild>
             {/* Modal Content (Main) */}
             <div
               className={cn(
                 'relative z-50 overflow-hidden bg-gray-950 shadow-2xl ring-1 ring-white/10',
-                isFullscreen
+                shouldBeFullscreen
                   ? 'fixed inset-0 h-full w-full max-w-none rounded-none'
                   : 'h-auto w-full rounded-xl'
               )}
               onClick={(e) => e.stopPropagation()}
+              // ▼▼▼ Attach Touch Handlers Here ▼▼▼
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
             >
               {/* Close Button / Fullscreen Toggle */}
               <div className="absolute top-4 right-4 z-10 flex gap-2">
@@ -91,14 +131,18 @@ export const VideoModal = () => {
 
               {/* Video Player */}
               <div
-                className={cn('relative w-full bg-black', isFullscreen ? 'h-full' : 'aspect-video')}
+                className={cn(
+                  'relative w-full bg-black',
+                  shouldBeFullscreen ? 'h-full' : 'aspect-video'
+                )}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onContextMenu={handleContextMenu}
                 onDoubleClick={handleDoubleClick}
               >
                 <video
-                  key={selectedVideo.id}
+                  // ▼▼▼ 変更: keyを固定文字列にしてDOM再利用を強制 ▼▼▼
+                  key="main-player"
                   ref={videoRef}
                   src={currentSrc}
                   className={cn(
@@ -118,8 +162,8 @@ export const VideoModal = () => {
                 />
               </div>
 
-              {/* Metadata Footer */}
-              {!isFullscreen && (
+              {/* Metadata Footer: モバイル以外、かつ非フルスクリーン時のみ表示 */}
+              {!shouldBeFullscreen && (
                 <VideoModalFooter
                   video={selectedVideo}
                   autoPlayNext={autoPlayNext}
@@ -141,15 +185,28 @@ export const VideoModal = () => {
         </ContextMenu>
 
         {/* Side Panel (Separate) */}
-        {!isFullscreen && isInfoPanelOpen && (
+        {!shouldBeFullscreen && isInfoPanelOpen && (
           <div
             className="animate-in fade-in slide-in-from-left-2 absolute top-0 left-full z-50 ml-4 h-full duration-200"
-            onClick={(e) => e.stopPropagation()} // パネルクリックでモーダルが閉じないようにする
+            onClick={(e) => e.stopPropagation()}
           >
             <VideoMetadataPanel video={selectedVideo} />
           </div>
         )}
       </div>
+
+      {/* ▼▼▼ 追加: 次の動画を裏で読み込むための隠しプレイヤー ▼▼▼ */}
+      {nextVideoUrl && (
+        <video
+          key={nextVideoUrl} // URLが変わるたびにリセット
+          src={nextVideoUrl}
+          className="hidden"
+          preload="auto"
+          muted
+          width="0"
+          height="0"
+        />
+      )}
 
       {isRenameOpen && (
         <RenameVideoDialog
@@ -157,8 +214,6 @@ export const VideoModal = () => {
           onOpenChange={setIsRenameOpen}
           videoId={selectedVideo.id}
           videoName={selectedVideo.name}
-          // ▼▼▼ 修正: 以下の行を削除しました (videoPath はもう存在しません) ▼▼▼
-          // videoPath={selectedVideo.path} 
         />
       )}
     </div>

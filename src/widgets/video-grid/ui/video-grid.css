@@ -4,7 +4,8 @@
 .my-masonry-grid {
   display: flex;
   margin-left: -16px; /* gutter size offset */
-  width: auto;
+  /* ▼▼▼ 修正: ネガティブマージン分を考慮して幅を拡張 ▼▼▼ */
+  width: calc(100% + 16px);
 }
 .my-masonry-grid_column {
   padding-left: 16px; /* gutter size */
@@ -24,19 +25,15 @@
 
 /* --- Selection Mode Styles --- */
 
-/* 暗転処理 (filter) はパフォーマンス優先のため廃止 */
-/* カーソルのみ変更 */
 .is-selection-mode .video-card {
   cursor: pointer;
 }
 
-/* 選択されたカード: ボーダーで強調 */
 .is-selection-mode .video-card[data-selected='true'] {
   box-shadow: 0 0 0 3px theme('colors.primary.DEFAULT');
   z-index: 10;
 }
 
-/* 選択モード中は動画カード内のホバーアクション（再生ボタン等）を無効化 */
 .is-selection-mode .video-card .group-hover\:opacity-100 {
   opacity: 0 !important;
   pointer-events: none;

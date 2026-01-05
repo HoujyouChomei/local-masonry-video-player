@@ -8,64 +8,58 @@ import { DBMigrator } from './db-migrator';
 
 let db: Database.Database | null = null;
 
+// デバッグ用: インスタンスID (初期化されるたびに変わる)
+const instanceId = Math.floor(Math.random() * 10000);
+
 export const getDB = () => {
+  // console.log(`[DB] getDB called. InstanceID: ${instanceId}, DB State: ${db ? 'Initialized' : 'NULL'}`);
   if (!db) {
+    console.error(`[DB Error] getDB called but DB is null. InstanceID: ${instanceId}`);
     throw new Error('Database not initialized. Call initDB() first.');
   }
   return db;
 };
 
 export const initDB = () => {
-  if (db) return db;
+  if (db) {
+    console.log(`[DB] Already initialized. InstanceID: ${instanceId}`);
+    return db;
+  }
 
-  // DB保存先: ユーザーデータフォルダ
   const dbPath = path.join(app.getPath('userData'), 'library.db');
+  console.log(`[DB] Initializing... InstanceID: ${instanceId}`);
+  console.log(`[DB] Path: ${dbPath}`);
 
-  // ディレクトリが存在することを確認
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
   }
 
-  console.log(`Initializing SQLite database at: ${dbPath}`);
-
   try {
     db = new Database(dbPath);
 
-    // WALモード有効化
     db.pragma('journal_mode = WAL');
     db.pragma('synchronous = NORMAL');
 
-    // 現在のバージョンを確認
     const currentVersion = db.pragma('user_version', { simple: true }) as number;
 
-    // --- Schema Definition (Version 1: Initial Release) ---
     if (currentVersion === 0) {
       console.log('[DB] Creating fresh schema (v1)...');
       createSchema(db);
-      // バージョンを 1 (Base) に設定
       db.pragma('user_version = 1');
     }
 
-    // --- Migration (Future use for v2+) ---
     const migrator = new DBMigrator(db);
     migrator.migrate();
 
-    console.log('Database initialized successfully.');
+    console.log(`[DB] Initialization successful. InstanceID: ${instanceId}`);
     return db;
   } catch (error) {
-    console.error('Failed to initialize database:', error);
+    console.error('[DB] Initialization FAILED:', error);
     throw error;
   }
 };
 
-/**
- * 完全なスキーマ定義 (v1 Base)
- * - Videos (inc. AI Metadata, FPS, Codec)
- * - Playlists
- * - Tags
- * - FTS5 Search
- */
 const createSchema = (db: Database.Database) => {
   const runTransaction = db.transaction(() => {
     // 1. Videos Table
@@ -192,7 +186,6 @@ const createSchema = (db: Database.Database) => {
         );
       `);
 
-      // FPS情報を検索可能にするための式 (e.g., "60fps fps")
       const fpsExpression = `
         COALESCE(new.codec, '') || ' ' || 
         CASE 
@@ -208,7 +201,6 @@ const createSchema = (db: Database.Database) => {
         END
       `;
 
-      // Trigger: INSERT
       db.exec(`
         CREATE TRIGGER IF NOT EXISTS videos_ai AFTER INSERT ON videos BEGIN
           INSERT INTO videos_fts(rowid, name, path, generation_params, codec) 
@@ -222,7 +214,6 @@ const createSchema = (db: Database.Database) => {
         END;
       `);
 
-      // Trigger: DELETE
       db.exec(`
         CREATE TRIGGER IF NOT EXISTS videos_ad AFTER DELETE ON videos BEGIN
           INSERT INTO videos_fts(videos_fts, rowid, name, path, generation_params, codec) 
@@ -237,9 +228,16 @@ const createSchema = (db: Database.Database) => {
         END;
       `);
 
-      // Trigger: UPDATE
+      // ▼▼▼ 修正: WHEN句を追加して、無関係なカラム更新時のインデックス再構築を防ぐ ▼▼▼
+      // IS NOT を使用することで NULL 比較も正しく処理する
       db.exec(`
-        CREATE TRIGGER IF NOT EXISTS videos_au AFTER UPDATE ON videos BEGIN
+        CREATE TRIGGER IF NOT EXISTS videos_au AFTER UPDATE ON videos
+        WHEN old.name IS NOT new.name 
+          OR old.path IS NOT new.path 
+          OR old.generation_params IS NOT new.generation_params 
+          OR old.codec IS NOT new.codec
+          OR old.fps IS NOT new.fps
+        BEGIN
           INSERT INTO videos_fts(videos_fts, rowid, name, path, generation_params, codec) 
           VALUES (
             'delete', 

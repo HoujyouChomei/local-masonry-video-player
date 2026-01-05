@@ -1,9 +1,9 @@
 // electron/core/services/metadata-harvester.ts
 
-import { BrowserWindow } from 'electron';
 import { VideoRepository, VideoRow } from '../repositories/video-repository';
 import { VideoMetadataRepository } from '../repositories/video-metadata-repository';
 import { FFmpegService } from './ffmpeg-service';
+import { NotificationService } from './notification-service';
 
 export class MetadataHarvester {
   private static instance: MetadataHarvester;
@@ -11,6 +11,7 @@ export class MetadataHarvester {
   private videoRepo = new VideoRepository();
   private metaRepo = new VideoMetadataRepository();
   private ffmpegService = new FFmpegService();
+  private notifier = NotificationService.getInstance();
 
   private isRunning = false;
   private isProcessing = false;
@@ -178,12 +179,7 @@ export class MetadataHarvester {
   }
 
   private notifyFrontend(videoPath: string) {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
-    if (mainWindow) {
-      mainWindow.webContents.send('on-video-update', {
-        type: 'update',
-        path: videoPath,
-      });
-    }
+    const event = { type: 'update' as const, path: videoPath };
+    this.notifier.notify(event);
   }
 }

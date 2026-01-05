@@ -14,6 +14,7 @@ export type GridStyle = 'modern' | 'mosaic';
 export interface AppSettings {
   folderPath: string;
   columnCount: number;
+  mobileColumnCount: number;
   sortOption: SortOption;
   libraryFolders: string[];
   isSidebarOpen: boolean;
@@ -40,6 +41,13 @@ export interface AppSettings {
 
   enableLargeVideoRestriction: boolean;
   largeVideoThreshold: number; // MB単位
+
+  // Fullscreen Playback Setting
+  openInFullscreen: boolean;
+
+  // Phase 25: Mobile Support
+  enableMobileConnection: boolean;
+  authAccessToken: string;
 }
 
 export interface DirectoryEntry {
@@ -59,6 +67,11 @@ export type VideoUpdateEvent = {
   path: string;
 };
 
+export interface ConnectionInfo {
+  ip: string;
+  port: number;
+}
+
 // API Interface
 export interface IElectronAPI {
   // Videos
@@ -69,6 +82,9 @@ export interface IElectronAPI {
   // Settings
   getSettings: () => Promise<AppSettings>;
   saveSettings: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<boolean>;
+
+  // Phase 25: Token Reset
+  resetAccessToken: () => Promise<string>;
 
   // Dialogs
   selectFolder: () => Promise<string | null>;
@@ -85,9 +101,12 @@ export interface IElectronAPI {
 
   // File Ops
   getSubdirectories: (dirPath: string) => Promise<DirectoryEntry[]>;
+  // ▼▼▼ 追加 ▼▼▼
+  getDirectoryTree: (dirPath: string) => Promise<string[]>;
+
   deleteVideo: (id: string) => Promise<boolean>;
   relaunchApp: () => Promise<void>;
-  // ▼▼▼ 変更: 引数をIDに ▼▼▼
+
   revealInExplorer: (videoId: string) => Promise<void>;
   openPath: (filePath: string) => Promise<void>;
   renameVideo: (id: string, newFileName: string) => Promise<VideoFile | null>;
@@ -106,7 +125,7 @@ export interface IElectronAPI {
   createPlaylist: (name: string) => Promise<Playlist>;
   deletePlaylist: (id: string) => Promise<Playlist[]>;
   updatePlaylistMeta: (id: string, name: string) => Promise<Playlist>;
-  // ▼▼▼ 変更 ▼▼▼
+
   addVideoToPlaylist: (playlistId: string, videoId: string) => Promise<Playlist>;
   removeVideoFromPlaylist: (playlistId: string, videoId: string) => Promise<Playlist>;
   reorderPlaylist: (playlistId: string, newVideoIds: string[]) => Promise<Playlist>;
@@ -118,7 +137,7 @@ export interface IElectronAPI {
   // Sorting & Metadata
   saveFolderOrder: (folderPath: string, videoPaths: string[]) => Promise<void>;
   getFolderOrder: (folderPath: string) => Promise<string[]>;
-  // ▼▼▼ 変更: path -> videoId ▼▼▼
+
   updateVideoMetadata: (
     videoId: string,
     duration: number,
@@ -134,15 +153,19 @@ export interface IElectronAPI {
   getVideoTags: (videoId: string) => Promise<Tag[]>;
   assignTag: (videoId: string, tagId: string) => Promise<Tag[]>;
   unassignTag: (videoId: string, tagId: string) => Promise<Tag[]>;
+
   getVideosByTag: (tagIds: string[]) => Promise<VideoFile[]>;
 
   assignTagToVideos: (videoIds: string[], tagId: string) => Promise<void>;
   unassignTagFromVideos: (videoIds: string[], tagId: string) => Promise<void>;
 
   // Events
-  onVideoUpdate: (callback: (event: VideoUpdateEvent) => void) => () => void;
+  onVideoUpdate: (callback: (events: VideoUpdateEvent[]) => void) => () => void;
 
   // Drag & Drop
   startDrag: (files: string | string[]) => void;
   getFilePath: (file: File) => string;
+
+  // Connection
+  getConnectionInfo: () => Promise<ConnectionInfo | null>;
 }

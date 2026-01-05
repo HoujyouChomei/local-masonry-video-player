@@ -1,8 +1,5 @@
 // src/features/sort-videos/ui/sort-menu.tsx
 
-'use client';
-
-import React from 'react';
 import { ArrowDownUp, Check } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { SortOption } from '@/shared/types/video';

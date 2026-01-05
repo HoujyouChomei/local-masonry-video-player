@@ -1,8 +1,5 @@
 // src/widgets/error-fallback/ui/main-error-fallback.tsx
 
-'use client';
-
-import React from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

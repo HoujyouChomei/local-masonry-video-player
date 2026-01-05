@@ -1,8 +1,6 @@
 // src/features/batch-actions/ui/batch-tag-dialog.tsx
 
-'use client';
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Hash, Plus, Check } from 'lucide-react';
 import { useTagsAll } from '@/entities/tag/model/use-tags';
 import { useBatchTag } from '../model/use-batch-tag';

@@ -21,7 +21,6 @@ export const useFullscreen = (isOpen: boolean) => {
   useEffect(() => {
     if (!isOpen && isFullscreen) {
       setFullScreenApi(false);
-      // ▼▼▼ 修正: setStateを非同期にしてカスケード更新警告を回避 ▼▼▼
       setTimeout(() => {
         setIsFullscreen(false);
         isFullscreenRef.current = false;
@@ -35,6 +34,27 @@ export const useFullscreen = (isOpen: boolean) => {
       if (isFullscreenRef.current) {
         setFullScreenApi(false);
       }
+    };
+  }, []);
+
+  // ▼▼▼ Added: Sync with Browser Fullscreen API (e.g. for Mobile Gesture Exit) ▼▼▼
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isDocFullscreen = !!document.fullscreenElement;
+      // 状態が不一致の場合のみ更新 (toggleFullscreenからの変更と区別するため)
+      if (isDocFullscreen !== isFullscreenRef.current) {
+        setIsFullscreen(isDocFullscreen);
+        isFullscreenRef.current = isDocFullscreen;
+      }
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    // Safari/Older browsers support (Just in case, though Vite/React often polyfills)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
     };
   }, []);
 

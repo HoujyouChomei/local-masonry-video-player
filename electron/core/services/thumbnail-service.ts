@@ -1,11 +1,13 @@
 // electron/core/services/thumbnail-service.ts
 
-import { app, nativeImage, BrowserWindow } from 'electron';
+import { app, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { FFmpegService } from './ffmpeg-service';
-import { NATIVE_EXTENSIONS } from '../../lib/extensions'; // Import
+import { NATIVE_EXTENSIONS } from '../../lib/extensions';
+import { THUMBNAIL } from '../../../src/shared/constants/assets';
+import { NotificationService } from './notification-service';
 
 interface QueueItem {
   path: string;
@@ -19,9 +21,10 @@ export class ThumbnailService {
   private isProcessing = false;
   private thumbDir: string;
   private ffmpegService = new FFmpegService();
+  private notifier = NotificationService.getInstance();
 
   private constructor() {
-    this.thumbDir = path.join(app.getPath('userData'), 'thumbnails');
+    this.thumbDir = path.join(app.getPath('userData'), THUMBNAIL.DIR_NAME);
     if (!fs.existsSync(this.thumbDir)) {
       fs.mkdirSync(this.thumbDir, { recursive: true });
     }
@@ -37,7 +40,7 @@ export class ThumbnailService {
   public deleteThumbnail(videoPath: string): void {
     try {
       const hash = crypto.createHash('md5').update(videoPath).digest('hex');
-      const thumbPath = path.join(this.thumbDir, `${hash}.jpg`);
+      const thumbPath = path.join(this.thumbDir, `${hash}${THUMBNAIL.EXTENSION}`);
 
       if (fs.existsSync(thumbPath)) {
         fs.unlinkSync(thumbPath);
@@ -88,47 +91,42 @@ export class ThumbnailService {
   private async generateThumbnail(filePath: string, force: boolean): Promise<void> {
     try {
       const hash = crypto.createHash('md5').update(filePath).digest('hex');
-      const thumbPath = path.join(this.thumbDir, `${hash}.jpg`);
+      const thumbPath = path.join(this.thumbDir, `${hash}${THUMBNAIL.EXTENSION}`);
 
       if (!force && fs.existsSync(thumbPath)) {
         return;
       }
 
-      // ▼▼▼ 修正: 拡張子によるルーティング ▼▼▼
       const ext = path.extname(filePath).toLowerCase();
-      // .mp4, .webm 等が含まれるかチェック
       const isNativeSupported = NATIVE_EXTENSIONS.has(ext);
 
       let success = false;
 
-      // 1. Native対応形式なら、まずNative生成を試す (高速)
+      // 1. Native
       if (isNativeSupported) {
         try {
           const image = await nativeImage.createThumbnailFromPath(filePath, {
-            width: 480,
-            height: 270,
+            width: THUMBNAIL.WIDTH,
+            height: THUMBNAIL.HEIGHT,
           });
           if (!image.isEmpty()) {
-            const jpegBuffer = image.toJPEG(80);
+            const jpegBuffer = image.toJPEG(THUMBNAIL.QUALITY);
             await fs.promises.writeFile(thumbPath, jpegBuffer);
             success = true;
           }
         } catch {
-          // 失敗したらログを出してFFmpegへフォールバック
-          // console.warn(`[ThumbnailService] Native generation failed for supported format: ${filePath}`);
+          // Fallback
         }
       }
 
-      // 2. Native非対応、またはNative生成に失敗した場合はFFmpegを使用
+      // 2. FFmpeg
       if (!success) {
-        // console.log(`[ThumbnailService] Using FFmpeg for: ${path.basename(filePath)}`);
         success = await this.ffmpegService.generateThumbnail(filePath, thumbPath);
+      }
 
-        if (success) {
-          // FFmpegで生成できた場合はフロントエンドに通知
-          const mainWindow = BrowserWindow.getAllWindows()[0];
-          mainWindow?.webContents.send('on-video-update', { type: 'thumbnail', path: filePath });
-        }
+      if (success) {
+        const event = { type: 'thumbnail' as const, path: filePath };
+        this.notifier.notify(event);
       }
     } catch (error) {
       console.warn(`[ThumbnailService] Failed to generate for ${filePath}`, error);

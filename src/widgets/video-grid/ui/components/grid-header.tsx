@@ -1,8 +1,5 @@
 // src/widgets/video-grid/ui/components/grid-header.tsx
 
-'use client';
-
-import React from 'react';
 import { Hash, Calendar, Clock, HardDrive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 // import { useSettingsStore } from '@/entities/settings/model/store'; // 削除

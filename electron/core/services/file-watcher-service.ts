@@ -2,9 +2,9 @@
 
 import { Worker } from 'worker_threads';
 import path from 'path';
-import { BrowserWindow } from 'electron';
 import { VideoService } from './video-service';
 import { FFmpegService } from './ffmpeg-service';
+import { NotificationService } from './notification-service';
 
 type WorkerMessage =
   | { type: 'file-added'; path: string }
@@ -12,11 +12,12 @@ type WorkerMessage =
   | { type: 'file-changed'; path: string };
 
 export class FileWatcherService {
-  private static instance: FileWatcherService; // Singleton Instance
+  private static instance: FileWatcherService;
 
   private worker: Worker | null = null;
   private videoService: VideoService;
   private ffmpegService = new FFmpegService();
+  private notifier = NotificationService.getInstance();
 
   private constructor() {
     this.videoService = new VideoService();
@@ -59,7 +60,6 @@ export class FileWatcherService {
   public async watch(folderPath: string) {
     if (!this.worker) return;
 
-    // ▼▼▼ 修正: ドット記法でアクセス ▼▼▼
     const hasFFmpeg = await this.ffmpegService.validatePath(
       this.ffmpegService.ffmpegPath,
       'ffmpeg'
@@ -78,38 +78,38 @@ export class FileWatcherService {
   }
 
   private async handleWorkerMessage(msg: WorkerMessage) {
-    const mainWindow = BrowserWindow.getAllWindows()[0];
     const normalizedPath = path.normalize(msg.path);
 
     try {
+      let event: { type: 'add' | 'delete' | 'update'; path: string } | null = null;
+
       switch (msg.type) {
         case 'file-added':
           console.log(`[Watcher] File Added: ${normalizedPath}`);
           await this.videoService.getVideo(normalizedPath);
-          mainWindow?.webContents.send('on-video-update', { type: 'add', path: normalizedPath });
+          event = { type: 'add', path: normalizedPath };
           break;
 
-        case 'file-deleted':
+        case 'file-deleted': {
           console.log(`[Watcher] File Deleted: ${normalizedPath}`);
           const result = await this.videoService.handleFileMissing(normalizedPath);
           if (result === 'recovered') {
-            mainWindow?.webContents.send('on-video-update', {
-              type: 'update',
-              path: normalizedPath,
-            });
+            event = { type: 'update', path: normalizedPath };
           } else {
-            mainWindow?.webContents.send('on-video-update', {
-              type: 'delete',
-              path: normalizedPath,
-            });
+            event = { type: 'delete', path: normalizedPath };
           }
           break;
+        }
 
         case 'file-changed':
           console.log(`[Watcher] File Changed: ${normalizedPath}`);
           await this.videoService.getVideo(normalizedPath);
-          mainWindow?.webContents.send('on-video-update', { type: 'update', path: normalizedPath });
+          event = { type: 'update', path: normalizedPath };
           break;
+      }
+
+      if (event) {
+        this.notifier.notify(event);
       }
     } catch (error) {
       console.error(`[FileWatcherService] Error handling message ${msg.type}:`, error);

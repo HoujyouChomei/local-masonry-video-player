@@ -9,15 +9,33 @@ export interface DirectoryEntry {
   path: string;
 }
 
+// ヘルパー: 再帰的にディレクトリパスを収集
+const scanDirectoriesRecursively = async (dir: string, list: string[]) => {
+  try {
+    const dirents = await fs.readdir(dir, { withFileTypes: true });
+    for (const dirent of dirents) {
+      if (dirent.isDirectory()) {
+        // 隠しフォルダとnode_modulesは除外
+        if (dirent.name.startsWith('.') || dirent.name === 'node_modules') continue;
+
+        const fullPath = path.join(dir, dirent.name);
+        list.push(fullPath);
+        await scanDirectoriesRecursively(fullPath, list);
+      }
+    }
+  } catch {
+    // アクセス権限エラーなどは無視して続行
+  }
+};
+
 export const handleDirectories = () => {
-  // 指定パスの直下にあるサブディレクトリ一覧を返す
+  // 指定パスの直下にあるサブディレクトリ一覧を返す (既存)
   ipcMain.handle('get-subdirectories', async (_event, dirPath: string) => {
     try {
       const dirents = await fs.readdir(dirPath, { withFileTypes: true });
 
       const directories: DirectoryEntry[] = dirents
         .filter((dirent) => {
-          // ディレクトリのみ && 隠しフォルダ(.gitなど)は除外
           return dirent.isDirectory() && !dirent.name.startsWith('.');
         })
         .map((dirent) => ({
@@ -30,5 +48,12 @@ export const handleDirectories = () => {
       console.error(`Failed to read directories from: ${dirPath}`, error);
       return [];
     }
+  });
+
+  // ▼▼▼ 追加: 指定パス以下の全ディレクトリツリーを返す ▼▼▼
+  ipcMain.handle('get-directory-tree', async (_event, dirPath: string) => {
+    const results: string[] = [];
+    await scanDirectoriesRecursively(dirPath, results);
+    return results;
   });
 };

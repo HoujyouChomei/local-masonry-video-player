@@ -1,7 +1,5 @@
 // src/features/scrollbar-manager/ui/scrollbar-manager.tsx
 
-'use client';
-
 import { useEffect, useRef } from 'react';
 
 export const ScrollbarManager = () => {

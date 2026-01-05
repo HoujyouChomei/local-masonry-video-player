@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileCog, FolderOpen, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSettingsStore } from '@/shared/stores/settings-store';

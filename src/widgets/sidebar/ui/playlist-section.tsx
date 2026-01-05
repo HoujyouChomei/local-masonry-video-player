@@ -1,8 +1,5 @@
 // src/widgets/sidebar/ui/playlist-section.tsx
 
-'use client';
-
-import React from 'react';
 import { Plus, ListMusic } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store'; // 追加
 import { Button } from '@/components/ui/button';

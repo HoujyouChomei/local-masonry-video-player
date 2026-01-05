@@ -8,7 +8,7 @@ import {
   VideoCreateInput,
   VideoUpdateInput,
 } from '../repositories/video-repository';
-import { VideoIntegrityRepository } from '../repositories/video-integrity-repository'; // 追加
+import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
 import { VideoFile } from '../../../src/shared/types/video';
 import { VideoMapper } from './video-mapper';
 import { calculateFileHash } from '../../lib/file-hash';
@@ -18,15 +18,17 @@ import { FFmpegService } from './ffmpeg-service';
 import { NATIVE_EXTENSIONS, EXTENDED_EXTENSIONS } from '../../lib/extensions';
 
 const CHUNK_SIZE = 500;
+const MAX_SCAN_DEPTH = 20; // 再帰スキャンの深さ制限
 
 export class LibraryScanner {
   private videoRepo = new VideoRepository();
-  private integrityRepo = new VideoIntegrityRepository(); // 追加
+  private integrityRepo = new VideoIntegrityRepository();
   private mapper = new VideoMapper();
   private rebinder = new VideoRebinder();
   private thumbnailService = ThumbnailService.getInstance();
   private ffmpegService = new FFmpegService();
 
+  // 通常スキャン (変更なし: 直下のみ、サムネイル生成あり)
   async scan(folderPath: string): Promise<VideoFile[]> {
     try {
       const hasFFmpeg = await this.ffmpegService.validatePath(
@@ -57,7 +59,7 @@ export class LibraryScanner {
         .map((row) => row.id);
 
       if (idsToMarkMissing.length > 0) {
-        this.integrityRepo.markAsMissing(idsToMarkMissing); // integrityRepoを使用
+        this.integrityRepo.markAsMissing(idsToMarkMissing);
       }
 
       if (videoFiles.length === 0) return [];
@@ -145,11 +147,11 @@ export class LibraryScanner {
               ino: stat.ino,
             });
             calculateFileHash(filePath).then((hash) => {
-              if (hash) this.integrityRepo.updateHash(id, hash); // integrityRepoを使用
+              if (hash) this.integrityRepo.updateHash(id, hash);
             });
           }
         }
-        this.integrityRepo.upsertMany(toInsert, toUpdate); // integrityRepoを使用
+        this.integrityRepo.upsertMany(toInsert, toUpdate);
       }
 
       if (changedPaths.length > 0) {
@@ -165,6 +167,128 @@ export class LibraryScanner {
     } catch (error) {
       console.error(`Failed to scan folder: ${folderPath}`, error);
       return [];
+    }
+  }
+
+  // 再帰的スキャンヘルパー
+  private async scanDirRecursively(
+    dirPath: string,
+    extensions: Set<string>,
+    depth: number,
+    results: string[]
+  ): Promise<void> {
+    // 深さ制限を超えたら停止
+    if (depth > MAX_SCAN_DEPTH) return;
+
+    try {
+      const dirents = await fs.readdir(dirPath, { withFileTypes: true });
+
+      for (const dirent of dirents) {
+        // シンボリックリンクは循環参照のリスクがあるため無視
+        if (dirent.isSymbolicLink()) continue;
+
+        const fullPath = path.join(dirPath, dirent.name);
+
+        if (dirent.isDirectory()) {
+          // 隠しフォルダ (.gitなど) はスキップ
+          if (dirent.name.startsWith('.')) continue;
+
+          await this.scanDirRecursively(fullPath, extensions, depth + 1, results);
+        } else if (dirent.isFile()) {
+          const ext = path.extname(dirent.name).toLowerCase();
+          if (extensions.has(ext)) {
+            results.push(fullPath);
+          }
+        }
+      }
+    } catch {
+      // ▼▼▼ 修正: catch (error) -> catch に変更し、未使用変数を削除 ▼▼▼
+      // アクセス権限エラーなどは無視して続行
+      // console.warn(`[Scanner] Skipped: ${dirPath}`, error);
+    }
+  }
+
+  // 軽量再帰スキャン (ID登録のみ)
+  async scanQuietly(folderPath: string): Promise<void> {
+    try {
+      const hasFFmpeg = await this.ffmpegService.validatePath(
+        this.ffmpegService.ffmpegPath,
+        'ffmpeg'
+      );
+      const targetExtensions = hasFFmpeg ? EXTENDED_EXTENSIONS : NATIVE_EXTENSIONS;
+
+      const videoFiles: string[] = [];
+
+      console.log(`[LibraryScanner] Starting quiet recursive scan for: ${folderPath}`);
+      await this.scanDirRecursively(folderPath, targetExtensions, 0, videoFiles);
+
+      if (videoFiles.length === 0) return;
+
+      // DB未登録のファイルを特定
+      for (let i = 0; i < videoFiles.length; i += CHUNK_SIZE) {
+        const chunkPaths = videoFiles.slice(i, i + CHUNK_SIZE);
+        const existingRows = this.videoRepo.findManyByPaths(chunkPaths);
+        const existingPathSet = new Set(existingRows.map((r) => r.path));
+
+        const newPaths = chunkPaths.filter((p) => !existingPathSet.has(p));
+
+        if (newPaths.length === 0) continue;
+
+        // 未登録ファイルのみ Stat を取得して登録
+        const toInsert: VideoCreateInput[] = [];
+
+        await Promise.all(
+          newPaths.map(async (filePath) => {
+            try {
+              const stat = await fs.stat(filePath);
+              const fileName = path.basename(filePath);
+
+              // 簡易Rebindチェック (Hash計算なし)
+              const candidate = await this.rebinder.findCandidate(
+                filePath,
+                {
+                  size: stat.size,
+                  mtime: Math.floor(stat.mtimeMs),
+                  birthtime: stat.birthtimeMs,
+                  ino: Number(stat.ino),
+                },
+                false
+              );
+
+              if (candidate) {
+                this.rebinder.execute(
+                  candidate.id,
+                  filePath,
+                  stat.size,
+                  Math.floor(stat.mtimeMs),
+                  Number(stat.ino),
+                  candidate.file_hash,
+                  'Quiet Rebind'
+                );
+              } else {
+                toInsert.push({
+                  id: crypto.randomUUID(),
+                  path: filePath,
+                  name: fileName,
+                  size: stat.size,
+                  mtime: Math.floor(stat.mtimeMs),
+                  created_at: Date.now(),
+                  ino: Number(stat.ino),
+                });
+              }
+            } catch {
+              // ignore
+            }
+          })
+        );
+
+        if (toInsert.length > 0) {
+          console.log(`[LibraryScanner] Registered ${toInsert.length} new files.`);
+          this.integrityRepo.upsertMany(toInsert, []);
+        }
+      }
+    } catch (error) {
+      console.error(`[LibraryScanner] Quiet scan failed for: ${folderPath}`, error);
     }
   }
 }

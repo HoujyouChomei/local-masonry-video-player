@@ -5,7 +5,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useVideoModalPlayer } from './use-video-modal-player';
-import { VideoUpdateEvent } from '@/shared/types/electron'; // 追加
+import { VideoUpdateEvent } from '@/shared/types/electron';
 
 // --- Types for Mocks ---
 interface MockStoreState {
@@ -21,6 +21,7 @@ interface MockStoreState {
   closeVideo: ReturnType<typeof vi.fn>;
   playNext: ReturnType<typeof vi.fn>;
   playPrev: ReturnType<typeof vi.fn>;
+  updateVideoData: ReturnType<typeof vi.fn>;
 }
 
 interface MockSettingsState {
@@ -29,6 +30,7 @@ interface MockSettingsState {
   volume: number;
   isMuted: boolean;
   setVolumeState: ReturnType<typeof vi.fn>;
+  openInFullscreen: boolean;
 }
 
 // --- Mocks ---
@@ -37,14 +39,12 @@ interface MockSettingsState {
 const mockSetFullScreen = vi.fn();
 const mockHarvestMetadata = vi.fn();
 const mockFetchVideoDetails = vi.fn();
-// ▼▼▼ 追加: イベントリスナー用モック ▼▼▼
 const mockOnVideoUpdate = vi.fn();
 
 vi.mock('@/shared/api/electron', () => ({
   setFullScreenApi: (enable: boolean) => mockSetFullScreen(enable),
   harvestMetadataApi: (id: string) => mockHarvestMetadata(id),
   fetchVideoDetailsApi: (path: string) => mockFetchVideoDetails(path),
-  // ▼▼▼ 修正: 型定義を追加 (any -> VideoUpdateEvent) ▼▼▼
   onVideoUpdateApi: (cb: (event: VideoUpdateEvent) => void) => {
     mockOnVideoUpdate(cb);
     return () => {}; // unsubscribe function
@@ -60,6 +60,7 @@ const { storeState, settingsState } = vi.hoisted(() => ({
     closeVideo: vi.fn(),
     playNext: vi.fn(),
     playPrev: vi.fn(),
+    updateVideoData: vi.fn(),
   } as MockStoreState,
   settingsState: {
     autoPlayNext: false,
@@ -67,18 +68,20 @@ const { storeState, settingsState } = vi.hoisted(() => ({
     volume: 0.5,
     isMuted: false,
     setVolumeState: vi.fn(),
+    openInFullscreen: false,
   } as MockSettingsState,
 }));
 
-vi.mock('@/features/video-player/model/store', () => ({
-  useVideoPlayerStore: () => storeState,
-}));
+vi.mock('@/features/video-player/model/store', () => {
+  const useStore = () => storeState;
+  useStore.getState = () => storeState;
+  return { useVideoPlayerStore: useStore };
+});
 
 vi.mock('@/shared/stores/settings-store', () => ({
   useSettingsStore: () => settingsState,
 }));
 
-// use-player-playback.ts で使用されるヘルパーのモック
 vi.mock('@/shared/lib/video-extensions', () => ({
   isNativeVideo: vi.fn().mockReturnValue(true),
   getStreamUrl: vi.fn().mockReturnValue('http://mock-stream-url'),
@@ -89,7 +92,6 @@ vi.mock('@/shared/lib/video-extensions', () => ({
 describe('useVideoModalPlayer Integration Test', () => {
   let videoElement: HTMLVideoElement;
 
-  // QueryClient Wrapperの作成
   const createWrapper = () => {
     const queryClient = new QueryClient({
       defaultOptions: {
@@ -98,7 +100,6 @@ describe('useVideoModalPlayer Integration Test', () => {
         },
       },
     });
-    // 名前付き関数コンポーネントとして定義して返す (ESLintエラー回避)
     const TestWrapper = ({ children }: { children: React.ReactNode }) =>
       React.createElement(QueryClientProvider, { client: queryClient }, children);
 
@@ -109,18 +110,27 @@ describe('useVideoModalPlayer Integration Test', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
 
+    // ▼▼▼ 修正: 非同期関数のモックに戻り値を設定 ▼▼▼
+    // .then() で呼び出されるため、Promiseを返す必要がある
+    mockFetchVideoDetails.mockResolvedValue(null);
+    mockHarvestMetadata.mockResolvedValue(undefined);
+    mockSetFullScreen.mockResolvedValue(undefined);
+    // ▲▲▲ 修正ここまで ▲▲▲
+
     storeState.selectedVideo = null;
     storeState.playlist = [];
     storeState.isOpen = false;
     storeState.closeVideo.mockClear();
     storeState.playNext.mockClear();
     storeState.playPrev.mockClear();
+    storeState.updateVideoData.mockClear();
 
     settingsState.autoPlayNext = false;
     settingsState.toggleAutoPlayNext.mockClear();
     settingsState.volume = 0.5;
     settingsState.isMuted = false;
     settingsState.setVolumeState.mockClear();
+    settingsState.openInFullscreen = false;
 
     videoElement = document.createElement('video');
     videoElement.play = vi.fn().mockResolvedValue(undefined);
@@ -159,6 +169,8 @@ describe('useVideoModalPlayer Integration Test', () => {
       name: 'v1',
       metadataStatus: 'completed',
     };
+    // プリフェッチロジックがエラーにならないようプレイリストも設定
+    storeState.playlist = [storeState.selectedVideo];
 
     hook.rerender();
 

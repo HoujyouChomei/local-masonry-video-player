@@ -1,14 +1,15 @@
 // electron/core/services/background-verification-service.ts
 
-import { BrowserWindow } from 'electron';
-import { VideoIntegrityRepository } from '../repositories/video-integrity-repository'; // 変更
+import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
 import { FileIntegrityService } from './file-integrity-service';
+import { NotificationService } from './notification-service';
 
 export class BackgroundVerificationService {
-  private integrityRepo = new VideoIntegrityRepository(); // 変更
+  private integrityRepo = new VideoIntegrityRepository();
   private integrityService = new FileIntegrityService();
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning = false;
+  private notifier = NotificationService.getInstance();
 
   private readonly CHECK_INTERVAL = 2 * 60 * 1000;
 
@@ -36,7 +37,7 @@ export class BackgroundVerificationService {
     this.isRunning = true;
 
     try {
-      const importantPaths = this.integrityRepo.getImportantPaths(); // 変更
+      const importantPaths = this.integrityRepo.getImportantPaths();
 
       if (importantPaths.length === 0) {
         this.isRunning = false;
@@ -47,8 +48,8 @@ export class BackgroundVerificationService {
 
       if (hasChanges) {
         console.log('[BackgroundVerification] Changes detected. Notifying UI.');
-        const mainWindow = BrowserWindow.getAllWindows()[0];
-        mainWindow?.webContents.send('on-video-update', { type: 'update', path: '' });
+        const event = { type: 'update' as const, path: '' };
+        this.notifier.notify(event);
       }
     } catch (error) {
       console.error('[BackgroundVerification] Error during verification:', error);

@@ -1,7 +1,5 @@
 // src/widgets/video-grid/ui/views/list-view.tsx
 
-'use client';
-
 import React from 'react';
 import {
   DndContext,

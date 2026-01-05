@@ -1,7 +1,5 @@
 // src/features/toggle-favorite/ui/favorite-button.tsx
 
-'use client';
-
 import React from 'react';
 import { Heart } from 'lucide-react';
 import { useFavorites } from '../model/use-favorite';

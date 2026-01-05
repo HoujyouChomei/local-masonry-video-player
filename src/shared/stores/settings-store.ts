@@ -3,11 +3,13 @@
 import { create } from 'zustand';
 import { SortOption } from '@/shared/types/video';
 import { AppSettings, GridStyle } from '@/shared/types/electron';
+import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
 import {
   fetchSettings,
   saveSetting,
   validateFFmpegPathApi,
   validateFFprobePathApi,
+  resetAccessTokenApi,
 } from '@/shared/api/electron';
 
 interface SettingsState extends AppSettings {
@@ -17,6 +19,7 @@ interface SettingsState extends AppSettings {
   // Actions
   setFolderPath: (path: string) => Promise<void>;
   setColumnCount: (count: number) => Promise<void>;
+  setMobileColumnCount: (count: number) => Promise<void>;
   setSortOption: (option: SortOption) => Promise<void>;
 
   toggleSidebar: () => void;
@@ -42,44 +45,24 @@ interface SettingsState extends AppSettings {
   setFFmpegPath: (path: string) => Promise<boolean>;
   setFFprobePath: (path: string) => Promise<boolean>;
 
-  // ▼▼▼ Phase 20 Action ▼▼▼
   toggleExperimentalNormalize: () => Promise<void>;
 
-  // ▼▼▼ 追加: Actions ▼▼▼
   toggleLargeVideoRestriction: () => Promise<void>;
   setLargeVideoThreshold: (mb: number) => Promise<void>;
+
+  // ▼▼▼ Added: Fullscreen Toggle ▼▼▼
+  toggleOpenInFullscreen: () => Promise<void>;
+
+  // Phase 25: Mobile Support Actions
+  toggleMobileConnection: () => Promise<void>;
+  resetAuthToken: () => Promise<void>;
 
   initialize: () => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  // Default Values
-  folderPath: '',
-  columnCount: 4,
-  sortOption: 'date-desc',
-  libraryFolders: [],
-  isSidebarOpen: true,
-  expandedPaths: [],
-  rootMargin: 500, // Modified: Balanced
-  debounceTime: 100, // Modified: 100ms
-  chunkSize: 100,
-
-  autoPlayNext: false,
-  enableHardwareDecoding: true, // Modified: ON
-  playOnHoverOnly: false,
-  volume: 1.0,
-  isMuted: false,
-  layoutMode: 'masonry',
-  gridStyle: 'modern',
-
-  ffmpegPath: '',
-  ffprobePath: '',
-
-  enableExperimentalNormalize: false,
-
-  // ▼▼▼ 追加: 初期値 (TypeScript用) ▼▼▼
-  enableLargeVideoRestriction: true,
-  largeVideoThreshold: 1024,
+  // Default Values from Single Source of Truth
+  ...DEFAULT_SETTINGS,
 
   isInitialized: false,
 
@@ -101,6 +84,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setColumnCount: async (count) => {
     set({ columnCount: count });
     await saveSetting('columnCount', count);
+  },
+
+  setMobileColumnCount: async (count) => {
+    const safeCount = count < 1 ? 1 : count > 2 ? 2 : count;
+    set({ mobileColumnCount: safeCount });
+    await saveSetting('mobileColumnCount', safeCount);
   },
 
   setSortOption: async (option) => {
@@ -213,14 +202,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return isValid;
   },
 
-  // ▼▼▼ Action Implementation ▼▼▼
   toggleExperimentalNormalize: async () => {
     const newState = !get().enableExperimentalNormalize;
     set({ enableExperimentalNormalize: newState });
     await saveSetting('enableExperimentalNormalize', newState);
   },
 
-  // ▼▼▼ 追加: 実装 ▼▼▼
   toggleLargeVideoRestriction: async () => {
     const newState = !get().enableLargeVideoRestriction;
     set({ enableLargeVideoRestriction: newState });
@@ -230,5 +217,26 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   setLargeVideoThreshold: async (mb) => {
     set({ largeVideoThreshold: mb });
     await saveSetting('largeVideoThreshold', mb);
+  },
+
+  // ▼▼▼ Added: Toggle Action ▼▼▼
+  toggleOpenInFullscreen: async () => {
+    const newState = !get().openInFullscreen;
+    set({ openInFullscreen: newState });
+    await saveSetting('openInFullscreen', newState);
+  },
+
+  // Phase 25 Implementation
+  toggleMobileConnection: async () => {
+    const newState = !get().enableMobileConnection;
+    set({ enableMobileConnection: newState });
+    await saveSetting('enableMobileConnection', newState);
+  },
+
+  resetAuthToken: async () => {
+    const newToken = await resetAccessTokenApi();
+    if (newToken) {
+      set({ authAccessToken: newToken });
+    }
   },
 }));

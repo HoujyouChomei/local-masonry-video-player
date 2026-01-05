@@ -1,13 +1,14 @@
 // electron/core/repositories/video-search-repository.ts
 
-import path from 'path'; // 追加
+import path from 'path';
 import { getDB } from '../../lib/db';
-import { VideoRow } from './video-repository';
+import { VideoRow, LITE_COLUMNS } from './video-repository';
 
 export interface SearchOptions {
   folderPath?: string;
   playlistId?: string;
   isFavorite?: boolean;
+  allowedRoots?: string[]; // ▼▼▼ 追加: 検索対象をこれらのフォルダ配下に限定する ▼▼▼
 }
 
 export class VideoSearchRepository {
@@ -16,7 +17,7 @@ export class VideoSearchRepository {
   }
 
   /**
-   * 動画検索を実行する (Hybrid Search: FTS5 + LIKE + Special Syntax)
+   * 動画検索を実行する (Modified: FTS5 Only for Performance)
    * @param query 検索クエリ文字列
    * @param tagIds タグIDのリスト (AND条件)
    * @param options 検索スコープオプション
@@ -28,15 +29,12 @@ export class VideoSearchRepository {
     const sqlConditions: string[] = [];
 
     // FPS Syntax: fps:60, fps:24 など
-    // 数値周辺の誤差を考慮して ±1 の範囲で検索する
     const fpsMatch = rawQuery.match(/fps:(\d+)/i);
     if (fpsMatch) {
       const targetFps = parseInt(fpsMatch[1], 10);
       sqlConditions.push(`(v.fps >= ? AND v.fps < ?)`);
-      params.push(targetFps - 1); // 例: 59
-      params.push(targetFps + 1); // 例: 61
-
-      // クエリから除去
+      params.push(targetFps - 1);
+      params.push(targetFps + 1);
       rawQuery = rawQuery.replace(fpsMatch[0], '');
     }
 
@@ -46,8 +44,6 @@ export class VideoSearchRepository {
       const targetCodec = codecMatch[1];
       sqlConditions.push(`v.codec LIKE ?`);
       params.push(`%${targetCodec}%`);
-
-      // クエリから除去
       rawQuery = rawQuery.replace(codecMatch[0], '');
     }
 
@@ -68,7 +64,6 @@ export class VideoSearchRepository {
     const hasQuery = includes.length > 0 || excludes.length > 0;
     const hasSpecialConditions = sqlConditions.length > 0;
 
-    // 何も条件がない場合は空を返す
     if (
       !hasQuery &&
       !hasTags &&
@@ -81,7 +76,7 @@ export class VideoSearchRepository {
     }
 
     // 2. ベースクエリ構築
-    let sql = `SELECT v.* FROM videos v`;
+    let sql = `SELECT ${LITE_COLUMNS} FROM videos v`;
 
     if (hasTags) {
       sql += ` JOIN video_tags vt ON v.id = vt.video_id`;
@@ -92,16 +87,13 @@ export class VideoSearchRepository {
 
     sql += ` WHERE v.status = 'available'`;
 
-    // 特殊構文条件の追加 (fps, codec指定)
     if (hasSpecialConditions) {
       sql += ` AND ${sqlConditions.join(' AND ')}`;
     }
 
     // 3. スコープ条件
     if (options.folderPath) {
-      // ▼▼▼ 変更: 再帰検索を防止し、直下のファイルのみを対象にする ▼▼▼
-      
-      // 1. パスの末尾にセパレータを保証 (例: "C:\Videos" -> "C:\Videos\")
+      // 特定フォルダ内検索
       const folderPrefix = options.folderPath.endsWith(path.sep)
         ? options.folderPath
         : options.folderPath + path.sep;
@@ -109,15 +101,31 @@ export class VideoSearchRepository {
       sql += ` AND v.path LIKE ?`;
       params.push(`${folderPrefix}%`);
 
-      // 2. プレフィックス以降の部分にセパレータが含まれていないことを確認 (直下判定)
-      // SQLiteの SUBSTR は 1-based index なので +1
       const offset = folderPrefix.length + 1;
-      
       sql += ` AND INSTR(SUBSTR(v.path, ?), ?) = 0`;
       params.push(offset);
       params.push(path.sep);
+    } else if (
+      !options.playlistId &&
+      !options.isFavorite &&
+      options.allowedRoots &&
+      options.allowedRoots.length > 0
+    ) {
+      // ▼▼▼ 追加: グローバル検索時のライブラリフォルダ制限 ▼▼▼
+      // playlistId や isFavorite が指定されている場合は、場所に関わらず表示する（または要件に応じてここも含める）
+      // ここでは「グローバル検索」のコンテキストなので、プレイリストやお気に入り指定がない場合のみ制限を適用します。
+
+      const rootConditions = options.allowedRoots.map(() => `v.path LIKE ?`).join(' OR ');
+      sql += ` AND (${rootConditions})`;
+
+      // 各ルートパスに対して前方一致条件を追加
+      options.allowedRoots.forEach((root) => {
+        // パスの区切り文字を考慮して、フォルダ配下であることを保証
+        const prefix = root.endsWith(path.sep) ? root : root + path.sep;
+        params.push(`${prefix}%`);
+      });
     }
-    
+
     if (options.playlistId) {
       sql += ` AND pi.playlist_id = ?`;
       params.push(options.playlistId);
@@ -133,36 +141,12 @@ export class VideoSearchRepository {
       params.push(...tagIds);
     }
 
-    // 5. キーワード検索 (Hybrid: FTS OR LIKE)
+    // 5. キーワード検索 (FTS5 Prefix Search)
     if (includes.length > 0) {
-      sql += ` AND (`;
+      const ftsQueryString = includes.map((t) => `"${t.replace(/"/g, '')}"*`).join(' AND ');
 
-      const subConditions: string[] = [];
-
-      // A. FTS Search
-      const ftsQueryString = includes.map((t) => `"${t.replace(/"/g, '')}"`).join(' AND ');
-      subConditions.push(`v.rowid IN (SELECT rowid FROM videos_fts WHERE videos_fts MATCH ?)`);
+      sql += ` AND v.rowid IN (SELECT rowid FROM videos_fts WHERE videos_fts MATCH ?)`;
       params.push(ftsQueryString);
-
-      // B. LIKE Search (Fallback & Partial Match)
-      // path, generation_params, codec を対象にする
-      const likeConditions = includes
-        .map(
-          () => `
-        (v.path LIKE ? OR v.generation_params LIKE ? OR v.codec LIKE ?)
-      `
-        )
-        .join(' AND ');
-      subConditions.push(`(${likeConditions})`);
-
-      includes.forEach((term) => {
-        params.push(`%${term}%`); // path
-        params.push(`%${term}%`); // generation_params
-        params.push(`%${term}%`); // codec (Added)
-      });
-
-      sql += subConditions.join(' OR ');
-      sql += `)`;
     }
 
     // 6. 除外キーワード

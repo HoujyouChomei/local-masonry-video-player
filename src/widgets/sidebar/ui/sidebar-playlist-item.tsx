@@ -1,7 +1,5 @@
 // src/widgets/sidebar/ui/sidebar-playlist-item.tsx
 
-'use client';
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ListMusic, Trash2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -10,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Playlist } from '@/shared/types/playlist';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useRenamePlaylist, useDeletePlaylist } from '@/entities/playlist/model/use-playlists';
-// ▼▼▼ 追加 ▼▼▼
 import { useSidebarDrop } from '@/shared/lib/use-sidebar-drop';
+import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
 
 interface PlaylistNameInputProps {
   initialValue: string;
@@ -76,8 +74,9 @@ export const SidebarPlaylistItem = ({
   const { mutate: renamePlaylist } = useRenamePlaylist();
   const { mutate: deletePlaylist, isPending: isDeleting } = useDeletePlaylist();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const isMobile = useIsMobile(); // 追加
 
-  // ▼▼▼ 追加: DnD Hook ▼▼▼
+  // DnD Hook
   const { isOver, dropProps } = useSidebarDrop({
     type: 'playlist',
     targetId: playlist.id,
@@ -105,11 +104,9 @@ export const SidebarPlaylistItem = ({
         isSelected
           ? 'bg-white/20 text-white hover:bg-white/30'
           : 'text-gray-400 hover:bg-white/10 hover:text-white',
-        // ▼▼▼ 追加: ドラッグオーバー時のハイライト ▼▼▼
         isOver && 'bg-primary/30 ring-primary/50 text-white ring-1'
       )}
       onClick={onSelect}
-      // ▼▼▼ 追加: Drop Event Handlers ▼▼▼
       {...dropProps}
     >
       <div className="pointer-events-none flex min-w-0 flex-1 items-center gap-2 truncate">
@@ -118,7 +115,13 @@ export const SidebarPlaylistItem = ({
         <span className="shrink-0 text-xs opacity-50">({playlist.videoPaths.length})</span>
       </div>
 
-      <div className="flex shrink-0 items-center opacity-0 transition-opacity group-hover:opacity-100">
+      {/* ▼▼▼ 修正: モバイル時は opacity-100 を強制 (ホバーなしで表示) ▼▼▼ */}
+      <div
+        className={cn(
+          'flex shrink-0 items-center transition-opacity',
+          isMobile ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        )}
+      >
         <Button
           variant="ghost"
           size="icon"

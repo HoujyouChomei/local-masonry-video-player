@@ -8,7 +8,7 @@ import { VideoRepository } from '../repositories/video-repository';
 import crypto from 'crypto';
 import { VideoMapper } from './video-mapper';
 import { FileIntegrityService } from './file-integrity-service';
-import { BrowserWindow } from 'electron';
+import { NotificationService } from './notification-service';
 
 export class PlaylistService {
   private playlistRepo = new PlaylistRepository();
@@ -16,6 +16,7 @@ export class PlaylistService {
   private videoRepo = new VideoRepository();
   private mapper = new VideoMapper();
   private integrityService = new FileIntegrityService();
+  private notifier = NotificationService.getInstance();
 
   getAll(): Playlist[] {
     return this.playlistRepo.getAll();
@@ -55,22 +56,23 @@ export class PlaylistService {
     return this.playlistRepo.getById(id);
   }
 
-  // ▼▼▼ 変更: videoIdを受け取る。存在確認のみ行う ▼▼▼
+  /**
+   * 動画をプレイリストに追加
+   * ※ videoId は VideoRepository 等で解決済みであることを前提とする
+   */
   async addVideo(playlistId: string, videoId: string): Promise<Playlist | null> {
     const video = this.videoRepo.findById(videoId);
-    if (!video) return null; // IDが存在しない場合は何もしない
+    if (!video) return null;
 
     this.playlistRepo.addVideo(playlistId, videoId);
     return this.playlistRepo.getById(playlistId);
   }
 
-  // ▼▼▼ 変更: videoIdを受け取る ▼▼▼
   removeVideo(playlistId: string, videoId: string): Playlist | null {
     this.playlistRepo.removeVideo(playlistId, videoId);
     return this.playlistRepo.getById(playlistId);
   }
 
-  // ▼▼▼ 変更: videoIdsを受け取る ▼▼▼
   reorder(playlistId: string, videoIds: string[]): Playlist | null {
     this.playlistRepo.reorderVideos(playlistId, videoIds);
     return this.playlistRepo.getById(playlistId);
@@ -88,8 +90,8 @@ export class PlaylistService {
     const rows = this.videoRepo.findManyByPaths(paths);
 
     if (hasChanges) {
-      const mainWindow = BrowserWindow.getAllWindows()[0];
-      mainWindow?.webContents.send('on-video-update', { type: 'update', path: '' });
+      const event = { type: 'update' as const, path: '' };
+      this.notifier.notify(event);
     }
 
     const rowMap = new Map(rows.map((r) => [r.path, r]));

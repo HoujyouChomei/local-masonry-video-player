@@ -8,6 +8,7 @@ import { useSaveFolderOrder } from '@/features/sort-videos/model/use-folder-orde
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { VideoFile } from '@/shared/types/video';
+import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
 
 export const useVideoGridInteractions = (folderPath: string, allSortedVideos: VideoFile[]) => {
   const openVideo = useVideoPlayerStore((state) => state.openVideo);
@@ -27,6 +28,8 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
   const { mutate: reorderPlaylist } = useReorderPlaylist();
   const { mutate: saveFolderOrder } = useSaveFolderOrder();
 
+  const isMobile = useIsMobile(); // 追加
+
   const [videoToRename, setVideoToRename] = useState<VideoFile | null>(null);
 
   const videosRef = useRef(allSortedVideos);
@@ -38,8 +41,8 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
   const isLongPressTriggeredRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
 
-  const LONG_PRESS_DURATION = 1000;
-  const DRAG_THRESHOLD = 5;
+  const LONG_PRESS_DURATION = 500;
+  const DRAG_THRESHOLD = 10;
 
   const clearLongPressTimer = useCallback(() => {
     if (longPressTimerRef.current) {
@@ -51,7 +54,10 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
 
   const handlePointerDown = useCallback(
     (video: VideoFile, e: React.PointerEvent) => {
-      if (e.button !== 0) return;
+      // ▼▼▼ 修正: モバイルの場合は自前のタイマー処理を行わない（ライブラリ標準に任せる） ▼▼▼
+      if (isMobile) return;
+
+      if (!e.isPrimary || e.button !== 0) return;
 
       isLongPressTriggeredRef.current = false;
       pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
@@ -59,6 +65,7 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
       longPressTimerRef.current = setTimeout(() => {
         isLongPressTriggeredRef.current = true;
 
+        // PCでのロングプレス挙動
         if (useSelectionStore.getState().isSelectionMode) {
           exitSelectionMode();
         } else {
@@ -66,7 +73,7 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
         }
       }, LONG_PRESS_DURATION);
     },
-    [enterSelectionMode, exitSelectionMode]
+    [isMobile, enterSelectionMode, exitSelectionMode] // 依存配列に追加
   );
 
   const handlePointerMove = useCallback(
@@ -99,6 +106,8 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
     (video: VideoFile, e: React.MouseEvent) => {
       if (isLongPressTriggeredRef.current) {
         isLongPressTriggeredRef.current = false;
+        e.preventDefault();
+        e.stopPropagation();
         return;
       }
 
@@ -123,14 +132,11 @@ export const useVideoGridInteractions = (folderPath: string, allSortedVideos: Vi
     (newOrder: VideoFile[]) => {
       if (isGlobalMode || isTagMode || isSelectionMode) return;
 
-      // プレイリストの場合はIDを渡す
       if (isPlaylistMode && selectedPlaylistId) {
-        const newIds = newOrder.map((v) => v.id); // ▼▼▼ ID配列を作成 ▼▼▼
-        reorderPlaylist({ playlistId: selectedPlaylistId, newVideoIds: newIds }); // 変数名変更
+        const newIds = newOrder.map((v) => v.id);
+        reorderPlaylist({ playlistId: selectedPlaylistId, newVideoIds: newIds });
         queryClient.setQueryData(['playlist-videos', selectedPlaylistId], newOrder);
       } else if (!isPlaylistMode) {
-        // 通常フォルダの場合は引き続きパスベース (ソート順はパスで保存されているため)
-        // ※ 将来的にはここもIDにするか検討だが、今回は対象外
         const newPaths = newOrder.map((v) => v.path);
         saveFolderOrder({ folderPath, videoPaths: newPaths });
         queryClient.setQueryData(['folder-order', folderPath], newPaths);

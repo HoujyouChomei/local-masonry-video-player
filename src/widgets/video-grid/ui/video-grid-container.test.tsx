@@ -1,12 +1,26 @@
 // src/widgets/video-grid/ui/video-grid-container.test.tsx
 
-import React from 'react';
 import { render, screen, act, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VideoGridContainer } from './video-grid-container';
 import { VideoFile } from '@/shared/types/video';
 
 // --- Mocks Setup ---
+
+// 0. Global Mocks
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 // 1. Mock Child Component (VideoGridLayout)
 vi.mock('./video-grid-layout', () => ({
@@ -17,12 +31,7 @@ vi.mock('./video-grid-layout', () => ({
         Fetch More
       </button>
       {videos.map((v: VideoFile) => (
-        <div
-          key={v.id}
-          data-testid="video-item"
-          // ▼▼▼ 修正: イベントオブジェクト e を受け取り、第2引数として渡す ▼▼▼
-          onClick={(e) => onVideoClick(v, e)}
-        >
+        <div key={v.id} data-testid="video-item" onClick={(e) => onVideoClick(v, e)}>
           {v.name}
           <button data-testid={`rename-${v.id}`} onClick={() => onRenameOpen(v)}>
             Rename
@@ -41,15 +50,15 @@ const mockOpenVideo = vi.fn();
 const mockReorderPlaylist = vi.fn();
 const mockSaveFolderOrder = vi.fn();
 
-// ▼▼▼ 修正: パスを新しい場所に更新 (entities -> shared) ▼▼▼
 vi.mock('@/shared/stores/settings-store', () => ({
   useSettingsStore: (selector: (state: unknown) => unknown) =>
     selector({
       sortOption: 'date-desc',
       layoutMode: 'masonry',
-      chunkSize: 10, // テスト用に小さく設定
+      chunkSize: 10,
       gridStyle: 'modern',
-      folderPath: '/test/videos', // folderPathを追加
+      folderPath: '/test/videos',
+      mobileColumnCount: 1, // Added
     }),
 }));
 
@@ -59,7 +68,6 @@ vi.mock('@/shared/stores/ui-store', () => ({
       showFavoritesOnly: false,
       selectedPlaylistId: null,
       viewMode: 'folder',
-      // Selection Mode Mock
       isSelectionMode: false,
       selectedVideoIds: [],
       enterSelectionMode: vi.fn(),
@@ -81,12 +89,11 @@ vi.mock('@/features/search-videos/model/store', () => ({
   useSearchStore: (selector: (state: unknown) => unknown) =>
     selector({
       query: '',
-      searchScope: 'folder', // 追加
-      debouncedQuery: '', // 追加
+      searchScope: 'folder',
+      debouncedQuery: '',
     }),
 }));
 
-// ▼▼▼ 追加: useSelectionStore Mock ▼▼▼
 vi.mock('@/shared/stores/selection-store', () => ({
   useSelectionStore: (selector: (state: unknown) => unknown) =>
     selector({
@@ -125,13 +132,16 @@ vi.mock('../model/use-video-updates', () => ({
   useVideoUpdates: vi.fn(),
 }));
 
-// ▼▼▼ 追加: useExternalDrop Mock ▼▼▼
-// 外部ドロップロジック（useBatchMoveを含む）をモック化して依存を切り離す
 vi.mock('../model/use-external-drop', () => ({
   useExternalDrop: () => ({
     isDraggingOver: false,
     dropHandlers: {},
   }),
+}));
+
+// Mock useIsMobile
+vi.mock('@/shared/lib/use-is-mobile', () => ({
+  useIsMobile: () => false, // Default to PC
 }));
 
 // 4. Mock API Mutations
@@ -143,7 +153,6 @@ vi.mock('@/features/sort-videos/model/use-folder-order', () => ({
   useSaveFolderOrder: () => ({ mutate: mockSaveFolderOrder }),
 }));
 
-// ▼▼▼ 修正: useMutation を追加 ▼▼▼
 vi.mock('@tanstack/react-query', () => ({
   useQuery: () => ({ data: null }),
   useQueryClient: () => ({
@@ -169,46 +178,33 @@ describe('VideoGridContainer Integration', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers(); // タイマーモック有効化
-
-    // window.scrollTo mock
+    vi.useFakeTimers();
     Object.defineProperty(window, 'scrollTo', { value: vi.fn(), writable: true });
   });
 
   afterEach(() => {
-    vi.useRealTimers(); // タイマーモック解除
+    vi.useRealTimers();
   });
 
   it('renders correctly with initial data', () => {
     render(<VideoGridContainer {...defaultProps} />);
-
-    // 初期表示は chunkSize (10) に制限されているはず
-    // toHaveTextContent の代わりに textContent を直接比較
     expect(screen.getByTestId('video-count').textContent).toBe('10');
   });
 
   it('handles infinite scroll (fetch more)', () => {
     render(<VideoGridContainer {...defaultProps} />);
-
-    // Fetch More ボタンをクリック
     const btn = screen.getByTestId('fetch-more-btn');
     fireEvent.click(btn);
-
-    // setTimeout (300ms) を待機
     act(() => {
       vi.advanceTimersByTime(300);
     });
-
-    // 表示数が chunkSize 分増えているはず (10 -> 20)
     expect(screen.getByTestId('video-count').textContent).toBe('20');
   });
 
   it('handles video click to open player', () => {
     render(<VideoGridContainer {...defaultProps} />);
-
     const items = screen.getAllByTestId('video-item');
-    fireEvent.click(items[0]); // 最初のビデオをクリック
-
+    fireEvent.click(items[0]);
     expect(mockOpenVideo).toHaveBeenCalledTimes(1);
     expect(mockOpenVideo).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'v-0' }),
@@ -218,11 +214,8 @@ describe('VideoGridContainer Integration', () => {
 
   it('handles reorder logic (Folder Mode)', () => {
     render(<VideoGridContainer {...defaultProps} />);
-
     const btn = screen.getByTestId('reorder-btn');
     fireEvent.click(btn);
-
-    // PlaylistModeでないため、FolderOrder保存が呼ばれるはず
     expect(mockSaveFolderOrder).toHaveBeenCalled();
     expect(mockReorderPlaylist).not.toHaveBeenCalled();
   });

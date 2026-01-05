@@ -1,7 +1,5 @@
 // src/widgets/video-grid/ui/video-grid-layout.tsx
 
-'use client';
-
 import React from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
 import { VideoFile, SortOption } from '@/shared/types/video';
@@ -79,26 +77,45 @@ export const VideoGridLayout = ({
 }: VideoGridLayoutProps) => {
   const isSelectionMode = useSelectionStore((state) => state.isSelectionMode);
 
+  // ▼▼▼ 修正: isLoading を条件から除外 ▼▼▼
+  // これにより、検索中やフォルダ切り替え中も、前の画面を表示し続ける（Stale-while-revalidate）
   if (
     totalVideosCount === 0 ||
-    isLoading ||
+    // isLoading ||  <-- 削除
     isError ||
     (!isGlobalMode && !isPlaylistMode && !isTagMode && !folderPath)
   ) {
-    return (
-      <EmptyState
-        isLoading={isLoading}
-        isError={isError}
-        error={error}
-        totalVideosCount={totalVideosCount}
-        searchQuery={searchQuery}
-        isGlobalMode={isGlobalMode}
-        isPlaylistMode={isPlaylistMode}
-        isTagMode={isTagMode}
-        folderPath={folderPath}
-        showFavoritesOnly={showFavoritesOnly}
-      />
-    );
+    // データがない、かつロード中でもない場合にのみ EmptyState を出す
+    // (ロード中は videos が空でも、初期ロードでなければ前のデータが残っているはずだが、
+    // useVideoSource がデータをクリアする場合は空になる。その場合のみ EmptyState が出る)
+    if (!isLoading) {
+      return (
+        <EmptyState
+          isLoading={isLoading}
+          isError={isError}
+          error={error}
+          totalVideosCount={totalVideosCount}
+          searchQuery={searchQuery}
+          isGlobalMode={isGlobalMode}
+          isPlaylistMode={isPlaylistMode}
+          isTagMode={isTagMode}
+          folderPath={folderPath}
+          showFavoritesOnly={showFavoritesOnly}
+        />
+      );
+    }
+    // ロード中でデータが空の場合は、ちらつき防止のため何も表示しないか、
+    // あるいはスケルトンを表示するのが理想だが、ここではnullを返してホワイトアウトを許容するか
+    // EmptyState(Loading)を出すか。
+    // useQueryの挙動として、キーが変わるとデータはundefinedになるため、
+    // 厳密にはここでもローディング表示が必要になる場合がある。
+    // ただし、検索クエリの変化(keepPreviousData相当)の場合はデータが残る。
+
+    // データが本当に空で、ロード中の場合
+    if (isLoading && videos.length === 0) {
+      // 初回ロード時などはここに来る
+      return null;
+    }
   }
 
   const isSortable =
@@ -114,6 +131,13 @@ export const VideoGridLayout = ({
         loader={null}
         style={{ overflow: 'visible' }}
       >
+        {/* ▼▼▼ 追加: ロード中であることを視覚的に示す（オプション） ▼▼▼ */}
+        {isLoading && (
+          <div className="fixed top-16 right-6 z-50">
+            <div className="bg-primary h-2 w-2 animate-ping rounded-full opacity-75"></div>
+          </div>
+        )}
+
         {layoutMode === 'masonry' ? (
           <MasonryView
             videos={videos}
@@ -147,7 +171,6 @@ export const VideoGridLayout = ({
         <RenameVideoDialog
           isOpen={!!videoToRename}
           onOpenChange={(isOpen) => !isOpen && onRenameClose()}
-          // ▼▼▼ 変更: videoIdを渡す ▼▼▼
           videoId={videoToRename.id}
           videoName={videoToRename.name}
         />

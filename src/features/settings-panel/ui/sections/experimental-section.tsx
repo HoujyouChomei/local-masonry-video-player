@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+// src/features/settings-panel/ui/sections/experimental-section.tsx
+
+import { useState } from 'react';
 import { Beaker, ChevronDown } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { cn } from '@/lib/utils';
 import { SettingsSwitch } from '../components/settings-switch';
+import { MobileConnectionSection } from './mobile-connection-section';
 
-export const ExperimentalSection = ({ isVisible }: { isVisible: boolean }) => {
+interface ExperimentalSectionProps {
+  isFFmpegValid: boolean | null;
+}
+
+export const ExperimentalSection = ({ isFFmpegValid }: ExperimentalSectionProps) => {
   const { enableExperimentalNormalize, toggleExperimentalNormalize } = useSettingsStore();
   const [isExpanded, setIsExpanded] = useState(false);
-
-  if (!isVisible) return null;
 
   return (
     <div className="border-border/40 border-t pt-2">
@@ -18,7 +23,7 @@ export const ExperimentalSection = ({ isVisible }: { isVisible: boolean }) => {
           className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between text-xs font-semibold transition-colors outline-none select-none"
         >
           <span className="flex items-center gap-2">
-            <Beaker size={12} /> EXPERIMENTAL FEATURES
+            <Beaker size={12} /> EXPERIMENTAL
           </span>
           <ChevronDown
             size={12}
@@ -27,20 +32,27 @@ export const ExperimentalSection = ({ isVisible }: { isVisible: boolean }) => {
         </button>
 
         {isExpanded && (
-          <div className="animate-in fade-in slide-in-from-top-1 mt-3 space-y-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Enable &quot;Normalize Video&quot;</div>
-                <p className="text-muted-foreground text-[10px] leading-relaxed">
-                  Adds an option to re-encode videos to even-dimension H.264. This improves
-                  compatibility with Generative AI and GPU acceleration, resolving playback issues.
-                </p>
+          <div className="animate-in fade-in slide-in-from-top-1 mt-3 space-y-6">
+            {/* Mobile Connection (Always Visible on PC) */}
+            <MobileConnectionSection />
+
+            {/* Normalize Video (Visible only if FFmpeg is valid) */}
+            {isFFmpegValid && (
+              <div className="border-border/30 flex items-start justify-between gap-3 border-t pt-4">
+                <div className="space-y-1">
+                  <div className="text-sm font-medium">Enable &quot;Normalize Video&quot;</div>
+                  <p className="text-muted-foreground text-[10px] leading-relaxed">
+                    Adds an option to re-encode videos to even-dimension H.264. This improves
+                    compatibility with Generative AI and GPU acceleration, resolving playback
+                    issues.
+                  </p>
+                </div>
+                <SettingsSwitch
+                  checked={enableExperimentalNormalize}
+                  onCheckedChange={toggleExperimentalNormalize}
+                />
               </div>
-              <SettingsSwitch
-                checked={enableExperimentalNormalize}
-                onCheckedChange={toggleExperimentalNormalize}
-              />
-            </div>
+            )}
           </div>
         )}
       </div>

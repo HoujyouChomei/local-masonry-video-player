@@ -1,8 +1,5 @@
 // src/widgets/video-grid/ui/components/empty-state.tsx
 
-'use client';
-
-import React from 'react';
 import { AlertCircle, Star, SearchX, ListMusic, FolderOpen, Hash } from 'lucide-react';
 import { SelectFolderButton } from '@/features/select-folder/ui/select-folder-button';
 
@@ -14,7 +11,7 @@ interface EmptyStateProps {
   searchQuery: string;
   isGlobalMode: boolean;
   isPlaylistMode: boolean;
-  isTagMode: boolean; // 追加
+  isTagMode: boolean;
   folderPath: string;
   showFavoritesOnly: boolean;
 }
@@ -27,7 +24,7 @@ export const EmptyState = ({
   searchQuery,
   isGlobalMode,
   isPlaylistMode,
-  isTagMode, // 追加
+  isTagMode,
   folderPath,
   showFavoritesOnly,
 }: EmptyStateProps) => {
@@ -85,7 +82,6 @@ export const EmptyState = ({
             <p className="text-sm">Right-click on videos to add them here.</p>
           </>
         ) : isTagMode ? (
-          // ▼▼▼ タグモード用の空状態 ▼▼▼
           <>
             <Hash size={48} className="mb-2 opacity-20" />
             <p>No videos found with this tag.</p>

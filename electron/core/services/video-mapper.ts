@@ -2,7 +2,7 @@
 
 import path from 'path';
 import { pathToFileURL } from 'url';
-import { getServerPort } from '../../lib/local-server';
+import { getServerPort } from '../../lib/server-state'; // 変更: 依存先を変更
 import { VideoRow } from '../repositories/video-repository';
 import { VideoFile } from '../../../src/shared/types/video';
 
@@ -14,11 +14,14 @@ export class VideoMapper {
     const port = getServerPort();
     const src = pathToFileURL(row.path).href;
 
-    const thumbnailSrc = `http://127.0.0.1:${port}/thumbnail?path=${encodeURIComponent(row.path)}&ts=${row.mtime}&size=${row.size}`;
+    // ポートが未設定(0)の場合はlocalhostで仮組みするが、通常はサーバー起動後に呼ばれる
+    const authority = port > 0 ? `127.0.0.1:${port}` : '127.0.0.1';
+    
+    const thumbnailSrc = `http://${authority}/thumbnail?path=${encodeURIComponent(row.path)}&ts=${row.mtime}&size=${row.size}`;
 
     return {
       id: row.id,
-      name: row.name || path.basename(row.path), // DBにnameがない場合のフォールバック
+      name: row.name || path.basename(row.path),
       path: row.path,
       src,
       thumbnailSrc,
@@ -30,7 +33,6 @@ export class VideoMapper {
       height: row.height ?? undefined,
       generationParams: row.generation_params ?? undefined,
       metadataStatus: row.metadata_status ?? 'pending',
-      // ▼▼▼ v5 added ▼▼▼
       fps: row.fps ?? undefined,
       codec: row.codec ?? undefined,
     };

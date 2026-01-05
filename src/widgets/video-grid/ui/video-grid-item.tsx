@@ -1,7 +1,5 @@
 // src/widgets/video-grid/ui/video-grid-item.tsx
 
-'use client';
-
 import React from 'react';
 import { VideoCard } from '@/entities/video/ui/video-card';
 import { FavoriteButton } from '@/features/toggle-favorite/ui/favorite-button';

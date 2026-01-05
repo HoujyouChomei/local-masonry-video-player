@@ -1,7 +1,5 @@
 // src/widgets/video-grid/ui/sortable-video-list-item.tsx
 
-'use client';
-
 import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';

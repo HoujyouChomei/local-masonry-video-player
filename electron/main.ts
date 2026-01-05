@@ -1,14 +1,10 @@
 // electron/main.ts
 
 import { app, BrowserWindow, ipcMain } from 'electron';
-// ▼▼▼ 追加: 本番環境(パッケージ化済み)ならログ出力を無効化 ▼▼▼
 if (app.isPackaged) {
-  // ログ関数を空の関数で上書き
   console.log = () => {};
   console.debug = () => {};
   console.info = () => {};
-  // console.warn = () => {}; // 必要ならコメントアウト解除
-  // console.error は残しておくことを推奨（クラッシュログ等のため）
 }
 
 import path from 'path';
@@ -31,13 +27,14 @@ import { handleDragDrop } from './handlers/drag-drop';
 import { handleFFmpeg } from './handlers/ffmpeg';
 import { handleTags } from './handlers/tags';
 import { handleSearch } from './handlers/search';
-import { handleMetadata } from './handlers/metadata'; // ▼▼▼ 追加 ▼▼▼
+import { handleMetadata } from './handlers/metadata';
 import { startLocalServer } from './lib/local-server';
 import { store } from './lib/store';
-import { initDB } from './lib/db';
+import { initDB, getDB } from './lib/db';
 import { BackgroundVerificationService } from './core/services/background-verification-service';
 import { VideoService } from './core/services/video-service';
-import { MetadataHarvester } from './core/services/metadata-harvester'; // ▼▼▼ 追加 ▼▼▼
+import { MetadataHarvester } from './core/services/metadata-harvester';
+import { VideoLibraryService } from './core/services/video-library-service';
 
 const settings = store.store;
 
@@ -48,6 +45,7 @@ if (!settings.enableHardwareDecoding) {
 
 let mainWindow: BrowserWindow | null;
 const backgroundVerifier = new BackgroundVerificationService();
+const libraryService = new VideoLibraryService();
 
 const createWindow = () => {
   const mainWindowState = windowStateKeeper({
@@ -60,11 +58,14 @@ const createWindow = () => {
     y: mainWindowState.y,
     width: mainWindowState.width,
     height: mainWindowState.height,
+    backgroundColor: '#030712',
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
+      allowRunningInsecureContent: true,
     },
   });
 
@@ -75,14 +76,18 @@ const createWindow = () => {
   const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
 
   if (isDev) {
-    mainWindow.loadURL('http://localhost:3000');
+    mainWindow.loadURL('http://localhost:5173');
   } else {
-    const indexPath = path.join(app.getAppPath(), 'out/index.html');
+    const indexPath = path.join(app.getAppPath(), 'dist/index.html');
     console.log('Loading index from:', indexPath);
     mainWindow.loadFile(indexPath).catch((e) => {
       console.error('Failed to load index.html:', e);
     });
   }
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
+  });
 
   mainWindow.on('focus', () => {
     backgroundVerifier.runVerification();
@@ -90,27 +95,57 @@ const createWindow = () => {
 };
 
 app.whenReady().then(async () => {
+  console.log('[Main] App Ready. Initializing DB...');
+
+  // ▼▼▼ 追加: 起動時に必ずモバイル接続をOFF(ローカルホストのみ)にする ▼▼▼
+  store.set('enableMobileConnection', false);
+
   try {
     initDB();
+    const db = getDB();
+    const tableCount = db
+      .prepare("SELECT count(*) as count FROM sqlite_master WHERE type='table'")
+      .get() as { count: number };
+    console.log(`[Main] DB Initialized. Table count: ${tableCount.count}`);
   } catch (e) {
-    console.error('Database initialization failed:', e);
+    console.error('[Main] CRITICAL: Database initialization failed:', e);
+    app.quit();
+    return;
   }
 
   try {
+    // ▼▼▼ 修正: 引数なし(デフォルト: 127.0.0.1)で起動 ▼▼▼
     await startLocalServer();
   } catch (e) {
     console.error('Failed to start local video server:', e);
   }
 
   backgroundVerifier.start();
-  MetadataHarvester.getInstance(); // ▼▼▼ 追加: サービス開始 ▼▼▼
+  MetadataHarvester.getInstance();
 
-  try {
-    const videoService = new VideoService();
-    videoService.runGarbageCollection();
-  } catch (e) {
-    console.error('Failed to run garbage collection:', e);
-  }
+  // ▼▼▼ 変更: GCを起動直後ではなく、1分後に遅延実行する ▼▼▼
+  setTimeout(() => {
+    console.log('[Main] Running delayed Garbage Collection...');
+    try {
+      const videoService = new VideoService();
+      videoService.runGarbageCollection();
+    } catch (e) {
+      console.error('Failed to run garbage collection:', e);
+    }
+  }, 1000 * 60);
+
+  // 起動時の静的スキャン（遅延実行）
+  // ▼▼▼ 変更: GCとタイミングを分散させるため 5秒 -> 10秒に変更 ▼▼▼
+  setTimeout(async () => {
+    const folders = store.get('libraryFolders') as string[];
+    if (folders && folders.length > 0) {
+      console.log(`[Main] Starting background quiet scan for ${folders.length} folders...`);
+      for (const folder of folders) {
+        await libraryService.scanQuietly(folder);
+      }
+      console.log('[Main] Background quiet scan completed.');
+    }
+  }, 10000);
 
   ipcMain.handle('get-videos', async (_event, folderPath: string) => {
     return await getVideos(folderPath);
@@ -127,7 +162,7 @@ app.whenReady().then(async () => {
   handleFFmpeg();
   handleTags();
   handleSearch();
-  handleMetadata(); // ▼▼▼ 追加 ▼▼▼
+  handleMetadata();
 
   createWindow();
 
@@ -138,6 +173,6 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   backgroundVerifier.stop();
-  MetadataHarvester.getInstance().stop(); // ▼▼▼ 追加 ▼▼▼
+  MetadataHarvester.getInstance().stop();
   if (process.platform !== 'darwin') app.quit();
 });

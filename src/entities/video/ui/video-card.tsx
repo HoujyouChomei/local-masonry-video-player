@@ -1,7 +1,5 @@
 // src/entities/video/ui/video-card.tsx
 
-'use client';
-
 import React, { useState, useRef, useCallback, useMemo } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { cva } from 'class-variance-authority';
@@ -12,6 +10,8 @@ import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
+import { useSelectionStore } from '@/shared/stores/selection-store';
 
 // Sub-components
 import { VideoSelectionOverlay } from './video-selection-overlay';
@@ -46,7 +46,7 @@ interface VideoCardProps {
   onPointerMove?: (e: React.PointerEvent) => void;
   onPointerUp?: (e: React.PointerEvent) => void;
   onPointerLeave?: (e: React.PointerEvent) => void;
-  onDragStart?: () => void; // 追加: ロングプレス解除用
+  onDragStart?: () => void;
 }
 
 export const VideoCard = React.memo(
@@ -64,7 +64,7 @@ export const VideoCard = React.memo(
     onPointerMove,
     onPointerUp,
     onPointerLeave,
-    onDragStart: onDragStartExternal, // 追加
+    onDragStart: onDragStartExternal,
   }: VideoCardProps) => {
     const initialAspectRatio = video.width && video.height ? video.width / video.height : undefined;
 
@@ -75,16 +75,17 @@ export const VideoCard = React.memo(
     const scrollDirection = useUIStore((state) => state.scrollDirection);
     const playOnHoverOnly = useSettingsStore((state) => state.playOnHoverOnly);
 
-    // ▼▼▼ 追加: 重い動画の設定値を取得 ▼▼▼
     const enableLargeVideoRestriction = useSettingsStore(
       (state) => state.enableLargeVideoRestriction
     );
     const largeVideoThreshold = useSettingsStore((state) => state.largeVideoThreshold);
 
-    // ▼▼▼ 追加: 判定ロジック ▼▼▼
-    // 動画サイズが閾値を超えているか
+    const isMobile = useIsMobile();
+    const enterSelectionMode = useSelectionStore((s) => s.enterSelectionMode);
+    // ▼▼▼ 追加: 解除アクションを取得 ▼▼▼
+    const exitSelectionMode = useSelectionStore((s) => s.exitSelectionMode);
+
     const isHeavy = enableLargeVideoRestriction && video.size > largeVideoThreshold * 1024 * 1024;
-    // ホバー検知を行うべきか (設定でON、または重い動画の場合)
     const shouldTrackHover = playOnHoverOnly || isHeavy;
 
     const FIXED_BUFFER = 150;
@@ -114,22 +115,19 @@ export const VideoCard = React.memo(
       [inViewRef]
     );
 
-    // DnD Hook
     const { handleDragStart, handleDragEnd } = useVideoDrag({
       videoPath: video.path,
       videoId: video.id,
     });
 
-    // ▼▼▼ 追加: ドラッグ開始時にロングプレスタイマーを解除しつつ、ネイティブDnDを開始するラッパー ▼▼▼
     const handleDragStartCombined = useCallback(
       (e: React.DragEvent) => {
-        onDragStartExternal?.(); // 親から渡されたタイマー解除関数を実行
-        handleDragStart(e); // 既存のDnD開始処理を実行
+        onDragStartExternal?.();
+        handleDragStart(e);
       },
       [handleDragStart, onDragStartExternal]
     );
 
-    // ▼▼▼ 修正: shouldTrackHoverがtrueの時だけ呼ばれるため、if分岐を削除して軽量化 ▼▼▼
     const handleMouseEnter = useCallback(() => {
       setIsHoveredState(true);
     }, []);
@@ -138,18 +136,33 @@ export const VideoCard = React.memo(
       setIsHoveredState(false);
     }, []);
 
+    // メニュー開閉ハンドラ (モバイルならメニューを開かずに選択モード起動/解除)
+    const handleMenuOpenChange = (open: boolean) => {
+      if (open && isMobile) {
+        // ▼▼▼ 修正: 選択モード中なら解除、そうでなければ開始 ▼▼▼
+        if (isSelectionMode) {
+          exitSelectionMode();
+        } else {
+          enterSelectionMode(video.id);
+        }
+
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+      }
+    };
+
     return (
       <>
-        <ContextMenu>
+        <ContextMenu onOpenChange={handleMenuOpenChange}>
           <ContextMenuTrigger>
             <div
               ref={setRefs}
               onClick={(e) => onClick?.(video, e)}
-              // ▼▼▼ 修正: 条件を満たさない場合は undefined を渡し、イベントリスナー登録自体をスキップ ▼▼▼
               onMouseEnter={shouldTrackHover ? handleMouseEnter : undefined}
               onMouseLeave={shouldTrackHover ? handleMouseLeave : undefined}
               draggable
-              onDragStart={handleDragStartCombined} // 変更: ラッパー関数を使用
+              onDragStart={handleDragStartCombined}
               onDragEnd={handleDragEnd}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
@@ -174,7 +187,8 @@ export const VideoCard = React.memo(
               <VideoSelectionOverlay isSelectionMode={isSelectionMode} isSelected={isSelected} />
             </div>
           </ContextMenuTrigger>
-          {contextMenuSlot}
+
+          {!isMobile && contextMenuSlot}
         </ContextMenu>
       </>
     );

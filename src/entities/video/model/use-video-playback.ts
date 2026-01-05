@@ -19,8 +19,6 @@ interface UseVideoPlaybackProps {
 export const useVideoPlayback = ({
   video,
   inView,
-  // elementRef は watchDog 等で使う可能性があるため残しますが、スクロール判定には使いません
-  elementRef,
   isHovered,
   isModalOpen,
   setAspectRatio,

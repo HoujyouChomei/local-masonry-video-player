@@ -1,8 +1,6 @@
 // src/features/search-videos/ui/search-bar.tsx
 
-'use client';
-
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Search, X, Globe, Folder } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';

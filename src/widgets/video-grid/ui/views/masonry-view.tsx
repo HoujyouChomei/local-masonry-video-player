@@ -1,7 +1,5 @@
 // src/widgets/video-grid/ui/views/masonry-view.tsx
 
-'use client';
-
 import React from 'react';
 import Masonry from 'react-masonry-css';
 import { useSettingsStore } from '@/shared/stores/settings-store';
@@ -11,7 +9,6 @@ import { VideoGridItem } from '../video-grid-item';
 interface MasonryViewProps {
   videos: VideoFile[];
   columnCount: number;
-  // ▼▼▼ 変更: 型定義を更新 ▼▼▼
   onVideoClick: (video: VideoFile, e: React.MouseEvent) => void;
   isModalOpen: boolean;
   onRenameOpen: (video: VideoFile) => void;
@@ -35,13 +32,16 @@ export const MasonryView = ({
 }: MasonryViewProps) => {
   const gridStyle = useSettingsStore((state) => state.gridStyle);
 
+  // ▼▼▼ 修正: 600px未満でも columnCount (1 or 2) を尊重するように変更 ▼▼▼
+  // 以前は '600: 1' で強制的に1列になっていました
   const breakpointColumnsObj = {
     default: columnCount,
     1800: Math.min(5, columnCount),
     1500: Math.min(4, columnCount),
     1200: Math.min(3, columnCount),
     900: Math.min(2, columnCount),
-    600: 1,
+    // 600px未満でも最大2列まで許容する (columnCountが1なら1、2なら2になる)
+    600: Math.min(2, columnCount),
   };
 
   const getMasonryClasses = () => {

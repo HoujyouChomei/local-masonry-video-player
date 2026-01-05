@@ -1,7 +1,8 @@
 // src/widgets/video-grid/model/use-video-source.ts
 
 import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+// ▼▼▼ 修正: keepPreviousData を追加インポート ▼▼▼
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSearchStore } from '@/features/search-videos/model/store';
 import {
@@ -25,19 +26,12 @@ export const useVideoSource = (folderPath: string) => {
 
   const isGlobalSearchScope = searchScope === 'global';
 
-  // 検索クエリがある場合、またはグローバルスコープでタグフィルタがある場合は検索APIを使用
-  // ※ Folder Scope (Context Scope) でも検索クエリがあれば検索APIを使うように変更
   const hasSearchQuery = debouncedQuery.length > 0;
 
-  // 検索APIを使用すべきかどうか
-  // 1. Global Scope かつ (クエリあり OR タグ指定あり)
-  // 2. Folder Scope かつ クエリあり
   const shouldUseSearchApi = isGlobalSearchScope
     ? hasSearchQuery || selectedTagIds.length > 0
     : hasSearchQuery;
 
-  // クエリキーの決定
-  // 検索条件やスコープが変わればリフェッチされるようにキーを構成
   const queryKey = shouldUseSearchApi
     ? [
         'search',
@@ -63,18 +57,14 @@ export const useVideoSource = (folderPath: string) => {
       if (shouldUseSearchApi) {
         const options: SearchOptions = {};
 
-        // Scope = 'folder' (Context) の場合、現在のビューに応じた絞り込みを適用
         if (!isGlobalSearchScope) {
           if (isGlobalMode) {
             options.isFavorite = true;
           } else if (isPlaylistMode && selectedPlaylistId) {
             options.playlistId = selectedPlaylistId;
           } else if (isTagMode) {
-            // タグモードの場合、コンテキストとしてのタグは第2引数(tagIds)に含める
-            // (useUIStoreのselectedTagIdsは既にtagIds引数として渡されるので、ここで追加処理は不要)
-            // ただし、Folderパスは指定しない（タグはフォルダ横断的だから）
+            // No options needed for tag context
           } else {
-            // 通常フォルダモード
             options.folderPath = folderPath;
           }
         }
@@ -82,7 +72,7 @@ export const useVideoSource = (folderPath: string) => {
         return searchVideosApi(debouncedQuery, selectedTagIds, options);
       }
 
-      // 2. Existing Modes (No Search Query)
+      // 2. Existing Modes
       if (isGlobalMode) return fetchFavoriteVideos();
       if (isPlaylistMode && selectedPlaylistId) return fetchPlaylistVideosApi(selectedPlaylistId);
       if (isTagMode && selectedTagIds.length > 0) return fetchVideosByTagApi(selectedTagIds);
@@ -93,6 +83,9 @@ export const useVideoSource = (folderPath: string) => {
     enabled: true,
     staleTime: 0,
     refetchOnMount: true,
+    // ▼▼▼ 追加: これが暗転を防ぐ魔法のオプションです ▼▼▼
+    // キーが変わっても、次のデータが来るまで前のデータを維持します
+    placeholderData: keepPreviousData,
   });
 
   useEffect(() => {

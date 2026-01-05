@@ -17,7 +17,7 @@ vi.mock('../repositories/video-repository', () => ({
   },
 }));
 
-// 2. VideoMetadataRepository Mock (ここが重要: 名前を repoMocks から変更し、新しいクラスをモックする)
+// 2. VideoMetadataRepository Mock
 const metaRepoMocks = vi.hoisted(() => ({
   updateMetadataStatus: vi.fn(),
   updateGenerationParams: vi.fn(),
@@ -51,16 +51,16 @@ vi.mock('./ffmpeg-service', () => ({
   },
 }));
 
-// 4. Electron BrowserWindow Mock
-const electronMocks = vi.hoisted(() => ({
-  webContents: {
-    send: vi.fn(),
-  },
+// 4. NotificationService Mock (変更点: Electronの直接モックではなくこちらを使用)
+const notifierMocks = vi.hoisted(() => ({
+  notify: vi.fn(),
 }));
 
-vi.mock('electron', () => ({
-  BrowserWindow: {
-    getAllWindows: vi.fn(() => [{ webContents: electronMocks.webContents }]),
+vi.mock('./notification-service', () => ({
+  NotificationService: {
+    getInstance: () => ({
+      notify: notifierMocks.notify,
+    }),
   },
 }));
 
@@ -71,7 +71,6 @@ describe('MetadataHarvester', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
 
-    // デフォルトのモック動作設定
     metaRepoMocks.resetIncompleteMetadataStatus.mockReturnValue(0);
     metaRepoMocks.getPendingVideos.mockReturnValue([]);
 
@@ -106,7 +105,7 @@ describe('MetadataHarvester', () => {
 
     await vi.advanceTimersByTimeAsync(100);
 
-    // metaRepoMocks を検証に使用
+    // 検証
     expect(metaRepoMocks.updateMetadataStatus).toHaveBeenCalledWith('v1', 'processing');
     expect(ffmpegMocks.extractMetadata).toHaveBeenCalledWith('/video.mp4');
     expect(metaRepoMocks.updateGenerationParams).toHaveBeenCalledWith(
@@ -121,7 +120,8 @@ describe('MetadataHarvester', () => {
       30,
       'h264'
     );
-    expect(electronMocks.webContents.send).toHaveBeenCalledWith('on-video-update', {
+    // NotificationService.notify が呼ばれたか確認
+    expect(notifierMocks.notify).toHaveBeenCalledWith({
       type: 'update',
       path: '/video.mp4',
     });

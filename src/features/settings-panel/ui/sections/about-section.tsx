@@ -1,6 +1,6 @@
 // src/features/settings-panel/ui/sections/about-section.tsx
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Info, FileText, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,16 +32,11 @@ export const AboutSection = () => {
   // ダイアログが開いたときにJSONをフェッチする
   useEffect(() => {
     if (isOpen && !licenses) {
-      // ▼▼▼ 修正: 非同期関数内で処理を完結させる ▼▼▼
       const loadLicenses = async () => {
         setLoading(true);
         try {
-          // 修正前: 絶対パスだと file:// プロトコル環境下でルートディレクトリを参照してしまう
-          // const res = await fetch('/licenses.json');
-
-          // 修正後: 相対パスに変更して、index.html と同じ階層のファイルを参照させる
+          // 相対パスで参照
           const res = await fetch('./licenses.json');
-
           const data = await res.json();
           setLicenses(data);
         } catch (err) {
@@ -69,8 +64,9 @@ export const AboutSection = () => {
         </h3>
 
         <div className="text-muted-foreground mb-3 text-[10px] leading-relaxed">
-          <p>Local Masonry Video Player v0.1.0</p>
-          <p>Powered by Electron, Next.js & Open Source Software.</p>
+          {/* ▼▼▼ 修正: バージョンを v0.2.0 に更新 ▼▼▼ */}
+          <p>Local Masonry Video Player v0.2.0</p>
+          <p>Powered by Electron, Vite & Open Source Software.</p>
         </div>
 
         <Button

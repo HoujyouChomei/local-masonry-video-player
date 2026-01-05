@@ -1,7 +1,5 @@
 // src/entities/video/ui/video-list-item.tsx
 
-'use client';
-
 import React, { useState } from 'react';
 import { Play } from 'lucide-react';
 import { formatDuration, cn } from '@/lib/utils';
@@ -115,7 +113,6 @@ export const VideoListItem = ({
             </div>
 
             <div className="h-10 w-16 overflow-hidden rounded bg-gray-800">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={thumbnailUrl}
                 alt=""

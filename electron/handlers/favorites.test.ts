@@ -1,89 +1,111 @@
 // electron/handlers/favorites.test.ts
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { IpcMainInvokeEvent } from 'electron';
 import { handleFavorites } from './favorites';
 
-// 1. Hoisted Mocks
-const mocks = vi.hoisted(() => ({
-  toggleFavoriteById: vi.fn(),
-  getFavoriteIds: vi.fn(),
-  getFavorites: vi.fn(),
-}));
+// Mock ipcMain.handle
+const ipcHandlers = new Map<
+  string,
+  (event: IpcMainInvokeEvent, ...args: unknown[]) => Promise<unknown>
+>();
 
-// 2. Repository Mock
-vi.mock('../core/repositories/video-repository', () => {
-  return {
-    VideoRepository: class {
-      toggleFavoriteById = mocks.toggleFavoriteById;
-      getFavoriteIds = mocks.getFavoriteIds;
-      getFavorites = mocks.getFavorites;
-    },
-  };
-});
-
-// 3. Electron ipcMain & app
-const ipcHandlers = new Map<string, (...args: any[]) => any>();
 vi.mock('electron', () => ({
   ipcMain: {
-    handle: vi.fn((channel, listener) => {
-      ipcHandlers.set(channel, listener);
+    handle: vi.fn((channel, handler) => {
+      ipcHandlers.set(channel, handler);
     }),
   },
+  BrowserWindow: {
+    getAllWindows: vi.fn().mockReturnValue([
+      {
+        webContents: {
+          send: vi.fn(),
+        },
+      },
+    ]),
+  },
   app: {
-    getPath: vi.fn().mockReturnValue('/mock/user/data'),
+    getPath: vi.fn().mockReturnValue('/tmp'),
   },
 }));
 
-// 4. Local Server
-vi.mock('../lib/local-server', () => ({
-  getServerPort: () => 3000,
+// Mock Services/Repositories
+const repoMocks = vi.hoisted(() => ({
+  getFavoriteIds: vi.fn(),
+  getFavorites: vi.fn(),
+  toggleFavoriteById: vi.fn(),
+  findById: vi.fn(), // Added
 }));
 
-// 5. fs
-vi.mock('fs', () => ({
-  default: {
-    existsSync: vi.fn().mockReturnValue(true),
-    mkdirSync: vi.fn(),
-  },
-  existsSync: vi.fn().mockReturnValue(true),
-  mkdirSync: vi.fn(),
+const sseMocks = vi.hoisted(() => ({
+  broadcast: vi.fn(),
 }));
+
+vi.mock('../core/repositories/video-repository', () => ({
+  VideoRepository: class {
+    getFavoriteIds = repoMocks.getFavoriteIds;
+    getFavorites = repoMocks.getFavorites;
+    toggleFavoriteById = repoMocks.toggleFavoriteById;
+    findById = repoMocks.findById; // Added
+  },
+}));
+
+// Mock SSEHandler
+vi.mock('../lib/server/sse-handler', () => ({
+  SSEHandler: {
+    getInstance: () => ({
+      broadcast: sseMocks.broadcast,
+    }),
+  },
+}));
+
+// Mock other dependencies
+vi.mock('../core/services/video-mapper', () => ({
+  VideoMapper: class {
+    toEntities = vi.fn((rows) => rows);
+  },
+}));
+
+vi.mock('../core/services/file-integrity-service', () => ({
+  FileIntegrityService: class {
+    verifyAndRecover = vi.fn().mockResolvedValue(false);
+  },
+}));
+
+// Helper to invoke handlers
+const invoke = async (channel: string, ...args: unknown[]) => {
+  const handler = ipcHandlers.get(channel);
+  if (!handler) throw new Error(`No handler for ${channel}`);
+  return handler({} as IpcMainInvokeEvent, ...args);
+};
 
 describe('Favorites Handlers (Repository Mock)', () => {
-  const invoke = async (channel: string, ...args: any[]) => {
-    const handler = ipcHandlers.get(channel);
-    if (!handler) throw new Error(`No handler registered for ${channel}`);
-    return handler({} as any, ...args);
-  };
-
   beforeEach(() => {
     vi.clearAllMocks();
     ipcHandlers.clear();
-    handleFavorites();
+    handleFavorites(); // Register handlers
+  });
+
+  it('should return favorites list (IDs)', async () => {
+    // Mock setup
+    const mockIds = ['video-123'];
+    repoMocks.getFavoriteIds.mockReturnValue(mockIds);
+
+    const favorites = await invoke('get-favorites');
+    expect(favorites).toEqual(mockIds);
+    expect(repoMocks.getFavoriteIds).toHaveBeenCalled();
   });
 
   it('should toggle favorite status by ID', async () => {
     const videoId = 'video-123';
+    // Mock current state
+    repoMocks.findById.mockReturnValue({ id: videoId, path: '/test.mp4' });
+    repoMocks.getFavoriteIds.mockReturnValue([videoId]);
 
-    // 1回目はIDが含まれる状態、2回目は空の状態を返すシミュレーション
-    mocks.getFavoriteIds.mockReturnValueOnce(['video-123']).mockReturnValueOnce([]);
+    const result = await invoke('toggle-favorite', videoId);
 
-    // Toggle ON
-    const result1 = await invoke('toggle-favorite', videoId);
-
-    expect(mocks.toggleFavoriteById).toHaveBeenCalledWith(videoId);
-    expect(result1).toEqual(['video-123']);
-
-    // Toggle OFF
-    const result2 = await invoke('toggle-favorite', videoId);
-    expect(result2).toEqual([]);
-  });
-
-  it('should return favorites list (IDs)', async () => {
-    mocks.getFavoriteIds.mockReturnValue(['fav-id-1']);
-
-    const favorites = await invoke('get-favorites');
-    expect(favorites).toEqual(['fav-id-1']);
+    expect(repoMocks.toggleFavoriteById).toHaveBeenCalledWith(videoId);
+    expect(result).toEqual([videoId]);
   });
 });

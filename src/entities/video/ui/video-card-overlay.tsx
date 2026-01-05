@@ -1,7 +1,5 @@
 // src/entities/video/ui/video-card-overlay.tsx
 
-'use client';
-
 import React from 'react';
 import { cn, formatDuration } from '@/lib/utils';
 import { VideoFile } from '../../../shared/types/video';

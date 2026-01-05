@@ -1,9 +1,10 @@
 // electron/core/services/ui-service.ts
 
-import { dialog, BrowserWindow, app } from 'electron';
+import { dialog, BrowserWindow, app, nativeImage } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
+import { THUMBNAIL } from '../../../src/shared/constants/assets';
 
 export class UIService {
   // 動画プレイヤーによるフルスクリーン制御の状態管理
@@ -74,21 +75,24 @@ export class UIService {
     // 代表ファイル（アイコン生成用および必須プロパティ用）はリストの最初を使用
     const primaryFile = fileList[0];
 
-    const thumbDir = path.join(app.getPath('userData'), 'thumbnails');
+    const thumbDir = path.join(app.getPath('userData'), THUMBNAIL.DIR_NAME);
     const hash = crypto.createHash('md5').update(primaryFile).digest('hex');
-    const thumbPath = path.join(thumbDir, `${hash}.jpg`);
+    const thumbPath = path.join(thumbDir, `${hash}${THUMBNAIL.EXTENSION}`);
 
-    // ElectronのstartDragはiconパスが無効（空文字含む）だと "Failed to load image from path" エラーになる
-    const dragOptions: { file: string; files: string[]; icon?: string } = {
-      file: primaryFile, // 必須: 常に先頭のファイルを指定
-      files: fileList, // 複数ファイル用
-    };
+    // ElectronのstartDragはiconが必須。
+    // サムネイルがない場合は空のNativeImageを渡してクラッシュを防ぐ。
+    let icon: string | Electron.NativeImage;
 
     if (fs.existsSync(thumbPath)) {
-      dragOptions.icon = thumbPath;
+      icon = thumbPath;
+    } else {
+      icon = nativeImage.createEmpty();
     }
-    // サムネイルがない場合は icon プロパティを省略（OSデフォルトのドラッグ表示にフォールバック）
 
-    sender.startDrag(dragOptions as unknown as Electron.Item);
+    sender.startDrag({
+      file: primaryFile,
+      files: fileList,
+      icon: icon,
+    });
   }
 }

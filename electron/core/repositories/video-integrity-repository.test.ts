@@ -11,13 +11,30 @@ const mockPrepare = vi.fn(() => ({
   get: mockGet,
   all: mockAll,
 }));
-const mockTransaction = vi.fn((fn) => fn);
+const mockTransaction = vi.fn((fn) => () => fn()); // トランザクションは実行可能な関数を返すようにモック
 
 vi.mock('../../lib/db', () => ({
   getDB: () => ({
     prepare: mockPrepare,
     transaction: mockTransaction,
   }),
+}));
+
+// Electron app path mock
+vi.mock('electron', () => ({
+  app: {
+    getPath: () => '/tmp',
+  },
+}));
+
+// fs mock for thumbnail deletion logic in deleteExpiredMissingVideos
+vi.mock('fs', () => ({
+  default: {
+    existsSync: vi.fn().mockReturnValue(false),
+    unlinkSync: vi.fn(),
+  },
+  existsSync: vi.fn().mockReturnValue(false),
+  unlinkSync: vi.fn(),
 }));
 
 describe('VideoIntegrityRepository', () => {
@@ -30,9 +47,9 @@ describe('VideoIntegrityRepository', () => {
 
   it('markAsMissing should update status to missing', () => {
     repo.markAsMissing(['1', '2']);
-    expect(mockPrepare).toHaveBeenCalledWith(
-      expect.stringContaining("UPDATE videos \n      SET status = 'missing'")
-    );
+    // SQLの空白や改行に依存しないようにキーワードでチェック
+    expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE videos'));
+    expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining("SET status = 'missing'"));
     expect(mockRun).toHaveBeenCalled();
   });
 
@@ -41,13 +58,13 @@ describe('VideoIntegrityRepository', () => {
 
     expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE videos'));
     expect(mockRun).toHaveBeenCalledWith(
-      '/restored.mp4',
-      'restored.mp4',
-      500,
-      2000,
-      888,
+      '/restored.mp4', // path
+      'restored.mp4', // name
+      500, // size
+      2000, // mtime
+      888, // ino
       expect.any(Number), // last_seen_at
-      'id-1'
+      'id-1' // id
     );
   });
 
@@ -55,9 +72,9 @@ describe('VideoIntegrityRepository', () => {
     repo.updatePath('id-1', '/new/path.mp4', 9999);
     expect(mockRun).toHaveBeenCalledWith(
       '/new/path.mp4',
-      'path.mp4',
+      'path.mp4', // name (basename)
       9999,
-      expect.any(Number),
+      expect.any(Number), // last_seen_at
       'id-1'
     );
   });
@@ -90,14 +107,21 @@ describe('VideoIntegrityRepository', () => {
     repo.upsertMany(toInsert, toUpdate);
 
     expect(mockTransaction).toHaveBeenCalled();
+    // insertとupdateで合計2回runが呼ばれるはず
     expect(mockRun).toHaveBeenCalledTimes(2);
   });
 
   it('deleteExpiredMissingVideos should delete old missing videos', () => {
+    // 削除対象のレコードを返すようにモック
     mockAll.mockReturnValue([{ id: 'old-1', path: '/old.mp4' }]);
+
     repo.deleteExpiredMissingVideos(30);
 
     expect(mockTransaction).toHaveBeenCalled();
-    expect(mockRun).toHaveBeenCalledTimes(4); // playlist_items, folder_sort_orders, video_tags, videos
+    // 1. DELETE playlist_items
+    // 2. DELETE folder_sort_orders
+    // 3. DELETE video_tags
+    // 4. DELETE videos
+    expect(mockRun).toHaveBeenCalledTimes(4);
   });
 });

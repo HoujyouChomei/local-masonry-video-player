@@ -34,7 +34,8 @@ export const useFavorites = () => {
 
       return { previousFavorites };
     },
-    onError: (err, newTodo, context) => {
+    // ▼▼▼ 修正: 未使用引数に _ を付与して型チェックを通す ▼▼▼
+    onError: (_err, _newTodo, context) => {
       // エラーが発生したら元に戻す
       if (context?.previousFavorites) {
         queryClient.setQueryData(['favorites'], context.previousFavorites);
@@ -42,8 +43,6 @@ export const useFavorites = () => {
     },
     onSettled: () => {
       // 完了したらサーバー(Electron)の最新データと同期
-      // ▼▼▼ 修正: 関連する全てのクエリを無効化する ▼▼▼
-
       // 1. パスリスト
       queryClient.invalidateQueries({ queryKey: ['favorites'] });
 
@@ -51,9 +50,6 @@ export const useFavorites = () => {
       queryClient.invalidateQueries({ queryKey: ['all-favorites-videos'] });
 
       // 3. 動画リスト (通常フォルダビューなど)
-      //    お気に入りの有無によって表示が変わるフィルタリングをしている場合、
-      //    基本的には ['favorites'] の更新だけでコンポーネントは再計算されるが、
-      //    念のため整合性を保つ
       queryClient.invalidateQueries({ queryKey: ['videos'] });
     },
   });

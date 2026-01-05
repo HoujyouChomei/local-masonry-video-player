@@ -1,8 +1,6 @@
 // src/widgets/video-menu/ui/video-context-menu.tsx
 
-'use client';
-
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { ContextMenuContent } from '@/components/ui/context-menu';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { VideoFile } from '@/shared/types/video';

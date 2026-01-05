@@ -1,8 +1,5 @@
 // src/features/filter-favorites/ui/favorites-toggle.tsx
 
-'use client';
-
-import React from 'react';
 import { Heart } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store'; // 変更
 import { Button } from '@/components/ui/button';

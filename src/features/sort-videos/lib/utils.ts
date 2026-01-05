@@ -11,8 +11,8 @@ export const sortVideos = (
   const sorted = [...videos];
 
   switch (option) {
-    case 'custom':
-      // ▼▼▼ 追加: カスタムソートロジック ▼▼▼
+    case 'custom': {
+      // ▼▼▼ 修正: ブロック {} で囲む ▼▼▼
       if (!customOrder || customOrder.length === 0) {
         // 順序データがない場合は、デフォルトで「古い順 (Date Asc)」にする
         // (新規追加ファイルが末尾に来るようにするため)
@@ -34,6 +34,7 @@ export const sortVideos = (
 
       // 結合（保存済み順序 + 未保存分）
       return [...inOrder, ...notInOrder];
+    }
 
     case 'date-desc': // 新しい順
       return sorted.sort((a, b) => b.updatedAt - a.updatedAt);

@@ -1,8 +1,5 @@
 // src/widgets/video-menu/ui/items/single-video-menu-items.tsx
 
-'use client';
-
-import React from 'react';
 import {
   FolderSearch,
   Pencil,
@@ -37,6 +34,7 @@ import { useUIStore } from '@/shared/stores/ui-store';
 import { useFavorites } from '@/features/toggle-favorite/model/use-favorite';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
 
 interface SingleVideoMenuItemsProps {
   video: VideoFile;
@@ -63,6 +61,7 @@ export const SingleVideoMenuItems = ({
   const { autoPlayNext, toggleAutoPlayNext, enableExperimentalNormalize } = useSettingsStore();
 
   const isPlaylistMode = viewMode === 'playlist' && selectedPlaylistId;
+  const isMobile = useIsMobile(); // 追加
 
   const handleNormalize = async () => {
     const toastId = toast.loading(`Normalizing: ${video.name}...`);
@@ -108,17 +107,20 @@ export const SingleVideoMenuItems = ({
         </>
       )}
 
-      {/* ▼▼▼ 修正: video.id を渡す ▼▼▼ */}
-      <ContextMenuItem onSelect={() => revealInExplorerApi(video.id)}>
-        <FolderSearch className="mr-2 h-4 w-4" />
-        Reveal in Explorer
-      </ContextMenuItem>
-      <ContextMenuItem onSelect={onRename}>
-        <Pencil className="mr-2 h-4 w-4" />
-        Rename
-      </ContextMenuItem>
-
-      <ContextMenuSeparator />
+      {/* ▼▼▼ 修正: モバイル時はファイル操作・Explorer連携を非表示 ▼▼▼ */}
+      {!isMobile && (
+        <>
+          <ContextMenuItem onSelect={() => revealInExplorerApi(video.id)}>
+            <FolderSearch className="mr-2 h-4 w-4" />
+            Reveal in Explorer
+          </ContextMenuItem>
+          <ContextMenuItem onSelect={onRename}>
+            <Pencil className="mr-2 h-4 w-4" />
+            Rename
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+        </>
+      )}
 
       <ContextMenuItem onSelect={() => toggleFavorite(video.id)}>
         <Heart className="mr-2 h-4 w-4" fill={isFav ? 'currentColor' : 'none'} />
@@ -134,7 +136,6 @@ export const SingleVideoMenuItems = ({
         </ContextMenuSubTrigger>
         <ContextMenuSubContent className="w-48">
           <ContextMenuItem
-            // ▼▼▼ 変更: video.id ▼▼▼
             onSelect={() => createAndAdd(video.id)}
             className="text-primary font-medium"
           >
@@ -148,7 +149,6 @@ export const SingleVideoMenuItems = ({
             playlists.map((playlist) => (
               <ContextMenuItem
                 key={playlist.id}
-                // ▼▼▼ 変更: videoId ▼▼▼
                 onSelect={() => addToPlaylist({ playlistId: playlist.id, videoId: video.id })}
               >
                 {playlist.name}
@@ -166,7 +166,6 @@ export const SingleVideoMenuItems = ({
         <ContextMenuItem
           onSelect={() => {
             if (selectedPlaylistId) {
-              // ▼▼▼ 変更: videoId ▼▼▼
               removeFromPlaylist({ playlistId: selectedPlaylistId, videoId: video.id });
             }
           }}
@@ -177,7 +176,8 @@ export const SingleVideoMenuItems = ({
         </ContextMenuItem>
       )}
 
-      {enableExperimentalNormalize && (
+      {/* ▼▼▼ 修正: モバイル時は Normalize を非表示 ▼▼▼ */}
+      {enableExperimentalNormalize && !isMobile && (
         <>
           <ContextMenuSeparator />
           <ContextMenuItem
@@ -190,15 +190,19 @@ export const SingleVideoMenuItems = ({
         </>
       )}
 
-      <ContextMenuSeparator />
-
-      <ContextMenuItem
-        onSelect={onDelete}
-        className="text-destructive focus:text-destructive focus:bg-destructive/10"
-      >
-        <Trash2 className="mr-2 h-4 w-4" />
-        Delete from Disk
-      </ContextMenuItem>
+      {/* ▼▼▼ 修正: モバイル時は Delete を非表示 ▼▼▼ */}
+      {!isMobile && (
+        <>
+          <ContextMenuSeparator />
+          <ContextMenuItem
+            onSelect={onDelete}
+            className="text-destructive focus:text-destructive focus:bg-destructive/10"
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Delete from Disk
+          </ContextMenuItem>
+        </>
+      )}
     </>
   );
 };

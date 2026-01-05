@@ -48,26 +48,38 @@ export interface VideoUpdateInput {
   codec?: null;
 }
 
+// ▼▼▼ 追加: AIプロンプト(generation_params)を除外した軽量カラムリスト ▼▼▼
+// 一覧表示時に巨大なテキストデータを転送しないための最適化
+export const LITE_COLUMNS = `
+  id, path, name, size, mtime, duration, width, height, 
+  aspect_ratio, fps, codec, is_favorite, status, ino, 
+  file_hash, last_seen_at, last_scan_attempt_at, 
+  metadata_status, created_at
+`;
+
 export class VideoRepository {
   private get db() {
     return getDB();
   }
 
   findByPath(videoPath: string): VideoRow | undefined {
+    // 詳細取得用なので SELECT * (generation_params含む) のまま
     return this.db.prepare('SELECT * FROM videos WHERE path = ?').get(videoPath) as
       | VideoRow
       | undefined;
   }
 
   findById(id: string): VideoRow | undefined {
+    // 詳細取得用なので SELECT * (generation_params含む) のまま
     return this.db.prepare('SELECT * FROM videos WHERE id = ?').get(id) as VideoRow | undefined;
   }
 
   findManyByPaths(paths: string[]): VideoRow[] {
     if (paths.length === 0) return [];
     const placeholders = paths.map(() => '?').join(',');
+    // ▼▼▼ 修正: Liteカラムを使用 ▼▼▼
     return this.db
-      .prepare(`SELECT * FROM videos WHERE path IN (${placeholders})`)
+      .prepare(`SELECT ${LITE_COLUMNS} FROM videos WHERE path IN (${placeholders})`)
       .all(...paths) as VideoRow[];
   }
 
@@ -77,10 +89,11 @@ export class VideoRepository {
     const placeholders = tagIds.map(() => '?').join(',');
     const tagCount = tagIds.length;
 
+    // ▼▼▼ 修正: Liteカラムを使用 ▼▼▼
     return this.db
       .prepare(
         `
-      SELECT v.*
+      SELECT ${LITE_COLUMNS}
       FROM videos v
       JOIN video_tags vt ON v.id = vt.video_id
       WHERE vt.tag_id IN (${placeholders}) AND v.status = 'available'
@@ -113,17 +126,17 @@ export class VideoRepository {
   }
 
   getFavorites(): VideoRow[] {
+    // ▼▼▼ 修正: Liteカラムを使用 ▼▼▼
     return this.db
       .prepare(
         `
-      SELECT * FROM videos 
+      SELECT ${LITE_COLUMNS} FROM videos 
       WHERE is_favorite = 1 AND status = 'available'
     `
       )
       .all() as VideoRow[];
   }
 
-  // ▼▼▼ 変更: パスではなくIDのリストを返すように変更 ▼▼▼
   getFavoriteIds(): string[] {
     const rows = this.db
       .prepare(
@@ -136,7 +149,6 @@ export class VideoRepository {
     return rows.map((r) => r.id);
   }
 
-  // ▼▼▼ 変更: IDベースでトグルするように変更 ▼▼▼
   toggleFavoriteById(id: string): void {
     const row = this.findById(id);
     if (!row) return;

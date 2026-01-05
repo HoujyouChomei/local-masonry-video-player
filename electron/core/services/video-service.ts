@@ -74,6 +74,7 @@ export class VideoService {
       throw new Error('Filename cannot be empty');
     }
 
+    // eslint-disable-next-line no-control-regex
     const invalidChars = /[<>:"/\\|?*\x00-\x1F]/;
     if (invalidChars.test(newFileName)) {
       throw new Error('Filename contains invalid characters');
@@ -153,12 +154,7 @@ export class VideoService {
   }
 
   // ▼▼▼ 修正: IDを受け取りパスを解決して更新する ▼▼▼
-  async updateMetadata(
-    id: string,
-    duration: number,
-    width: number,
-    height: number
-  ): Promise<void> {
+  async updateMetadata(id: string, duration: number, width: number, height: number): Promise<void> {
     const videoRow = this.videoRepo.findById(id);
     if (!videoRow) {
       // console.warn(`[VideoService] Metadata update skipped. Video ID not found: ${id}`);

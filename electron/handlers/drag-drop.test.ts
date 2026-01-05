@@ -14,6 +14,10 @@ vi.mock('electron', () => ({
   app: {
     getPath: vi.fn().mockReturnValue('/mock/userData'),
   },
+  // ▼▼▼ 追加: nativeImage のモック ▼▼▼
+  nativeImage: {
+    createEmpty: vi.fn().mockReturnValue({ isEmpty: () => true }),
+  },
 }));
 
 // fsモジュールのモック修正

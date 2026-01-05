@@ -1,7 +1,5 @@
 // src/features/delete-video/ui/delete-video-button.tsx
 
-'use client';
-
 import React, { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import {

@@ -2,278 +2,319 @@
 
 import { ApiClient } from '../types';
 import { VideoFile } from '@/shared/types/video';
-import { AppSettings, DirectoryEntry, Tag, VideoUpdateEvent, SearchOptions } from '@/shared/types/electron';
+import {
+  AppSettings,
+  DirectoryEntry,
+  Tag,
+  VideoUpdateEvent,
+  SearchOptions,
+  ConnectionInfo,
+} from '@/shared/types/electron';
 import { Playlist } from '@/shared/types/playlist';
 
 export class ElectronClient implements ApiClient {
-  // ... (Existing methods) ...
+  videos = {
+    getAll: async (folderPath: string): Promise<VideoFile[]> => {
+      if (!window.electron) return [];
+      return window.electron.getVideos(folderPath);
+    },
 
-  // --- Videos ---
-  async getVideos(folderPath: string): Promise<VideoFile[]> {
-    if (!window.electron) return [];
-    return window.electron.getVideos(folderPath);
-  }
+    search: async (
+      query: string,
+      tagIds: string[],
+      options: SearchOptions
+    ): Promise<VideoFile[]> => {
+      if (!window.electron) return [];
+      return window.electron.searchVideos(query, tagIds, options);
+    },
 
-  async searchVideos(query: string, tagIds: string[], options: SearchOptions): Promise<VideoFile[]> {
-    if (!window.electron) return [];
-    return window.electron.searchVideos(query, tagIds, options);
-  }
+    getDetails: async (path: string): Promise<VideoFile | null> => {
+      if (!window.electron) return null;
+      return window.electron.getVideoDetails(path);
+    },
 
-  async getVideoDetails(path: string): Promise<VideoFile | null> {
-    if (!window.electron) return null;
-    return window.electron.getVideoDetails(path);
-  }
+    harvestMetadata: async (videoId: string): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.harvestMetadata(videoId);
+    },
 
-  async harvestMetadata(videoId: string): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.harvestMetadata(videoId);
-  }
+    updateMetadata: async (
+      videoId: string,
+      duration: number,
+      width: number,
+      height: number
+    ): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.updateVideoMetadata(videoId, duration, width, height);
+    },
 
-  async updateVideoMetadata(videoId: string, duration: number, width: number, height: number): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.updateVideoMetadata(videoId, duration, width, height);
-  }
+    delete: async (id: string): Promise<boolean> => {
+      if (!window.electron) return false;
+      return window.electron.deleteVideo(id);
+    },
 
-  // --- Settings ---
-  async getSettings(): Promise<AppSettings> {
-    if (!window.electron) {
-      return {
-        folderPath: '',
-        columnCount: 4,
-        sortOption: 'date-desc',
-        libraryFolders: [],
-        isSidebarOpen: true,
-        rootMargin: 1000,
-        debounceTime: 800,
-        chunkSize: 100,
-        autoPlayNext: false,
-        enableHardwareDecoding: false,
-        expandedPaths: [],
-        playOnHoverOnly: false,
-        volume: 1.0,
-        isMuted: false,
-        layoutMode: 'masonry',
-        gridStyle: 'modern',
-        ffmpegPath: '',
-        ffprobePath: '',
-        enableExperimentalNormalize: false,
-        enableLargeVideoRestriction: true,
-        largeVideoThreshold: 1024,
-      };
-    }
-    return window.electron.getSettings();
-  }
+    rename: async (id: string, newFileName: string): Promise<VideoFile | null> => {
+      if (!window.electron) return null;
+      return window.electron.renameVideo(id, newFileName);
+    },
 
-  async saveSettings<K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<boolean> {
-    if (!window.electron) return false;
-    return window.electron.saveSettings(key, value);
-  }
+    move: async (videoPaths: string[], targetFolderPath: string): Promise<number> => {
+      if (!window.electron) return 0;
+      return window.electron.moveVideos(videoPaths, targetFolderPath);
+    },
 
-  // --- Dialogs & System ---
-  async selectFolder(): Promise<string | null> {
-    if (!window.electron) return null;
-    return window.electron.selectFolder();
-  }
+    download: async (url: string, targetFolderPath: string): Promise<VideoFile | null> => {
+      if (!window.electron) return null;
+      return window.electron.downloadVideo(url, targetFolderPath);
+    },
 
-  async selectFile(): Promise<string | null> {
-    if (!window.electron) return null;
-    return window.electron.selectFile();
-  }
+    normalize: async (path: string): Promise<VideoFile | null> => {
+      if (!window.electron) return null;
+      return window.electron.normalizeVideo(path);
+    },
+  };
 
-  async validateFFmpegPath(path: string): Promise<boolean> {
-    if (!window.electron) return false;
-    return window.electron.validateFFmpegPath(path);
-  }
+  playlists = {
+    getAll: async (): Promise<Playlist[]> => {
+      if (!window.electron) return [];
+      return window.electron.getPlaylists();
+    },
 
-  async validateFFprobePath(path: string): Promise<boolean> {
-    if (!window.electron) return false;
-    return window.electron.validateFFprobePath(path);
-  }
+    create: async (name: string): Promise<Playlist | null> => {
+      if (!window.electron) return null;
+      return window.electron.createPlaylist(name);
+    },
 
-  async relaunchApp(): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.relaunchApp();
-  }
+    delete: async (id: string): Promise<Playlist[]> => {
+      if (!window.electron) return [];
+      return window.electron.deletePlaylist(id);
+    },
 
-  async setFullScreen(enable: boolean): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.setFullScreen(enable);
-  }
+    updateMeta: async (id: string, name: string): Promise<Playlist | null> => {
+      if (!window.electron) return null;
+      return window.electron.updatePlaylistMeta(id, name);
+    },
 
-  // --- Favorites ---
-  async getFavorites(): Promise<string[]> {
-    if (!window.electron) return [];
-    return window.electron.getFavorites();
-  }
+    addVideo: async (playlistId: string, videoId: string): Promise<Playlist | null> => {
+      if (!window.electron) return null;
+      return window.electron.addVideoToPlaylist(playlistId, videoId);
+    },
 
-  async getFavoriteVideos(): Promise<VideoFile[]> {
-    if (!window.electron) return [];
-    return window.electron.getFavoriteVideos();
-  }
+    removeVideo: async (playlistId: string, videoId: string): Promise<Playlist | null> => {
+      if (!window.electron) return null;
+      return window.electron.removeVideoFromPlaylist(playlistId, videoId);
+    },
 
-  async toggleFavorite(videoId: string): Promise<string[]> {
-    if (!window.electron) return [];
-    return window.electron.toggleFavorite(videoId);
-  }
+    reorder: async (playlistId: string, newVideoIds: string[]): Promise<Playlist | null> => {
+      if (!window.electron) return null;
+      return window.electron.reorderPlaylist(playlistId, newVideoIds);
+    },
 
-  // --- File Operations ---
-  async getSubdirectories(dirPath: string): Promise<DirectoryEntry[]> {
-    if (!window.electron) return [];
-    return window.electron.getSubdirectories(dirPath);
-  }
+    getVideos: async (playlistId: string): Promise<VideoFile[]> => {
+      if (!window.electron) return [];
+      return window.electron.getPlaylistVideos(playlistId);
+    },
+  };
 
-  async deleteVideo(id: string): Promise<boolean> {
-    if (!window.electron) return false;
-    return window.electron.deleteVideo(id);
-  }
+  tags = {
+    create: async (name: string): Promise<Tag | null> => {
+      if (!window.electron) return null;
+      return window.electron.createTag(name);
+    },
 
-  async revealInExplorer(videoId: string): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.revealInExplorer(videoId);
-  }
+    getActive: async (): Promise<Tag[]> => {
+      if (!window.electron) return [];
+      return window.electron.getTagsActive();
+    },
 
-  async openPath(filePath: string): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.openPath(filePath);
-  }
+    getByFolder: async (folderPath: string): Promise<Tag[]> => {
+      if (!window.electron) return [];
+      return window.electron.getTagsByFolder(folderPath);
+    },
 
-  async renameVideo(id: string, newFileName: string): Promise<VideoFile | null> {
-    if (!window.electron) return null;
-    return window.electron.renameVideo(id, newFileName);
-  }
+    getAll: async (): Promise<Tag[]> => {
+      if (!window.electron) return [];
+      return window.electron.getTagsAll();
+    },
 
-  async moveVideos(videoPaths: string[], targetFolderPath: string): Promise<number> {
-    if (!window.electron) return 0;
-    return window.electron.moveVideos(videoPaths, targetFolderPath);
-  }
+    getByVideo: async (videoId: string): Promise<Tag[]> => {
+      if (!window.electron) return [];
+      return window.electron.getVideoTags(videoId);
+    },
 
-  async downloadVideo(url: string, targetFolderPath: string): Promise<VideoFile | null> {
-    if (!window.electron) return null;
-    return window.electron.downloadVideo(url, targetFolderPath);
-  }
+    assign: async (videoId: string, tagId: string): Promise<Tag[]> => {
+      if (!window.electron) return [];
+      return window.electron.assignTag(videoId, tagId);
+    },
 
-  async normalizeVideo(path: string): Promise<VideoFile | null> {
-    if (!window.electron) return null;
-    return window.electron.normalizeVideo(path);
-  }
+    unassign: async (videoId: string, tagId: string): Promise<Tag[]> => {
+      if (!window.electron) return [];
+      return window.electron.unassignTag(videoId, tagId);
+    },
 
-  // --- Playlists ---
-  async getPlaylists(): Promise<Playlist[]> {
-    if (!window.electron) return [];
-    return window.electron.getPlaylists();
-  }
+    getVideos: async (tagIds: string[]): Promise<VideoFile[]> => {
+      if (!window.electron) return [];
+      return window.electron.getVideosByTag(tagIds);
+    },
 
-  async createPlaylist(name: string): Promise<Playlist | null> {
-    if (!window.electron) return null;
-    return window.electron.createPlaylist(name);
-  }
+    assignToVideos: async (videoIds: string[], tagId: string): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.assignTagToVideos(videoIds, tagId);
+    },
 
-  async deletePlaylist(id: string): Promise<Playlist[]> {
-    if (!window.electron) return [];
-    return window.electron.deletePlaylist(id);
-  }
+    unassignFromVideos: async (videoIds: string[], tagId: string): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.unassignTagFromVideos(videoIds, tagId);
+    },
+  };
 
-  async updatePlaylistMeta(id: string, name: string): Promise<Playlist | null> {
-    if (!window.electron) return null;
-    return window.electron.updatePlaylistMeta(id, name);
-  }
+  favorites = {
+    getAll: async (): Promise<string[]> => {
+      if (!window.electron) return [];
+      return window.electron.getFavorites();
+    },
 
-  async addVideoToPlaylist(playlistId: string, videoId: string): Promise<Playlist | null> {
-    if (!window.electron) return null;
-    return window.electron.addVideoToPlaylist(playlistId, videoId);
-  }
+    getVideos: async (): Promise<VideoFile[]> => {
+      if (!window.electron) return [];
+      return window.electron.getFavoriteVideos();
+    },
 
-  async removeVideoFromPlaylist(playlistId: string, videoId: string): Promise<Playlist | null> {
-    if (!window.electron) return null;
-    return window.electron.removeVideoFromPlaylist(playlistId, videoId);
-  }
+    toggle: async (videoId: string): Promise<string[]> => {
+      if (!window.electron) return [];
+      return window.electron.toggleFavorite(videoId);
+    },
+  };
 
-  async reorderPlaylist(playlistId: string, newVideoIds: string[]): Promise<Playlist | null> {
-    if (!window.electron) return null;
-    return window.electron.reorderPlaylist(playlistId, newVideoIds);
-  }
+  settings = {
+    get: async (): Promise<AppSettings> => {
+      if (!window.electron) {
+        // Fallback defaults
+        return {
+          folderPath: '',
+          columnCount: 4,
+          mobileColumnCount: 1,
+          sortOption: 'date-desc',
+          libraryFolders: [],
+          isSidebarOpen: true,
+          rootMargin: 1000,
+          debounceTime: 800,
+          chunkSize: 100,
+          autoPlayNext: false,
+          enableHardwareDecoding: false,
+          expandedPaths: [],
+          playOnHoverOnly: false,
+          volume: 1.0,
+          isMuted: false,
+          layoutMode: 'masonry',
+          gridStyle: 'modern',
+          ffmpegPath: '',
+          ffprobePath: '',
+          enableExperimentalNormalize: false,
+          enableLargeVideoRestriction: true,
+          largeVideoThreshold: 1024,
+          openInFullscreen: false,
+          enableMobileConnection: false,
+          authAccessToken: '',
+        };
+      }
+      return window.electron.getSettings();
+    },
 
-  async getPlaylistVideos(playlistId: string): Promise<VideoFile[]> {
-    if (!window.electron) return [];
-    return window.electron.getPlaylistVideos(playlistId);
-  }
+    save: async <K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<boolean> => {
+      if (!window.electron) return false;
+      return window.electron.saveSettings(key, value);
+    },
 
-  // --- Sorting ---
-  async saveFolderOrder(folderPath: string, videoPaths: string[]): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.saveFolderOrder(folderPath, videoPaths);
-  }
+    resetAccessToken: async (): Promise<string> => {
+      if (!window.electron) return '';
+      return window.electron.resetAccessToken();
+    },
+  };
 
-  async getFolderOrder(folderPath: string): Promise<string[]> {
-    if (!window.electron) return [];
-    return window.electron.getFolderOrder(folderPath);
-  }
+  system = {
+    selectFolder: async (): Promise<string | null> => {
+      if (!window.electron) return null;
+      return window.electron.selectFolder();
+    },
 
-  // --- Tags ---
-  async createTag(name: string): Promise<Tag | null> {
-    if (!window.electron) return null;
-    return window.electron.createTag(name);
-  }
+    selectFile: async (): Promise<string | null> => {
+      if (!window.electron) return null;
+      return window.electron.selectFile();
+    },
 
-  async getTagsActive(): Promise<Tag[]> {
-    if (!window.electron) return [];
-    return window.electron.getTagsActive();
-  }
+    validateFFmpeg: async (path: string): Promise<boolean> => {
+      if (!window.electron) return false;
+      return window.electron.validateFFmpegPath(path);
+    },
 
-  async getTagsByFolder(folderPath: string): Promise<Tag[]> {
-    if (!window.electron) return [];
-    return window.electron.getTagsByFolder(folderPath);
-  }
+    validateFFprobe: async (path: string): Promise<boolean> => {
+      if (!window.electron) return false;
+      return window.electron.validateFFprobePath(path);
+    },
 
-  async getTagsAll(): Promise<Tag[]> {
-    if (!window.electron) return [];
-    return window.electron.getTagsAll();
-  }
+    relaunchApp: async (): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.relaunchApp();
+    },
 
-  async getVideoTags(videoId: string): Promise<Tag[]> {
-    if (!window.electron) return [];
-    return window.electron.getVideoTags(videoId);
-  }
+    setFullScreen: async (enable: boolean): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.setFullScreen(enable);
+    },
 
-  async assignTag(videoId: string, tagId: string): Promise<Tag[]> {
-    if (!window.electron) return [];
-    return window.electron.assignTag(videoId, tagId);
-  }
+    revealInExplorer: async (videoId: string): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.revealInExplorer(videoId);
+    },
 
-  async unassignTag(videoId: string, tagId: string): Promise<Tag[]> {
-    if (!window.electron) return [];
-    return window.electron.unassignTag(videoId, tagId);
-  }
+    openPath: async (filePath: string): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.openPath(filePath);
+    },
 
-  async getVideosByTag(tagIds: string[]): Promise<VideoFile[]> {
-    if (!window.electron) return [];
-    return window.electron.getVideosByTag(tagIds);
-  }
+    getSubdirectories: async (dirPath: string): Promise<DirectoryEntry[]> => {
+      if (!window.electron) return [];
+      return window.electron.getSubdirectories(dirPath);
+    },
 
-  async assignTagToVideos(videoIds: string[], tagId: string): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.assignTagToVideos(videoIds, tagId);
-  }
+    // ▼▼▼ 追加 ▼▼▼
+    getDirectoryTree: async (dirPath: string): Promise<string[]> => {
+      if (!window.electron) return [];
+      return window.electron.getDirectoryTree(dirPath);
+    },
 
-  async unassignTagFromVideos(videoIds: string[], tagId: string): Promise<void> {
-    if (!window.electron) return;
-    return window.electron.unassignTagFromVideos(videoIds, tagId);
-  }
+    getConnectionInfo: async (): Promise<ConnectionInfo | null> => {
+      if (!window.electron) return null;
+      return window.electron.getConnectionInfo();
+    },
 
-  // --- Events ---
-  onVideoUpdate(callback: (event: VideoUpdateEvent) => void): () => void {
-    if (!window.electron) return () => {};
-    return window.electron.onVideoUpdate(callback);
-  }
+    startDrag: (files: string | string[]): void => {
+      if (!window.electron) return;
+      window.electron.startDrag(files);
+    },
 
-  // --- Drag & Drop (▼▼▼ 追加 ▼▼▼) ---
-  startDrag(files: string | string[]): void {
-    if (!window.electron) return;
-    window.electron.startDrag(files);
-  }
+    getFilePath: (file: File): string => {
+      if (!window.electron) return '';
+      return window.electron.getFilePath(file);
+    },
+  };
 
-  getFilePath(file: File): string {
-    if (!window.electron) return '';
-    return window.electron.getFilePath(file);
-  }
+  sorting = {
+    saveFolderOrder: async (folderPath: string, videoPaths: string[]): Promise<void> => {
+      if (!window.electron) return;
+      return window.electron.saveFolderOrder(folderPath, videoPaths);
+    },
+
+    getFolderOrder: async (folderPath: string): Promise<string[]> => {
+      if (!window.electron) return [];
+      return window.electron.getFolderOrder(folderPath);
+    },
+  };
+
+  events = {
+    onVideoUpdate: (callback: (events: VideoUpdateEvent[]) => void): (() => void) => {
+      if (!window.electron) return () => {};
+      return window.electron.onVideoUpdate(callback);
+    },
+  };
 }

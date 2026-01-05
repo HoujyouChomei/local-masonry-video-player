@@ -2,6 +2,10 @@
 
 import { getDB } from '../../lib/db';
 import path from 'path';
+import fs from 'fs';
+import crypto from 'crypto';
+import { app } from 'electron';
+import { THUMBNAIL } from '../../../src/shared/constants/assets';
 import { VideoRow, VideoCreateInput, VideoUpdateInput } from './video-repository';
 
 export class VideoIntegrityRepository {
@@ -220,6 +224,28 @@ export class VideoIntegrityRepository {
     const paths = rows.map((r) => r.path);
     const idPlaceholders = ids.map(() => '?').join(',');
     const pathPlaceholders = paths.map(() => '?').join(',');
+
+    // ▼▼▼ サムネイル削除ロジック ▼▼▼
+    const thumbDir = path.join(app.getPath('userData'), THUMBNAIL.DIR_NAME);
+    let deletedThumbnails = 0;
+
+    for (const row of rows) {
+      try {
+        const hash = crypto.createHash('md5').update(row.path).digest('hex');
+        const thumbPath = path.join(thumbDir, `${hash}${THUMBNAIL.EXTENSION}`);
+        if (fs.existsSync(thumbPath)) {
+          fs.unlinkSync(thumbPath);
+          deletedThumbnails++;
+        }
+      } catch (error) {
+        console.warn(`[Repo-GC] Failed to delete thumbnail for: ${row.path}`, error);
+      }
+    }
+
+    if (deletedThumbnails > 0) {
+      console.log(`[Repo-GC] Deleted ${deletedThumbnails} orphaned thumbnails.`);
+    }
+    // ▲▲▲ 追加ここまで ▲▲▲
 
     const tx = this.db.transaction(() => {
       this.db

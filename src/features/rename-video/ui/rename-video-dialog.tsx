@@ -1,7 +1,5 @@
 // src/features/rename-video/ui/rename-video-dialog.tsx
 
-'use client';
-
 import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import {

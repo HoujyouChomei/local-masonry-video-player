@@ -41,6 +41,7 @@ async function startWatch(folderPath: string) {
       stabilityThreshold: 2000,
       pollInterval: 100,
     },
+    // eslint-disable-next-line no-useless-escape
     ignored: [/(^|[\/\\])\../, '**/node_modules/**', '**/*.tmp'],
   });
 

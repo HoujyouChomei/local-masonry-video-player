@@ -1,31 +1,29 @@
 // src/widgets/sidebar/ui/library-section.tsx
 
-'use client';
-
-import React from 'react';
 import { Plus, Library } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { useUIStore } from '@/shared/stores/ui-store'; // 追加
+import { useUIStore } from '@/shared/stores/ui-store';
 import { selectFolder } from '@/shared/api/electron';
 import { FolderTreeItem } from './folder-tree-item';
 import { Button } from '@/components/ui/button';
+// ▼▼▼ 追加 ▼▼▼
+import { useDirectoryTree } from '@/features/prefetch-directories/model/use-directory-tree';
 
 export const LibrarySection = () => {
-  // ▼▼▼ 修正: setFolderPath を取得 ▼▼▼
   const { libraryFolders, addLibraryFolder, removeLibraryFolder, setFolderPath } =
     useSettingsStore();
-  // ▼▼▼ 追加: UIリセット用 ▼▼▼
   const { resetView } = useUIStore();
+  // ▼▼▼ 追加 ▼▼▼
+  const { prefetchTree } = useDirectoryTree();
 
   const handleAddFolder = async () => {
     const path = await selectFolder();
     if (path) {
-      // 1. ライブラリに追加
       await addLibraryFolder(path);
-      // 2. そのフォルダを選択状態にする (画面遷移)
       await setFolderPath(path);
-      // 3. 検索条件などをリセットしてフォルダの中身を表示
       resetView();
+      // ▼▼▼ 追加: 登録直後にプリフェッチ実行 ▼▼▼
+      prefetchTree(path);
     }
   };
 

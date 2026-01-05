@@ -7,7 +7,7 @@ import { LibraryScanner } from './library-scanner';
 
 // --- Mocks ---
 
-// VideoRepository Mock (Basic Read)
+// VideoRepository Mock
 const videoRepoMocks = vi.hoisted(() => ({
   findPathsByDirectory: vi.fn(),
   findManyByPaths: vi.fn(),
@@ -20,7 +20,7 @@ vi.mock('../repositories/video-repository', () => ({
   },
 }));
 
-// VideoIntegrityRepository Mock (Writes)
+// VideoIntegrityRepository Mock
 const integrityRepoMocks = vi.hoisted(() => ({
   markAsMissing: vi.fn(),
   upsertMany: vi.fn(),
@@ -35,7 +35,7 @@ vi.mock('../repositories/video-integrity-repository', () => ({
   },
 }));
 
-// Singletonパターン対応
+// ThumbnailService Mock
 const thumbMocks = vi.hoisted(() => ({
   addToQueue: vi.fn(),
   deleteThumbnail: vi.fn(),
@@ -49,6 +49,7 @@ vi.mock('./thumbnail-service', () => ({
   },
 }));
 
+// VideoRebinder Mock
 const rebinderMocks = vi.hoisted(() => ({
   findCandidate: vi.fn(),
   execute: vi.fn(),
@@ -74,14 +75,20 @@ vi.mock('./ffmpeg-service', () => ({
   },
 }));
 
-vi.mock('fs/promises', () => ({
-  default: {
-    readdir: vi.fn(),
-    stat: vi.fn(),
-  },
-}));
+// Mock fs/promises
+// Ensure compatibility with both default and named imports
+vi.mock('fs/promises', () => {
+  const readdir = vi.fn();
+  const stat = vi.fn();
+  return {
+    default: { readdir, stat },
+    readdir,
+    stat,
+  };
+});
 import fs from 'fs/promises';
 
+// Mock fs (sync)
 vi.mock('fs', () => ({
   default: { existsSync: vi.fn(), mkdirSync: vi.fn() },
   existsSync: vi.fn(),
@@ -97,23 +104,30 @@ vi.mock('../../lib/file-hash', () => ({ calculateFileHash: vi.fn().mockResolvedV
 
 describe('LibraryScanner', () => {
   let scanner: LibraryScanner;
-  const dummyFolder = path.normalize('/videos');
+  const dummyFolder = process.platform === 'win32' ? 'C:\\videos' : '/videos';
 
   beforeEach(() => {
     vi.clearAllMocks();
     scanner = new LibraryScanner();
     ffmpegMocks.validatePath.mockResolvedValue(false);
+
+    // Default mocks
+    vi.mocked(fs.readdir).mockResolvedValue([]);
+    vi.mocked(fs.stat).mockResolvedValue({
+      size: 100,
+      mtimeMs: 100,
+      birthtimeMs: 100,
+      ino: 1,
+    } as any);
+    videoRepoMocks.findManyByPaths.mockReturnValue([]);
+    videoRepoMocks.findPathsByDirectory.mockReturnValue([]);
+    rebinderMocks.findCandidate.mockResolvedValue(undefined);
   });
 
   describe('scan', () => {
     it('should insert new files with correct names', async () => {
       const mockDirents = [{ name: 'new.mp4', isFile: () => true }];
       vi.mocked(fs.readdir).mockResolvedValue(mockDirents as any);
-      vi.mocked(fs.stat).mockResolvedValue({ size: 100, mtimeMs: 100, ino: 1 } as any);
-
-      videoRepoMocks.findPathsByDirectory.mockReturnValue([]);
-      videoRepoMocks.findManyByPaths.mockReturnValue([]);
-      rebinderMocks.findCandidate.mockResolvedValue(undefined);
 
       await scanner.scan(dummyFolder);
 
@@ -131,11 +145,6 @@ describe('LibraryScanner', () => {
     it('should queue thumbnails for found files in scan', async () => {
       const mockDirents = [{ name: 'video.mp4', isFile: () => true }];
       vi.mocked(fs.readdir).mockResolvedValue(mockDirents as any);
-      vi.mocked(fs.stat).mockResolvedValue({ size: 100, mtimeMs: 100, ino: 1 } as any);
-
-      videoRepoMocks.findPathsByDirectory.mockReturnValue([]);
-      videoRepoMocks.findManyByPaths.mockReturnValue([]);
-      rebinderMocks.findCandidate.mockResolvedValue(undefined);
 
       await scanner.scan(dummyFolder);
 
@@ -145,12 +154,14 @@ describe('LibraryScanner', () => {
       );
     });
 
-    it('should update changed files (reset metadata) and regenerate thumbnails', async () => {
+    it('should update changed files and regenerate thumbnails', async () => {
       const filename = 'updated.mp4';
       const filePath = path.join(dummyFolder, filename);
       const mockDirents = [{ name: filename, isFile: () => true }];
 
       vi.mocked(fs.readdir).mockResolvedValue(mockDirents as any);
+
+      // Override fs.stat for this test
       vi.mocked(fs.stat).mockResolvedValue({
         size: 2000,
         mtimeMs: 9999,
@@ -198,9 +209,6 @@ describe('LibraryScanner', () => {
       vi.mocked(fs.readdir).mockResolvedValue(mockDirents as any);
       vi.mocked(fs.stat).mockResolvedValue({ size: 5000, mtimeMs: 1000, ino: 99 } as any);
 
-      videoRepoMocks.findPathsByDirectory.mockReturnValue([]);
-      videoRepoMocks.findManyByPaths.mockReturnValue([]);
-
       rebinderMocks.findCandidate.mockResolvedValue({ id: 'moved-id', file_hash: 'hash' });
 
       await scanner.scan(dummyFolder);
@@ -224,6 +232,98 @@ describe('LibraryScanner', () => {
       const result = await scanner.scan(dummyFolder);
 
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('scanQuietly', () => {
+    it('should recursively find files in scanQuietly', async () => {
+      const subDirName = 'subdir';
+      const rootFile = 'root.mp4';
+      const subFile = 'sub.mp4';
+      const subDirPath = path.join(dummyFolder, subDirName);
+
+      // Robust path normalization helper for mocks
+      // Note: On Windows test environment, input path might be "C:\videos\subdir" or "C:/videos/subdir"
+      const normalize = (p: string) => String(p).replace(/[\\/]/g, '/').toLowerCase();
+
+      vi.mocked(fs.readdir).mockImplementation(async (p: any) => {
+        const pNorm = normalize(p);
+
+        // Check if we are scanning the subdirectory
+        // Using includes to be safe against trailing slashes or drive letter variations
+        if (pNorm.includes(subDirName.toLowerCase())) {
+          return [
+            {
+              name: subFile,
+              isFile: () => true,
+              isSymbolicLink: () => false,
+              isDirectory: () => false,
+            },
+          ] as any;
+        }
+
+        // Otherwise assume root directory
+        return [
+          {
+            name: rootFile,
+            isFile: () => true,
+            isSymbolicLink: () => false,
+            isDirectory: () => false,
+          },
+          {
+            name: subDirName,
+            isFile: () => false,
+            isSymbolicLink: () => false,
+            isDirectory: () => true,
+          },
+        ] as any;
+      });
+
+      // Ensure stat succeeds for found files
+      vi.mocked(fs.stat).mockResolvedValue({
+        size: 100,
+        mtimeMs: 100,
+        birthtimeMs: 100,
+        ino: 1,
+      } as any);
+
+      // Ensure no files exist in DB so they are treated as new
+      videoRepoMocks.findManyByPaths.mockReturnValue([]);
+
+      // Ensure rebind returns undefined so they are added to insert list
+      rebinderMocks.findCandidate.mockResolvedValue(undefined);
+
+      await scanner.scanQuietly(dummyFolder);
+
+      expect(integrityRepoMocks.upsertMany).toHaveBeenCalled();
+
+      // Verify that the correct paths were attempted to be inserted
+      const calls = integrityRepoMocks.upsertMany.mock.calls;
+      const allInserted = calls.flatMap((c: any) => c[0]); // c[0] is toInsert array
+      const insertedPaths = allInserted.map((item: any) => item.path);
+
+      expect(insertedPaths).toContain(path.join(dummyFolder, rootFile));
+      expect(insertedPaths).toContain(path.join(subDirPath, subFile));
+    });
+
+    it('should respect max depth in scanQuietly', async () => {
+      // Infinite directory simulation
+      vi.mocked(fs.readdir).mockImplementation(async () => {
+        return [
+          {
+            name: 'deep_dir',
+            isFile: () => false,
+            isSymbolicLink: () => false,
+            isDirectory: () => true,
+          },
+        ] as any;
+      });
+
+      await scanner.scanQuietly(dummyFolder);
+
+      // Depth 0 (initial) + 20 recursive calls = 21 calls.
+      // At depth 21, it returns before calling readdir.
+      expect(fs.readdir).toHaveBeenCalledTimes(21);
     });
   });
 });

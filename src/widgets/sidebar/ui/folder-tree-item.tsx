@@ -1,7 +1,5 @@
 // src/widgets/sidebar/ui/folder-tree-item.tsx
 
-'use client';
-
 import React from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FolderSearch } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query'; // useQueryClient 追加

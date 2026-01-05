@@ -1,4 +1,3 @@
-import React from 'react';
 import { LayoutTemplate } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { cn } from '@/lib/utils';

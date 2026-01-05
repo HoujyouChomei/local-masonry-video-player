@@ -4,31 +4,18 @@ import { useState, useCallback } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useBatchMove } from '@/features/batch-actions/model/use-batch-move';
-import { downloadVideoApi, getFilePathApi } from '@/shared/api/electron'; // ▼▼▼ 追加: getFilePathApi ▼▼▼
+import { downloadVideoApi, getFilePathApi } from '@/shared/api/electron';
 import { toast } from 'sonner';
+import { VIDEO_EXTENSIONS_ALL } from '@/shared/constants/file-types';
 
-const VIDEO_EXTENSIONS = new Set([
-  '.mp4',
-  '.webm',
-  '.ogg',
-  '.mov',
-  '.m4v',
-  '.mkv',
-  '.avi',
-  '.wmv',
-  '.flv',
-  '.ts',
-  '.3gp',
-  '.mpg',
-  '.mpeg',
-]);
+const VIDEO_EXTENSIONS = new Set(VIDEO_EXTENSIONS_ALL);
 
 const isVideoFile = (fileName: string): boolean => {
   const ext = fileName.slice(Math.max(0, fileName.lastIndexOf('.')) || Infinity).toLowerCase();
   return VIDEO_EXTENSIONS.has(ext);
 };
 
-// ▼▼▼ 追加: URLが動画ファイルかどうかの簡易チェック ▼▼▼
+// URLが動画ファイルかどうかの簡易チェック
 const isVideoUrl = (url: string): boolean => {
   try {
     const pathname = new URL(url).pathname;
@@ -109,7 +96,6 @@ export const useExternalDrop = () => {
         const videoPaths: string[] = [];
 
         for (const file of files) {
-          // ▼▼▼ 修正: window.electron -> getFilePathApi ▼▼▼
           const path = getFilePathApi(file);
           if (path && isVideoFile(file.name)) {
             videoPaths.push(path);
@@ -135,11 +121,9 @@ export const useExternalDrop = () => {
       }
 
       // 2. URLドロップの処理 (ファイルがない場合)
-      // ブラウザからのDnDでは text/uri-list にURLが入る
       const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
 
       if (url && isVideoUrl(url)) {
-        // ダウンロード開始通知
         const toastId = toast.loading('Downloading video...');
 
         try {
@@ -155,7 +139,6 @@ export const useExternalDrop = () => {
           toast.error('Download failed', { id: toastId });
         }
       } else if (url) {
-        // 動画URLでない場合は無視するか、警告を出す
         console.log('Dropped URL is not a video file:', url);
       }
     },

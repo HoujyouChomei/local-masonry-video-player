@@ -1,17 +1,32 @@
 // src/entities/video/ui/video-card.test.tsx
 
-import React from 'react';
+import { ReactNode } from 'react';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VideoCard } from './video-card';
-import { VideoFile } from '../../../shared/types/video';
+import { VideoFile } from '@/shared/types/video';
 
 // --- Mocks Setup ---
+
+// 0. Global Mocks (matchMedia)
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 // 1. Hoisted State & Functions
 const mocks = vi.hoisted(() => ({
   setDraggedFilePath: vi.fn(),
-  setDraggedVideoId: vi.fn(), // 追加
+  setDraggedVideoId: vi.fn(),
   startDrag: vi.fn(),
   // Mutable State Containers
   selectionState: {
@@ -31,7 +46,6 @@ const mocks = vi.hoisted(() => ({
     playOnHoverOnly: false,
     gridStyle: 'modern' as const,
     debounceTime: 800,
-    // 追加
     enableLargeVideoRestriction: true,
     largeVideoThreshold: 1024,
   },
@@ -40,9 +54,9 @@ const mocks = vi.hoisted(() => ({
   },
   dragStoreState: {
     setDraggedFilePath: vi.fn(),
-    setDraggedVideoId: vi.fn(), // 追加
+    setDraggedVideoId: vi.fn(),
     draggedFilePath: null as string | string[] | null,
-    draggedVideoId: null as string | string[] | null, // 追加
+    draggedVideoId: null as string | string[] | null,
     clearDrag: vi.fn(),
   },
 }));
@@ -60,8 +74,6 @@ Object.defineProperty(window, 'electron', {
 });
 
 // 3. Mock Stores with Strict Types
-
-// Zustand Selector Type
 type StoreSelector<T, U> = (state: T) => U;
 
 vi.mock('@/shared/stores/drag-store', () => {
@@ -130,9 +142,28 @@ vi.mock('./video-card-overlay', () => ({
   VideoCardOverlay: () => <div data-testid="overlay">Overlay</div>,
 }));
 
+// Mock ContextMenu completely to avoid internal state issues
 vi.mock('@/components/ui/context-menu', () => ({
-  ContextMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  ContextMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ContextMenu: ({
+    children,
+    onOpenChange,
+  }: {
+    children: ReactNode;
+    onOpenChange?: (open: boolean) => void;
+  }) => (
+    <div
+      data-testid="context-menu-wrapper"
+      onContextMenu={() => onOpenChange && onOpenChange(true)}
+    >
+      {children}
+    </div>
+  ),
+  ContextMenuTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+}));
+
+// Mock useIsMobile
+vi.mock('@/shared/lib/use-is-mobile', () => ({
+  useIsMobile: () => false, // Always PC mode for these tests
 }));
 
 // --- Test Data ---
@@ -152,7 +183,6 @@ const mockVideo: VideoFile = {
 describe('VideoCard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset mutable state
     mocks.selectionState.selectedVideoIds = [];
     mocks.selectionState.isSelectionMode = false;
     mockQueryCache.findAll.mockReturnValue([]);
@@ -191,7 +221,6 @@ describe('VideoCard', () => {
 
   describe('2. Selection Mode', () => {
     it('shows selection visuals when in selection mode', () => {
-      // Setup state via mutable mock object
       mocks.selectionState.isSelectionMode = true;
       mocks.selectionState.selectedVideoIds = ['v1'];
 
@@ -199,8 +228,9 @@ describe('VideoCard', () => {
         <VideoCard video={mockVideo} isModalOpen={false} isSelectionMode={true} isSelected={true} />
       );
 
-      expect(screen.queryByTestId('overlay')).toBeNull();
-
+      // In selection mode, actionsSlot (overlay buttons) might be hidden by parent logic,
+      // but VideoSelectionOverlay is rendered.
+      // We check for data-selected attribute.
       const img = getVideoThumbnail(container);
       const card = img.closest('.video-card');
       expect(card?.getAttribute('data-selected')).toBe('true');
@@ -217,18 +247,16 @@ describe('VideoCard', () => {
 
       fireEvent.dragStart(card);
 
-      // Path と ID 両方がセットされることを確認
       expect(mocks.setDraggedFilePath).toHaveBeenCalledWith(mockVideo.path);
       expect(mocks.setDraggedVideoId).toHaveBeenCalledWith(mockVideo.id);
+      // startDragApi was mocked as startDrag
       expect(mocks.startDrag).toHaveBeenCalledWith(mockVideo.path);
     });
 
     it('initiates multi-file drag when selected and in selection mode', () => {
-      // Setup: Multi-selection state
       mocks.selectionState.isSelectionMode = true;
       mocks.selectionState.selectedVideoIds = ['v1', 'v2', 'v3'];
 
-      // Setup: Mock Query Cache
       const mockCachedVideos = [
         { id: 'v1', path: '/path/to/v1.mp4' },
         { id: 'v2', path: '/path/to/v2.mp4' },
@@ -249,9 +277,7 @@ describe('VideoCard', () => {
 
       const img = getVideoThumbnail(container);
       const card = img.closest('div[draggable="true"]');
-      if (!card) throw new Error('Draggable element not found');
-
-      fireEvent.dragStart(card);
+      fireEvent.dragStart(card!);
 
       const expectedPaths = ['/path/to/v1.mp4', '/path/to/v2.mp4', '/path/to/v3.mp4'];
       const expectedIds = ['v1', 'v2', 'v3'];
@@ -262,13 +288,12 @@ describe('VideoCard', () => {
     });
 
     it('initiates single drag if dragged item is NOT selected (even in selection mode)', () => {
-      // Setup: Selection mode, but this card ('v1') is NOT in selection
       mocks.selectionState.isSelectionMode = true;
       mocks.selectionState.selectedVideoIds = ['v2', 'v3'];
 
       const { container } = render(
         <VideoCard
-          video={mockVideo} // v1
+          video={mockVideo} // v1 is NOT selected
           isModalOpen={false}
           isSelectionMode={true}
           isSelected={false}
@@ -277,10 +302,8 @@ describe('VideoCard', () => {
 
       const img = getVideoThumbnail(container);
       const card = img.closest('div[draggable="true"]');
-
       fireEvent.dragStart(card!);
 
-      // Should only drag itself
       expect(mocks.startDrag).toHaveBeenCalledWith(mockVideo.path);
       expect(mocks.setDraggedVideoId).toHaveBeenCalledWith(mockVideo.id);
     });

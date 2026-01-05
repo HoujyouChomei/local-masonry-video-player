@@ -1,8 +1,12 @@
+ご指示の内容（実験的機能としての位置づけ、設定箇所の変更、ファイアウォール設定、再接続の仕様、Android限定など）を反映した `README_jp.md` です。
+
+---
+
 [ [English](README.md) | 日本語 ]
 
 # Local Masonry Video Player
 
-![Electron](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white) ![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Electron](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white) ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white) ![SQLite](https://img.shields.io/badge/SQLite-07405E?style=for-the-badge&logo=sqlite&logoColor=white) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 **動画素材や動画生成AI用ローカルビデオプレイヤー。**
 
@@ -16,18 +20,50 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
 *   **Masonry Gridレイアウト**: 動画のアスペクト比を維持し、隙間なくタイル状に配置します。
 *   **フォルダ参照型管理**: ファイルの実体を移動せず、インデックスのみを作成して管理します。
-*   **ファイル監視 (File Watcher)**: 対象フォルダ内のファイル追加・削除・変更を検知し、ライブラリを自動更新します。
+*   **ファイル監視**: 対象フォルダ内のファイル追加・削除・変更を検知し、ライブラリを自動更新します。
 *   **ファイル操作**: アプリ内からローカルファイルのリネーム、フォルダ移動、削除（ゴミ箱へ移動）が可能です。
 *   **ドラッグ＆ドロップ**: アプリ外（ComfyUI等の外部ツール）へのファイルドロップや、アプリ内でのフォルダ移動に対応しています。
+*   **モバイル連携**: **(実験機能)** 同一ネットワーク内のスマートフォンからQRコードで接続し、PC内の動画をストリーミング再生できます。
 *   **整理機能**: プレイリスト作成、タグ付け、お気に入り登録機能があります。
 *   **メタデータ収集**: **(要FFmpeg)** AI生成動画のプロンプト情報（JSON）、FPS、Codec等の技術情報を自動取得して表示・検索に使用できます。
 
 ## 検索機能
 
 *   **スコープ切り替え**: 現在のフォルダ内のみを検索するか、登録済みライブラリ全体（グローバル）を検索するかを切り替え可能です。
-*   **検索対象**:
+*   **高度な検索**:
     *   **FFmpegなし**: ファイル名のみ検索対象。
     *   **FFmpegあり**: ファイル名に加え、AIプロンプト、FPS、Codecなどのメタデータも検索対象になります。
+    *   **特殊構文**: `fps:60` や `codec:h264` と入力することで、技術的な仕様でフィルタリングが可能です。
+
+## モバイル連携 [実験機能]
+
+設定で本機能をONにした時のみ、PCで起動中のアプリが「サーバー」として動作し、スマートフォンからアクセスできます。
+
+**⚠️ 注意**: 
+本機能は実験機能であり、快適な動作を保証するものではありません。
+現在は **Android** でのみ動作確認を行っています。
+安全のため、公共の無線LAN（フリーWi-Fi）では使用しないでください。
+
+### 接続手順
+1.  PC側でアプリの `設定 (Settings) > EXPERIMENTAL` セクションを開きます。
+2.  `Mobile Connect` のトグルスイッチをONにします。
+3.  表示されたQRコードをスマートフォンで読み取ります。
+4.  ブラウザが立ち上がり、PC内のライブラリにアクセスできます。
+
+> **セキュリティについて**:
+> QRコードには、接続に必要な **認証トークン** が含まれています。これにより、QRコードを読み取った本人だけが安全にアクセスできます。
+
+> **再接続について**:
+> 一度接続に成功した場合、URL（トークンを含む）をブックマークや履歴から開くことで、次回以降はQRコードを読み取らなくても接続可能です（PC側のMobile ConnectがONになっている必要があります）。
+
+### 接続できない場合
+スマートフォンから接続できない場合は、以下の設定を確認してください。
+
+1.  **同一LAN接続**: PCとスマートフォンが同じWi-Fi（ルーター）に接続されている必要があります。
+2.  **ファイアウォール設定**: Windows Defender ファイアウォール等が通信をブロックしている可能性があります。
+    *   「ファイアウォールとネットワーク保護」設定を開きます。
+    *   「ファイアウォールによるアプリケーションの許可」を選択します。
+    *   一覧から `electron.exe` (または本アプリ名) を探し、**プライベート**（および必要ならパブリック）にチェックを入れて許可してください。
 
 ## 再生仕様とFFmpegについて
 
@@ -40,7 +76,7 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 | :--- | :--- | :--- |
 | **詳細プレーヤー**<br>(クリックして開く) | MP4, WebM のみ再生可能 | **多くの動画形式を再生可能**<br>(MKV, AVI, WMV 等) |
 | **一覧画面での同時再生**<br>(グリッド表示) | MP4, WebM のみ | **変化なし**<br>(Chromium準拠のため、FFmpegを入れてもMP4/WebMのみ) |
-| **データ取得** | 基本情報のみ | **サムネイル生成、FPS/Codec、AIプロンプト取得が可能** |
+| **データ取得** | 基本情報のみ | **FPS/Codec、AIプロンプト取得が可能** |
 
 ### FFmpeg 導入手順
 
@@ -49,14 +85,16 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 2.  解凍したフォルダ内の `bin` フォルダにある `ffmpeg.exe` と `ffprobe.exe` を任意の場所に保存します。
 3.  アプリの設定画面 (Settings) > External Tools セクションを開き、それぞれのパスを指定してください。
 
-## データ収集の仕様
+## データ収集と検索インデックスの仕様
 
-本アプリは、バックグラウンドで動画のメタデータを収集します。
+本アプリはバックグラウンドで動画のメタデータを収集しますが、**以下の条件を満たす必要があります。**
 
-*   **検索への反映**: 検索機能を利用するには、対象の動画が含まれるフォルダを**一度アプリ内で開く必要があります。**
-*   **反映ラグ**: 動画の詳細情報（AIプロンプトやFPSなど）が表示されるまで、数秒〜数分のラグが発生する場合があります。
+1.  **FFmpegの設定**: 設定画面で `ffmpeg` および `ffprobe` のパスが正しく指定されていること。
+2.  **フォルダの読み込み**: 対象の動画が含まれるフォルダを、**一度アプリ内で開く（表示する）必要があります。**
+    *   フォルダを開くとバックグラウンドで軽量スキャンが走り、検索インデックスに登録されます。
+    *   詳細情報（AIプロンプトやFPSなど）が表示されるまで、数秒〜数分のラグが発生する場合があります。
 
-## ショートカットキー
+## ショートカットキー & 操作
 
 ### 共通 / 一覧画面 (Grid View)
 | キー | 動作 |
@@ -76,11 +114,17 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 | `Mouse Wheel` | 前の動画 / 次の動画へ移動 |
 | `Esc` | プレーヤーを閉じる |
 
+### モバイル操作 (Touch)
+| アクション | 動作 |
+| :--- | :--- |
+| **スワイプ (左右)** | 前の動画 / 次の動画へ移動 |
+| **タップ** | コントロールの表示/非表示 |
+
 ## 注意事項
 
 ### 大容量の動画ファイルについて
 アプリケーションの安定性のため、初期設定では大容量の動画ファイルの自動再生が制限されています。
-デフォルトでは **1GB** を超える動画は、サムネイルにマウスカーソルを合わせた時のみプレビュー再生が開始されます。
+デフォルトでは **100MB** を超える動画は、サムネイルにマウスカーソルを合わせた時のみプレビュー再生が開始されます。
 
 この制限は `設定 (Settings) > Performance` セクションから、閾値の変更または機能の無効化が可能です。
 
@@ -101,19 +145,19 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
 ## 技術概要
 ### 技術スタック
-*   **Core**: Electron, Next.js (App Router), TypeScript
+*   **Core**: Electron, **Vite**, React, TypeScript
 *   **Frontend UI**: React, Tailwind CSS, Shadcn UI, Lucide React
 *   **State Management**: Zustand, TanStack Query
 *   **Database**: better-sqlite3 (SQLite)
-*   **Native Modules**: chokidar (ファイル監視)
+*   **Server**: Node.js HTTP Server + SSE (Server-Sent Events)
 
 ### アーキテクチャ
-*   **Frontend**: Feature-Sliced Design (FSD) をベースにしたディレクトリ構成を採用。
-*   **Backend**: Electronのメインプロセス内を Service/Repository パターンで構成。
+*   **Frontend**: Feature-Sliced Design (FSD) ベース。IPC通信とHTTP通信を抽象化した `ApiClient` パターンを採用し、デスクトップとモバイルでコードベースを共通化しています。
+*   **Backend**: Electronメインプロセス内にHTTPサーバーを内蔵。デスクトップ操作とモバイル操作をリアルタイムに同期します。
 
 ### データ管理と検索
 *   **SQLite**: メタデータ、設定、プレイリスト情報を単一の `.db` ファイルで管理。
-*   **Hybrid Search**: SQLiteの全文検索モジュール (FTS5) と通常のSQLクエリを組み合わせた検索実装。
+*   **Hybrid Search**: SQLiteの全文検索モジュール (**FTS5**) を全面的に採用した高速検索実装。
 *   **ポータブルデータ構造**: アプリケーション設定やデータベース（`userData`）は実行ファイルと同階層に保存。
 
 ### ファイル整合性と自動復元
@@ -128,7 +172,6 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 *実装を保証するものではありません*
 
 *   画像ファイルのサポート
-*   スマートフォン等でのリモート再生
 
 ## アンインストール方法
 

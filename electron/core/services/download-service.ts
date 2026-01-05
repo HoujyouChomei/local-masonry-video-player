@@ -34,6 +34,7 @@ export class DownloadService {
 
           // ファイル名サニタイズ処理
           // Windows/Linuxでファイル名に使用できない文字をアンダースコアに置換
+          // eslint-disable-next-line no-control-regex
           decoded = decoded.replace(/[<>:"/\\|?*\x00-\x1F]/g, '_');
 
           fileName = decoded;

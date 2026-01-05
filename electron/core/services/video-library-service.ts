@@ -9,9 +9,10 @@ import { FileIntegrityService } from './file-integrity-service';
 import { VideoRepository } from '../repositories/video-repository';
 import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
 import { VideoSearchRepository, SearchOptions } from '../repositories/video-search-repository';
-import { FolderRepository } from '../repositories/folder-repository'; // 追加
+import { FolderRepository } from '../repositories/folder-repository';
 import { VideoMapper } from './video-mapper';
 import { VideoFile } from '../../../src/shared/types/video';
+import { store } from '../../lib/store'; // ▼▼▼ 追加: storeへのアクセス ▼▼▼
 
 export class VideoLibraryService {
   private scanner = new LibraryScanner();
@@ -22,16 +23,30 @@ export class VideoLibraryService {
   private videoRepo = new VideoRepository();
   private integrityRepo = new VideoIntegrityRepository();
   private searchRepo = new VideoSearchRepository();
-  private folderRepo = new FolderRepository(); // 追加
+  private folderRepo = new FolderRepository();
   private mapper = new VideoMapper();
 
   /**
    * 指定フォルダをスキャンし、監視を開始する
    */
   async loadAndWatch(folderPath: string): Promise<VideoFile[]> {
+    if (!folderPath) {
+      this.watcher.stop();
+      return [];
+    }
+
     const videos = await this.scanner.scan(folderPath);
     this.watcher.watch(folderPath);
     return videos;
+  }
+
+  /**
+   * 指定フォルダを軽量スキャンする（サムネイル生成なし）
+   * APIリクエスト時やバックグラウンドでの定期実行用
+   */
+  async scanQuietly(folderPath: string): Promise<void> {
+    if (!folderPath) return;
+    await this.scanner.scanQuietly(folderPath);
   }
 
   /**
@@ -74,6 +89,12 @@ export class VideoLibraryService {
    */
   searchVideos(query: string, tagIds: string[], options: SearchOptions): VideoFile[] {
     try {
+      // ▼▼▼ 追加: フォルダ指定がない場合（グローバル検索）、現在のライブラリフォルダのみを対象にする ▼▼▼
+      if (!options.folderPath) {
+        const libraryFolders = (store.get('libraryFolders') as string[]) || [];
+        options.allowedRoots = libraryFolders;
+      }
+
       const rows = this.searchRepo.search(query, tagIds, options);
       return this.mapper.toEntities(rows);
     } catch (error) {
