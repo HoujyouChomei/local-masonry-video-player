@@ -90,15 +90,8 @@ Therefore, functionality is limited by default. To use all features, users must 
 
 The application collects video metadata in the background, but **the following conditions must be met:**
 
-<<<<<<< HEAD
-1.  **FFmpeg Setup**: `ffmpeg` and `ffprobe` paths must be correctly set in Settings.
-2.  **Folder Loading**: The folder containing the video **must be opened (displayed) within the app at least once.**
-    *   Opening the folder triggers a background lightweight scan to register it in the search index.
-    *   There may be a lag of a few seconds to a few minutes before detailed information (AI prompts, FPS, etc.) appears.
-=======
 *   **Search Indexing**: To enable search for a specific video, the folder containing it needs to be opened within the app at least once.
 *   **Rebinding Logic**: There may be a lag of a few seconds to a few minutes before detailed information (AI prompts, FPS, etc.) appears.
->>>>>>> 0b7b75965d5fc879fbf10716fd10d9efd235d450
 
 ## Shortcuts & Controls
 
