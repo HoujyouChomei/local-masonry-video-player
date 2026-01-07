@@ -73,7 +73,9 @@ const createWindow = () => {
 
   mainWindowState.manage(mainWindow);
 
-  const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+  // ▼▼▼ 変更: テストモード時は開発サーバーを使わずにビルドファイルを読み込む ▼▼▼
+  const isDev =
+    process.env.NODE_ENV === 'development' || (!app.isPackaged && process.env.NODE_ENV !== 'test');
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:5173');

@@ -96,7 +96,11 @@ const shellMocks = vi.hoisted(() => ({
   showItemInFolder: vi.fn(),
 }));
 
+// ▼▼▼ 修正: app もモックに含める ▼▼▼
 vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn().mockReturnValue('/tmp/userData'),
+  },
   shell: {
     trashItem: shellMocks.trashItem,
     showItemInFolder: shellMocks.showItemInFolder,

@@ -1,3 +1,4 @@
+// .gitignore
 # Dependencies
 /node_modules
 /.pnp
@@ -5,10 +6,7 @@
 
 # Testing
 /coverage
-
-# Next.js
-/.next/
-/out/
+test-results
 
 # Electron (Build outputs)
 /dist
@@ -34,12 +32,8 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
-# Vercel (If used later)
-.vercel
-
 # TypeScript
 *.tsbuildinfo
-next-env.d.ts
 
 # VS Code (Editor settings)
 .vscode/*
@@ -60,3 +54,6 @@ run-repomix.bat
 run-tests.bat
 start-dev.bat
 public/licenses.json
+
+# Test Binaries
+/bin

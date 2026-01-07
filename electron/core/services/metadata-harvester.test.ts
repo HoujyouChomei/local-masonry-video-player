@@ -51,7 +51,7 @@ vi.mock('./ffmpeg-service', () => ({
   },
 }));
 
-// 4. NotificationService Mock (変更点: Electronの直接モックではなくこちらを使用)
+// 4. NotificationService Mock
 const notifierMocks = vi.hoisted(() => ({
   notify: vi.fn(),
 }));
@@ -73,6 +73,8 @@ describe('MetadataHarvester', () => {
 
     metaRepoMocks.resetIncompleteMetadataStatus.mockReturnValue(0);
     metaRepoMocks.getPendingVideos.mockReturnValue([]);
+    // FFprobeパスをデフォルトに戻す
+    ffmpegMocks.ffprobePath = '/usr/bin/ffprobe';
 
     // シングルトンインスタンスを強制リセット
     (MetadataHarvester as any).instance = undefined;
@@ -120,7 +122,6 @@ describe('MetadataHarvester', () => {
       30,
       'h264'
     );
-    // NotificationService.notify が呼ばれたか確認
     expect(notifierMocks.notify).toHaveBeenCalledWith({
       type: 'update',
       path: '/video.mp4',
@@ -152,7 +153,6 @@ describe('MetadataHarvester', () => {
       name: 'priority',
     };
 
-    // 最初の呼び出しは空にしてアイドル状態へ
     metaRepoMocks.getPendingVideos.mockReturnValueOnce([]).mockReturnValue([batchVideo]);
 
     videoRepoMocks.findById.mockImplementation((id: string) => {
@@ -164,16 +164,13 @@ describe('MetadataHarvester', () => {
     ffmpegMocks.extractMetadata.mockResolvedValue({});
 
     harvester = MetadataHarvester.getInstance();
-    // アイドル状態になるまで進める
     await vi.advanceTimersByTimeAsync(50);
 
     harvester.requestHarvest('priority');
 
-    // 優先処理
     await vi.advanceTimersByTimeAsync(100);
     expect(metaRepoMocks.updateMetadataStatus).toHaveBeenNthCalledWith(1, 'priority', 'processing');
 
-    // バッチ処理（アイドル待機後）
     await vi.advanceTimersByTimeAsync(15000);
     expect(metaRepoMocks.updateMetadataStatus).toHaveBeenNthCalledWith(2, 'batch', 'processing');
   });
@@ -182,7 +179,6 @@ describe('MetadataHarvester', () => {
     const mockVideo = { id: 'v3', path: '/deleted.mp4', status: 'available' };
     metaRepoMocks.getPendingVideos.mockReturnValue([mockVideo]);
 
-    // DB再取得時に missing を返す
     videoRepoMocks.findById.mockReturnValue({ ...mockVideo, status: 'missing' });
 
     harvester = MetadataHarvester.getInstance();
@@ -196,5 +192,39 @@ describe('MetadataHarvester', () => {
   it('should reset incomplete metadata on startup', () => {
     harvester = MetadataHarvester.getInstance();
     expect(metaRepoMocks.resetIncompleteMetadataStatus).toHaveBeenCalled();
+  });
+
+  it('should wait if ffprobe path is not set', async () => {
+    // FFprobeパスを空にする
+    ffmpegMocks.ffprobePath = '';
+    const mockVideo = { id: 'v1', path: '/video.mp4', status: 'available' };
+    metaRepoMocks.getPendingVideos.mockReturnValue([mockVideo]);
+
+    harvester = MetadataHarvester.getInstance();
+
+    await vi.advanceTimersByTimeAsync(1000);
+
+    // 処理が始まらないことを確認
+    expect(metaRepoMocks.updateMetadataStatus).not.toHaveBeenCalled();
+    expect(ffmpegMocks.extractMetadata).not.toHaveBeenCalled();
+  });
+
+  it('should skip processing if on-demand video is already completed', async () => {
+    const completedVideo = {
+      id: 'completed',
+      path: '/completed.mp4',
+      status: 'available',
+      metadata_status: 'completed',
+    };
+    videoRepoMocks.findById.mockReturnValue(completedVideo);
+
+    harvester = MetadataHarvester.getInstance();
+
+    harvester.requestHarvest('completed');
+    await vi.advanceTimersByTimeAsync(100);
+
+    // 処理がスキップされるはず
+    expect(metaRepoMocks.updateMetadataStatus).not.toHaveBeenCalledWith('completed', 'processing');
+    expect(ffmpegMocks.extractMetadata).not.toHaveBeenCalled();
   });
 });

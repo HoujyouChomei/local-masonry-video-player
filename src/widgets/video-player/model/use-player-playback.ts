@@ -11,41 +11,57 @@ export const usePlayerPlayback = () => {
   const { selectedVideo, isOpen, closeVideo, playNext, playPrev } = useVideoPlayerStore();
   const { volume, isMuted, setVolumeState, autoPlayNext, toggleAutoPlayNext } = useSettingsStore();
 
-  // フォールバック（エラー発生時）モードかどうか
   const [isErrorFallback, setIsErrorFallback] = useState(false);
 
-  // 動画IDが変わったらフォールバック状態をリセット
   useEffect(() => {
     setIsErrorFallback(false);
   }, [selectedVideo?.id]);
 
-  // 宣言的に src を決定する
   const currentSrc = useMemo(() => {
     if (!selectedVideo) return '';
 
-    // 1. エラーフォールバック中なら強制的にトランスコードURL
     if (isErrorFallback) {
+      if (selectedVideo.src.startsWith('http')) return selectedVideo.src;
       return getStreamUrl(selectedVideo.thumbnailSrc, selectedVideo.path);
     }
 
-    // 2. ネイティブ対応なら file://
     if (isNativeVideo(selectedVideo.path)) {
       return selectedVideo.src;
     }
 
-    // 3. ネイティブ非対応ならトランスコードURL
+    if (selectedVideo.src.startsWith('http')) {
+      return selectedVideo.src;
+    }
+
     return getStreamUrl(selectedVideo.thumbnailSrc, selectedVideo.path);
   }, [selectedVideo, isErrorFallback]);
 
-  // マウント時/動画変更時の初期設定 (音量など)
+  // ▼▼▼ Added: Explicit load() to reset decoder pipeline on src change ▼▼▼
+  useEffect(() => {
+    if (videoRef.current && currentSrc) {
+      // DOM再利用時にデコーダーコンテキストをリセットするためにload()を呼ぶ
+      videoRef.current.load();
+      // 自動再生が効かないケースへの保険 (通常はautoPlay属性で動作する)
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((error) => {
+          // ユーザー操作直後でない場合、ブラウザのポリシーでブロックされることがあるが、
+          // モーダルプレイヤーのコンテキストでは通常問題ない。
+          // エラーログは抑制する（DOMException: The play() request was interrupted... 等）
+          if (error.name !== 'AbortError') {
+            console.warn('[Player] Auto-play prevented:', error);
+          }
+        });
+      }
+    }
+  }, [currentSrc]);
+
   useEffect(() => {
     if (videoRef.current) {
-      // 音量設定の同期
       videoRef.current.volume = volume;
       videoRef.current.muted = isMuted;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedVideo?.id, isOpen]);
+  }, [selectedVideo?.id, isOpen, volume, isMuted]);
 
   const togglePlay = useCallback(() => {
     if (videoRef.current) {
@@ -70,34 +86,47 @@ export const usePlayerPlayback = () => {
     }
   }, [autoPlayNext, playNext]);
 
-  // エラーハンドリング
   const handleError = useCallback(() => {
     if (!selectedVideo) return;
 
-    // 既にフォールバック中、または最初からトランスコード前提だった場合は諦める
-    if (isErrorFallback || !isNativeVideo(selectedVideo.path)) {
+    if (isErrorFallback || selectedVideo.src.startsWith('http')) {
       console.error('Video playback failed (Transcoding or Fallback).');
       return;
     }
 
-    // ネイティブ再生で失敗した場合はフォールバックを有効化
     console.warn('Native playback failed. Falling back to transcoding...');
     setIsErrorFallback(true);
   }, [selectedVideo, isErrorFallback]);
 
-  return {
-    videoRef,
-    selectedVideo,
-    isOpen,
-    currentSrc, // UIに渡すURL
-    closeVideo,
-    playNext,
-    playPrev,
-    autoPlayNext,
-    toggleAutoPlayNext,
-    togglePlay,
-    handleVolumeChange,
-    handleVideoEnded,
-    handleError,
-  };
+  return useMemo(
+    () => ({
+      videoRef,
+      selectedVideo,
+      isOpen,
+      currentSrc,
+      closeVideo,
+      playNext,
+      playPrev,
+      autoPlayNext,
+      toggleAutoPlayNext,
+      togglePlay,
+      handleVolumeChange,
+      handleVideoEnded,
+      handleError,
+    }),
+    [
+      selectedVideo,
+      isOpen,
+      currentSrc,
+      closeVideo,
+      playNext,
+      playPrev,
+      autoPlayNext,
+      toggleAutoPlayNext,
+      togglePlay,
+      handleVolumeChange,
+      handleVideoEnded,
+      handleError,
+    ]
+  );
 };

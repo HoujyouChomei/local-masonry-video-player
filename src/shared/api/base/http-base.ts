@@ -1,0 +1,136 @@
+// src/shared/api/base/http-base.ts
+
+import { VideoFile } from '@/shared/types/video';
+
+export class HttpBase {
+  protected token: string | null = null;
+
+  constructor() {
+    this.initToken();
+  }
+
+  private initToken() {
+    if (typeof window === 'undefined') return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('token');
+
+    if (tokenFromUrl) {
+      this.token = tokenFromUrl;
+      localStorage.setItem('lvm_auth_token', tokenFromUrl);
+
+      urlParams.delete('token');
+      const newUrl =
+        window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    } else {
+      this.token = localStorage.getItem('lvm_auth_token');
+    }
+  }
+
+  protected async request<T>(
+    path: string,
+    options: {
+      method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+      body?: unknown;
+      params?: Record<string, string | number | boolean | string[] | undefined | null>;
+    } = {}
+  ): Promise<T> {
+    const { method = 'GET', body, params } = options;
+
+    // クエリパラメータの構築
+    const queryParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === '') return;
+        if (Array.isArray(value)) {
+          value.forEach((v) => queryParams.append(key, String(v)));
+        } else {
+          queryParams.set(key, String(value));
+        }
+      });
+    }
+
+    const queryString = queryParams.toString();
+    const endpoint = queryString ? `${path}?${queryString}` : path;
+
+    // ヘッダー構築
+    const headers = new Headers();
+    if (this.token) {
+      headers.set('Authorization', `Bearer ${this.token}`);
+    }
+    if (body && (method === 'POST' || method === 'PUT')) {
+      headers.set('Content-Type', 'application/json');
+    }
+
+    const fetchOptions: RequestInit = {
+      method,
+      headers,
+    };
+
+    if (body) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+
+    const res = await fetch(`/api${endpoint}`, fetchOptions);
+
+    if (res.status === 401 || res.status === 403) {
+      console.error('Authentication failed. Please scan the QR code again.');
+      throw new Error('Unauthorized');
+    }
+
+    if (!res.ok) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
+
+    // レスポンスボディのパース (空の場合は空オブジェクトを返す)
+    const text = await res.text();
+    return text ? JSON.parse(text) : ({} as T);
+  }
+
+  protected adaptVideo(video: VideoFile): VideoFile {
+    let thumb = video.thumbnailSrc;
+
+    if (typeof window !== 'undefined') {
+      // Case A: Desktop版の最適化により file:// が返ってきた場合
+      // モバイルブラウザは file:// にアクセスできないため、HTTP経由のAPIパスに書き換える
+      if (thumb.startsWith('file://')) {
+        const origin = window.location.origin;
+        thumb = `${origin}/thumbnail?path=${encodeURIComponent(video.path)}&t=${video.updatedAt}&size=${video.size}`;
+        if (this.token) {
+          thumb += `&token=${this.token}`;
+        }
+      }
+      // Case B: 従来の http://127.0.0.1... が返ってきた場合 (サムネイル未生成時など)
+      // PCローカルのIPになっているため、モバイルからアクセス可能なホスト名に書き換える
+      else if (thumb.includes('127.0.0.1')) {
+        const currentHost = window.location.hostname;
+        const currentPort = window.location.port;
+
+        try {
+          const url = new URL(thumb);
+          url.hostname = currentHost;
+          url.port = currentPort;
+          if (this.token) {
+            url.searchParams.set('token', this.token);
+          }
+          thumb = url.toString();
+        } catch {
+          // URLパース失敗時のフォールバック
+          thumb = thumb.replace('127.0.0.1', currentHost);
+        }
+      }
+    }
+
+    // 動画本体のURL (ストリーミング用)
+    // モバイル環境では常にAPIサーバー経由でアクセスさせる
+    const streamUrlPath = `/video?path=${encodeURIComponent(video.path)}`;
+    const streamUrl = this.token ? `${streamUrlPath}&token=${this.token}` : streamUrlPath;
+
+    return {
+      ...video,
+      thumbnailSrc: thumb,
+      src: streamUrl,
+    };
+  }
+}

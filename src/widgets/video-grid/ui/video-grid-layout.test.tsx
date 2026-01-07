@@ -5,6 +5,8 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { VideoGridLayout } from './video-grid-layout';
 import { VideoFile } from '@/shared/types/video';
+// 型定義をインポート（vi.mock内で使用するため）
+import type { VideoGridItemInteractions } from './video-grid-item';
 
 // --- Mocks ---
 
@@ -13,15 +15,18 @@ vi.mock('@/features/select-folder/ui/select-folder-button', () => ({
   SelectFolderButton: () => <button data-testid="select-folder-btn">Select Folder</button>,
 }));
 
-interface MockVideoProps {
-  video: VideoFile;
-  onClick: (video: VideoFile) => void;
-  actionsSlot?: React.ReactNode;
-}
-
 // 2. VideoCard & ListItem Mocks
+// MockVideoProps を削除し、インラインで型定義
 vi.mock('@/entities/video/ui/video-card', () => ({
-  VideoCard: ({ video, onClick, actionsSlot }: MockVideoProps) => (
+  VideoCard: ({
+    video,
+    onClick,
+    actionsSlot,
+  }: {
+    video: VideoFile;
+    onClick: (video: VideoFile) => void;
+    actionsSlot?: React.ReactNode;
+  }) => (
     <div data-testid="video-card" onClick={() => onClick(video)}>
       {video.name}
       <div data-testid="actions-slot">{actionsSlot}</div>
@@ -30,7 +35,13 @@ vi.mock('@/entities/video/ui/video-card', () => ({
 }));
 
 vi.mock('@/entities/video/ui/video-list-item', () => ({
-  VideoListItem: ({ video, onClick }: MockVideoProps) => (
+  VideoListItem: ({
+    video,
+    onClick,
+  }: {
+    video: VideoFile;
+    onClick: (video: VideoFile) => void;
+  }) => (
     <div data-testid="video-list-item" onClick={() => onClick(video)}>
       {video.name}
     </div>
@@ -38,7 +49,13 @@ vi.mock('@/entities/video/ui/video-list-item', () => ({
 }));
 
 vi.mock('./sortable-video-list-item', () => ({
-  SortableVideoListItem: ({ video, onClick }: MockVideoProps) => (
+  SortableVideoListItem: ({
+    video,
+    onClick,
+  }: {
+    video: VideoFile;
+    onClick: (video: VideoFile) => void;
+  }) => (
     <div data-testid="sortable-video-list-item" onClick={() => onClick(video)}>
       {video.name}
     </div>
@@ -78,6 +95,50 @@ vi.mock('react-infinite-scroll-component', () => ({
   ),
 }));
 
+// 6. View Mocks (MasonryView / ListView)
+// any を回避し、型を適用
+vi.mock('./views/masonry-view', () => ({
+  MasonryView: ({
+    videos,
+    interactions,
+  }: {
+    videos: VideoFile[];
+    interactions: VideoGridItemInteractions;
+  }) => (
+    <div data-testid="masonry-grid">
+      {videos.map((v: VideoFile) => (
+        <div key={v.id} data-testid="video-card" onClick={(e) => interactions.onVideoClick(v, e)}>
+          {v.name}
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
+vi.mock('./views/list-view', () => ({
+  ListView: ({
+    videos,
+    interactions,
+    isSortable,
+  }: {
+    videos: VideoFile[];
+    interactions: VideoGridItemInteractions;
+    isSortable: boolean;
+  }) => (
+    <div data-testid="list-view">
+      {videos.map((v: VideoFile) => (
+        <div
+          key={v.id}
+          data-testid={isSortable ? 'sortable-video-list-item' : 'video-list-item'}
+          onClick={(e) => interactions.onVideoClick(v, e)}
+        >
+          {v.name}
+        </div>
+      ))}
+    </div>
+  ),
+}));
+
 // --- Test Data ---
 
 const mockVideos: VideoFile[] = [
@@ -104,7 +165,16 @@ const mockVideos: VideoFile[] = [
 ];
 
 // --- Default Props Helper ---
-// ▼▼▼ 修正: 不足していたPropsを追加 ▼▼▼
+const defaultInteractions = {
+  onVideoClick: vi.fn(),
+  onRenameOpen: vi.fn(),
+  onDragStart: vi.fn(),
+  onPointerDown: vi.fn(),
+  onPointerMove: vi.fn(),
+  onPointerUp: vi.fn(),
+  onPointerLeave: vi.fn(),
+};
+
 const defaultProps = {
   videos: mockVideos,
   totalVideosCount: 2,
@@ -115,26 +185,17 @@ const defaultProps = {
   columnCount: 4,
   isGlobalMode: false,
   isPlaylistMode: false,
-  isTagMode: false, // Added
+  isTagMode: false,
   isModalOpen: false,
+  isSelectionMode: false,
   folderPath: '/test/folder',
   showFavoritesOnly: false,
   layoutMode: 'masonry' as const,
   sortOption: 'date-desc' as const,
   onReorder: vi.fn(),
-  videoToRename: null,
-  onRenameClose: vi.fn(),
-  onRenameOpen: vi.fn(),
   hasMore: false,
   onFetchMore: vi.fn(),
-  onVideoClick: vi.fn(),
-
-  // Added Interactions
-  onPointerDown: vi.fn(),
-  onPointerMove: vi.fn(),
-  onPointerUp: vi.fn(),
-  onPointerLeave: vi.fn(),
-  onDragStart: vi.fn(),
+  interactions: defaultInteractions,
 };
 
 describe('VideoGridLayout Integration Test', () => {
@@ -149,12 +210,13 @@ describe('VideoGridLayout Integration Test', () => {
       expect(screen.getByText(/Select a folder/i)).toBeTruthy();
     });
 
-    it('should NOT show Loader when isLoading is true (Silent Loading)', () => {
+    // ▼▼▼ 修正: ローディング中は null ではなくインジケータが表示されることを確認 ▼▼▼
+    it('should show Loader when isLoading is true (Initial Loading)', () => {
       const { container } = render(
         <VideoGridLayout {...defaultProps} videos={[]} totalVideosCount={0} isLoading={true} />
       );
-      // ローディング中はnullを返すので、コンテナの中身は空になるはず
-      expect(container.firstChild).toBeNull();
+      expect(container.firstChild).not.toBeNull();
+      expect(container.getElementsByClassName('animate-ping').length).toBe(1);
     });
 
     it('should show Error message when isError is true', () => {
@@ -197,21 +259,24 @@ describe('VideoGridLayout Integration Test', () => {
     it('should call onVideoClick when a card is clicked', () => {
       const onVideoClick = vi.fn();
       render(
-        <VideoGridLayout {...defaultProps} layoutMode="masonry" onVideoClick={onVideoClick} />
+        <VideoGridLayout
+          {...defaultProps}
+          layoutMode="masonry"
+          interactions={{ ...defaultInteractions, onVideoClick }}
+        />
       );
 
       const card = screen.getByText('video1.mp4');
       fireEvent.click(card);
 
-      expect(onVideoClick).toHaveBeenCalledWith(mockVideos[0]);
+      expect(onVideoClick).toHaveBeenCalledWith(mockVideos[0], expect.anything());
     });
   });
 
   describe('List View Mode', () => {
     it('should render ListView when layoutMode is "list"', () => {
       render(<VideoGridLayout {...defaultProps} layoutMode="list" />);
-      expect(screen.getByText('Title')).toBeTruthy();
-      expect(screen.getByText('Date')).toBeTruthy();
+      expect(screen.getByTestId('list-view')).toBeTruthy();
 
       const items = screen.getAllByTestId('video-list-item');
       expect(items).toHaveLength(2);
@@ -237,19 +302,6 @@ describe('VideoGridLayout Integration Test', () => {
       );
       const items = screen.getAllByTestId('video-list-item');
       expect(items).toHaveLength(2);
-    });
-  });
-
-  describe('Rename Dialog Integration', () => {
-    it('should render RenameVideoDialog when videoToRename is provided', () => {
-      render(<VideoGridLayout {...defaultProps} videoToRename={mockVideos[0]} />);
-      expect(screen.getByTestId('rename-dialog')).toBeTruthy();
-      expect(screen.getByText('Renaming: video1.mp4')).toBeTruthy();
-    });
-
-    it('should not render RenameVideoDialog when videoToRename is null', () => {
-      render(<VideoGridLayout {...defaultProps} videoToRename={null} />);
-      expect(screen.queryByTestId('rename-dialog')).toBeNull();
     });
   });
 });

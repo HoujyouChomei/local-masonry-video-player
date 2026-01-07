@@ -1,7 +1,7 @@
 // src/widgets/video-player/model/use-video-modal-player.test.ts
 
 import React from 'react';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useVideoModalPlayer } from './use-video-modal-player';
@@ -39,15 +39,18 @@ interface MockSettingsState {
 const mockSetFullScreen = vi.fn();
 const mockHarvestMetadata = vi.fn();
 const mockFetchVideoDetails = vi.fn();
-const mockOnVideoUpdate = vi.fn();
+// コールバックを捕捉するためのモック
+let videoUpdateCallback: ((events: VideoUpdateEvent[]) => void) | null = null;
 
 vi.mock('@/shared/api/electron', () => ({
   setFullScreenApi: (enable: boolean) => mockSetFullScreen(enable),
   harvestMetadataApi: (id: string) => mockHarvestMetadata(id),
   fetchVideoDetailsApi: (path: string) => mockFetchVideoDetails(path),
-  onVideoUpdateApi: (cb: (event: VideoUpdateEvent) => void) => {
-    mockOnVideoUpdate(cb);
-    return () => {}; // unsubscribe function
+  onVideoUpdateApi: (cb: (events: VideoUpdateEvent[]) => void) => {
+    videoUpdateCallback = cb;
+    return () => {
+      videoUpdateCallback = null;
+    }; // unsubscribe function
   },
 }));
 
@@ -110,13 +113,13 @@ describe('useVideoModalPlayer Integration Test', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
 
-    // ▼▼▼ 修正: 非同期関数のモックに戻り値を設定 ▼▼▼
-    // .then() で呼び出されるため、Promiseを返す必要がある
+    // Reset API Mocks
     mockFetchVideoDetails.mockResolvedValue(null);
     mockHarvestMetadata.mockResolvedValue(undefined);
     mockSetFullScreen.mockResolvedValue(undefined);
-    // ▲▲▲ 修正ここまで ▲▲▲
+    videoUpdateCallback = null;
 
+    // Reset Store State
     storeState.selectedVideo = null;
     storeState.playlist = [];
     storeState.isOpen = false;
@@ -125,13 +128,15 @@ describe('useVideoModalPlayer Integration Test', () => {
     storeState.playPrev.mockClear();
     storeState.updateVideoData.mockClear();
 
+    // Reset Settings State
     settingsState.autoPlayNext = false;
     settingsState.toggleAutoPlayNext.mockClear();
     settingsState.volume = 0.5;
-    settingsState.isMuted = false;
+    settingsState.isMuted = false; // 修正: コロン(:)をイコール(=)に変更
     settingsState.setVolumeState.mockClear();
     settingsState.openInFullscreen = false;
 
+    // Mock Video Element
     videoElement = document.createElement('video');
     videoElement.play = vi.fn().mockResolvedValue(undefined);
     videoElement.pause = vi.fn();
@@ -266,6 +271,21 @@ describe('useVideoModalPlayer Integration Test', () => {
       expect(result.current.isFullscreen).toBe(true);
       expect(mockSetFullScreen).toHaveBeenCalledWith(true);
     });
+
+    it('should toggle info panel on "i" key', () => {
+      const { result } = renderAndInit();
+      expect(result.current.isInfoPanelOpen).toBe(false);
+
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' }));
+      });
+      expect(result.current.isInfoPanelOpen).toBe(true);
+
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' }));
+      });
+      expect(result.current.isInfoPanelOpen).toBe(false);
+    });
   });
 
   describe('3. Mouse Interactions', () => {
@@ -385,6 +405,113 @@ describe('useVideoModalPlayer Integration Test', () => {
       });
 
       expect(storeState.playNext).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('5. Touch Interactions', () => {
+    it('should navigate on swipe left (Next)', () => {
+      const { result } = renderAndInit();
+
+      const startEvent = {
+        touches: [{ clientX: 200, clientY: 100 }],
+      } as unknown as React.TouchEvent;
+
+      const endEvent = {
+        changedTouches: [{ clientX: 100, clientY: 100 }], // Move left by 100px
+      } as unknown as React.TouchEvent;
+
+      act(() => {
+        result.current.handleTouchStart(startEvent);
+        result.current.handleTouchEnd(endEvent);
+      });
+
+      expect(storeState.playNext).toHaveBeenCalled();
+    });
+
+    it('should navigate on swipe right (Prev)', () => {
+      const { result } = renderAndInit();
+
+      const startEvent = {
+        touches: [{ clientX: 100, clientY: 100 }],
+      } as unknown as React.TouchEvent;
+
+      const endEvent = {
+        changedTouches: [{ clientX: 200, clientY: 100 }], // Move right by 100px
+      } as unknown as React.TouchEvent;
+
+      act(() => {
+        result.current.handleTouchStart(startEvent);
+        result.current.handleTouchEnd(endEvent);
+      });
+
+      expect(storeState.playPrev).toHaveBeenCalled();
+    });
+
+    it('should ignore vertical swipes', () => {
+      const { result } = renderAndInit();
+
+      const startEvent = {
+        touches: [{ clientX: 100, clientY: 100 }],
+      } as unknown as React.TouchEvent;
+
+      const endEvent = {
+        changedTouches: [{ clientX: 100, clientY: 200 }], // Move down by 100px (Vertical)
+      } as unknown as React.TouchEvent;
+
+      act(() => {
+        result.current.handleTouchStart(startEvent);
+        result.current.handleTouchEnd(endEvent);
+      });
+
+      expect(storeState.playNext).not.toHaveBeenCalled();
+      expect(storeState.playPrev).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('6. History API', () => {
+    it('should close video on browser back (popstate)', () => {
+      renderAndInit();
+
+      // Trigger popstate event
+      act(() => {
+        window.dispatchEvent(new PopStateEvent('popstate', { state: null }));
+      });
+
+      expect(storeState.closeVideo).toHaveBeenCalled();
+    });
+  });
+
+  describe('7. Realtime Updates', () => {
+    it('should update video data when update event is received', async () => {
+      renderAndInit();
+
+      // ▼▼▼ 修正: waitForがタイムアウトしないように実時間タイマーに戻す ▼▼▼
+      vi.useRealTimers();
+
+      const updatedVideoData = {
+        id: 'v1',
+        name: 'v1-updated',
+        path: '/v1.mp4',
+        duration: 120,
+      };
+
+      // Mock the details fetch that happens after update event
+      mockFetchVideoDetails.mockResolvedValueOnce(updatedVideoData);
+
+      // Simulate update event
+      act(() => {
+        if (videoUpdateCallback) {
+          videoUpdateCallback([{ type: 'update', path: '/v1.mp4' }]);
+        }
+      });
+
+      // Wait for async fetch and update
+      await waitFor(() => {
+        expect(mockFetchVideoDetails).toHaveBeenCalledWith('/v1.mp4');
+        expect(storeState.updateVideoData).toHaveBeenCalledWith(
+          expect.objectContaining({ name: 'v1-updated' })
+        );
+      });
     });
   });
 });

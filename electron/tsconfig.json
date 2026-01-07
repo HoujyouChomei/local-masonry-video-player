@@ -3,12 +3,11 @@
     "target": "ESNext",
     "module": "CommonJS",
     "outDir": "../dist-electron",
-    "rootDir": "..", // ← ここを "./" から ".." に変更
+    "rootDir": "..",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true
   },
-  "include": ["."],
-  // ▼▼▼ これを追加 ▼▼▼
+  "include": [".", "../src/shared/constants"],
   "exclude": ["**/*.test.ts"]
 }

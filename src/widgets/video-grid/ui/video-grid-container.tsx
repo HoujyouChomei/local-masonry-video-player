@@ -1,6 +1,6 @@
 // src/widgets/video-grid/ui/video-grid-container.tsx
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { useSearchStore } from '@/features/search-videos/model/store';
@@ -8,50 +8,42 @@ import { useSelectionStore } from '@/shared/stores/selection-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { VideoGridLayout } from './video-grid-layout';
 import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/shared/lib/use-is-mobile'; // Added
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
+import { RenameVideoDialog } from '@/features/rename-video/ui/rename-video-dialog';
 
 import { useVideoGridState } from '../model/use-video-grid-state';
 import { useGridPagination } from '../model/use-grid-pagination';
 import { useVideoGridInteractions } from '../model/use-video-grid-interactions';
 import { useExternalDrop } from '../model/use-external-drop';
+import { VideoGridItemInteractions } from './video-grid-item';
 
 interface VideoGridContainerProps {
   folderPath: string;
-  columnCount: number; // PC value from props
+  columnCount: number;
 }
 
 export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContainerProps) => {
+  // Global Stores
   const layoutMode = useSettingsStore((s) => s.layoutMode);
   const gridStyle = useSettingsStore((s) => s.gridStyle);
-  const mobileColumnCount = useSettingsStore((s) => s.mobileColumnCount); // Added
+  const mobileColumnCount = useSettingsStore((s) => s.mobileColumnCount);
   const isModalOpen = useVideoPlayerStore((state) => state.isOpen);
-
-  // 検索入力値と、確定した検索クエリを取得
   const searchQuery = useSearchStore((state) => state.query);
   const debouncedQuery = useSearchStore((state) => state.debouncedQuery);
-
-  // タグ選択状態を取得
   const selectedTagIds = useUIStore((state) => state.selectedTagIds);
-
   const isSelectionMode = useSelectionStore((state) => state.isSelectionMode);
+  const isMobile = useIsMobile();
 
-  const isMobile = useIsMobile(); // Added
+  const showFavoritesOnly = useUIStore((state) => state.showFavoritesOnly);
+  const isGlobalMode = useUIStore((state) => state.viewMode === 'all-favorites');
+  const isPlaylistMode = useUIStore((state) => state.viewMode === 'playlist');
+  const isTagMode = useUIStore((state) => state.viewMode === 'tag-results');
 
+  // Hooks
   const { dropHandlers } = useExternalDrop();
 
-  const {
-    allSortedVideos,
-    isLoading,
-    isError,
-    error,
-    isGlobalMode,
-    isPlaylistMode,
-    isTagMode,
-    showFavoritesOnly,
-    sortOption,
-  } = useVideoGridState(folderPath);
+  const { allSortedVideos, isLoading, isError, error, sortOption } = useVideoGridState(folderPath);
 
-  // ▼▼▼ 修正: モバイル時は mobileColumnCount を優先 ▼▼▼
   const effectiveColumnCount = isMobile ? mobileColumnCount : columnCount;
 
   const { visibleVideos, deferredColumnCount, deferredGridStyle, hasMore, handleFetchMore } =
@@ -70,18 +62,36 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
     handleDragStart,
   } = useVideoGridInteractions(folderPath, allSortedVideos);
 
-  // マウント時（フォルダ変更時など）のスクロールリセット
+  // Scroll Reset
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
-  }, []);
-
-  // ▼▼▼ 追加: 検索クエリやタグ選択が変更された時にスクロールをトップに戻す ▼▼▼
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }, [debouncedQuery, selectedTagIds]);
+  }, [folderPath, debouncedQuery, selectedTagIds]);
 
   const containerPadding =
     layoutMode === 'masonry' && deferredGridStyle === 'mosaic' ? 'p-0' : 'p-4';
+
+  // --- Optimization: Group Interactions ---
+  // このオブジェクトの参照が変わらない限り、VideoGridLayout以下の純粋なコンポーネントは再レンダリングされない
+  const interactions: VideoGridItemInteractions = useMemo(
+    () => ({
+      onVideoClick: handleVideoClick,
+      onRenameOpen: setVideoToRename,
+      onDragStart: handleDragStart,
+      onPointerDown: handlePointerDown,
+      onPointerMove: handlePointerMove,
+      onPointerUp: handlePointerUp,
+      onPointerLeave: handlePointerLeave,
+    }),
+    [
+      handleVideoClick,
+      setVideoToRename,
+      handleDragStart,
+      handlePointerDown,
+      handlePointerMove,
+      handlePointerUp,
+      handlePointerLeave,
+    ]
+  );
 
   return (
     <div
@@ -93,34 +103,40 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
       {...dropHandlers}
     >
       <VideoGridLayout
+        // Data & Status
         videos={visibleVideos}
         totalVideosCount={allSortedVideos.length}
         isLoading={isLoading}
         isError={isError}
         error={error}
         searchQuery={searchQuery}
+        // View Configuration
         columnCount={deferredColumnCount}
         isGlobalMode={isGlobalMode}
         isPlaylistMode={isPlaylistMode}
         isTagMode={isTagMode}
-        isModalOpen={isModalOpen}
         folderPath={folderPath}
         showFavoritesOnly={showFavoritesOnly}
+        isModalOpen={isModalOpen}
+        isSelectionMode={isSelectionMode}
         layoutMode={layoutMode}
         sortOption={sortOption}
         onReorder={handleReorder}
-        videoToRename={videoToRename}
-        onRenameClose={handleRenameClose}
-        onRenameOpen={setVideoToRename}
+        // Pagination
         hasMore={hasMore}
         onFetchMore={handleFetchMore}
-        onVideoClick={handleVideoClick}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerLeave}
-        onDragStart={handleDragStart}
+        // Interactions (Grouped)
+        interactions={interactions}
       />
+
+      {videoToRename && (
+        <RenameVideoDialog
+          isOpen={!!videoToRename}
+          onOpenChange={(isOpen) => !isOpen && handleRenameClose()}
+          videoId={videoToRename.id}
+          videoName={videoToRename.name}
+        />
+      )}
     </div>
   );
 };

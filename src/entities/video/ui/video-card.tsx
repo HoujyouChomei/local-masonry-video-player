@@ -1,17 +1,12 @@
 // src/entities/video/ui/video-card.tsx
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
-import { useInView } from 'react-intersection-observer';
+import React from 'react';
 import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { VideoFile } from '@/shared/types/video';
 import { GridStyle } from '@/shared/types/electron';
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu';
-import { useSettingsStore } from '@/shared/stores/settings-store';
-import { useUIStore } from '@/shared/stores/ui-store';
-import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
-import { useIsMobile } from '@/shared/lib/use-is-mobile';
-import { useSelectionStore } from '@/shared/stores/selection-store';
+import { useVideoCardLogic } from '../model/use-video-card-logic';
 
 // Sub-components
 import { VideoSelectionOverlay } from './video-selection-overlay';
@@ -20,7 +15,7 @@ import { VideoMedia } from './video-media';
 const cardVariants = cva('group relative w-full cursor-pointer bg-gray-900', {
   variants: {
     style: {
-      modern: 'rounded-lg shadow-sm',
+      modern: 'rounded-lg',
       mosaic: 'rounded-none border-none',
     },
   },
@@ -64,93 +59,27 @@ export const VideoCard = React.memo(
     onPointerMove,
     onPointerUp,
     onPointerLeave,
-    onDragStart: onDragStartExternal,
+    onDragStart,
   }: VideoCardProps) => {
-    const initialAspectRatio = video.width && video.height ? video.width / video.height : undefined;
-
-    const [aspectRatio, setAspectRatio] = useState<number | undefined>(initialAspectRatio);
-    const [isHoveredState, setIsHoveredState] = useState(false);
-
-    const settingsRootMargin = useSettingsStore((state) => state.rootMargin);
-    const scrollDirection = useUIStore((state) => state.scrollDirection);
-    const playOnHoverOnly = useSettingsStore((state) => state.playOnHoverOnly);
-
-    const enableLargeVideoRestriction = useSettingsStore(
-      (state) => state.enableLargeVideoRestriction
-    );
-    const largeVideoThreshold = useSettingsStore((state) => state.largeVideoThreshold);
-
-    const isMobile = useIsMobile();
-    const enterSelectionMode = useSelectionStore((s) => s.enterSelectionMode);
-    // ▼▼▼ 追加: 解除アクションを取得 ▼▼▼
-    const exitSelectionMode = useSelectionStore((s) => s.exitSelectionMode);
-
-    const isHeavy = enableLargeVideoRestriction && video.size > largeVideoThreshold * 1024 * 1024;
-    const shouldTrackHover = playOnHoverOnly || isHeavy;
-
-    const FIXED_BUFFER = 150;
-
-    const rootMargin = useMemo(() => {
-      if (scrollDirection === 'down') {
-        return `${FIXED_BUFFER}px 0px ${settingsRootMargin}px 0px`;
-      } else if (scrollDirection === 'up') {
-        return `${settingsRootMargin}px 0px ${FIXED_BUFFER}px 0px`;
-      }
-      return `${settingsRootMargin}px 0px ${settingsRootMargin}px 0px`;
-    }, [scrollDirection, settingsRootMargin]);
-
-    const elementRef = useRef<HTMLDivElement>(null);
-
-    const { ref: inViewRef, inView } = useInView({
-      threshold: 0,
-      triggerOnce: false,
-      rootMargin: rootMargin,
+    // カスタムフックを使用
+    const {
+      aspectRatio,
+      setAspectRatio,
+      isHoveredState,
+      shouldTrackHover,
+      isMobile,
+      inView,
+      elementRef,
+      setRefs,
+      handleDragStartCombined,
+      handleDragEnd,
+      handleMouseEnter,
+      handleMouseLeave,
+      handleMenuOpenChange,
+    } = useVideoCardLogic({
+      video,
+      onDragStartExternal: onDragStart,
     });
-
-    const setRefs = useCallback(
-      (node: HTMLDivElement | null) => {
-        inViewRef(node);
-        elementRef.current = node;
-      },
-      [inViewRef]
-    );
-
-    const { handleDragStart, handleDragEnd } = useVideoDrag({
-      videoPath: video.path,
-      videoId: video.id,
-    });
-
-    const handleDragStartCombined = useCallback(
-      (e: React.DragEvent) => {
-        onDragStartExternal?.();
-        handleDragStart(e);
-      },
-      [handleDragStart, onDragStartExternal]
-    );
-
-    const handleMouseEnter = useCallback(() => {
-      setIsHoveredState(true);
-    }, []);
-
-    const handleMouseLeave = useCallback(() => {
-      setIsHoveredState(false);
-    }, []);
-
-    // メニュー開閉ハンドラ (モバイルならメニューを開かずに選択モード起動/解除)
-    const handleMenuOpenChange = (open: boolean) => {
-      if (open && isMobile) {
-        // ▼▼▼ 修正: 選択モード中なら解除、そうでなければ開始 ▼▼▼
-        if (isSelectionMode) {
-          exitSelectionMode();
-        } else {
-          enterSelectionMode(video.id);
-        }
-
-        if (navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-      }
-    };
 
     return (
       <>

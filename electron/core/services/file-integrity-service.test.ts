@@ -33,6 +33,7 @@ const integrityRepoMocks = vi.hoisted(() => ({
   markAsMissing: vi.fn(),
   markScanAttempted: vi.fn(),
   updateHash: vi.fn(),
+  markAsMissingByPath: vi.fn(),
 }));
 
 vi.mock('../repositories/video-integrity-repository', () => ({
@@ -42,6 +43,7 @@ vi.mock('../repositories/video-integrity-repository', () => ({
     markAsMissing = integrityRepoMocks.markAsMissing;
     markScanAttempted = integrityRepoMocks.markScanAttempted;
     updateHash = integrityRepoMocks.updateHash;
+    markAsMissingByPath = integrityRepoMocks.markAsMissingByPath;
   },
 }));
 
@@ -86,14 +88,16 @@ vi.mock('../../lib/store', () => ({
   },
 }));
 
+// fs/promises mock
+import fs from 'fs/promises';
 vi.mock('fs/promises', () => ({
   default: {
     stat: vi.fn(),
     access: vi.fn(),
   },
 }));
-import fs from 'fs/promises';
 
+// fs mock
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
@@ -248,6 +252,40 @@ describe('FileIntegrityService', () => {
         false
       );
     });
+
+    it('should remove duplicated row if path match exists but ID differs from rebind target', async () => {
+      // ▼▼▼ 修正: Inode不一致のAvailableレコードにして、pathMatchRowの早期リターンを回避する ▼▼▼
+      // これにより「パスは一致するが中身が違う」と判定され、後続のRebinderが呼ばれる
+      const pathRow = {
+        id: 'old-id',
+        path: dummyPath,
+        status: 'available',
+        ino: 11111, // MockStatの 88888 と不一致
+      };
+      videoRepoMocks.findByPath.mockReturnValue(pathRow);
+
+      const rebindRow = {
+        id: 'rebind-id',
+        status: 'missing',
+        size: 5000,
+        file_hash: 'rebind-hash',
+      };
+      rebinderMocks.findCandidate.mockResolvedValue(rebindRow);
+      videoRepoMocks.findById.mockReturnValue(rebindRow);
+
+      await service.processNewFile(dummyPath);
+
+      expect(videoRepoMocks.deleteById).toHaveBeenCalledWith('old-id');
+      expect(rebinderMocks.execute).toHaveBeenCalledWith(
+        'rebind-id',
+        dummyPath,
+        5000,
+        9999,
+        88888,
+        'rebind-hash',
+        expect.anything()
+      );
+    });
   });
 
   describe('verifyAndRecover (On-Demand Verification)', () => {
@@ -321,15 +359,46 @@ describe('FileIntegrityService', () => {
       expect(result).toBe(true);
     });
 
+    it('should mark as missing if file was "available" but scan failed (without Rebind)', async () => {
+      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
+
+      // 既にスキャン済み(last_scan_attempt_atあり)だが、statusがavailableのまま（例えば外部削除）
+      const availableRow = {
+        id: '1',
+        path: dummyPath,
+        status: 'available',
+        last_scan_attempt_at: 12345,
+      };
+      videoRepoMocks.findManyByPaths.mockReturnValue([availableRow]);
+
+      const result = await service.verifyAndRecover([dummyPath]);
+
+      // findManyByPathsの結果をフィルタリングして markAsMissing を呼ぶロジックの確認
+      expect(integrityRepoMocks.markAsMissing).toHaveBeenCalledWith(['1']);
+      expect(result).toBe(true);
+    });
+
     it('should skip scan if already attempted', async () => {
       vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
-      const attemptedRow = { id: '1', path: dummyPath, last_scan_attempt_at: 12345 };
+      const attemptedRow = {
+        id: '1',
+        path: dummyPath,
+        last_scan_attempt_at: 12345,
+        status: 'missing',
+      };
       videoRepoMocks.findManyByPaths.mockReturnValue([attemptedRow]);
 
       await service.verifyAndRecover([dummyPath]);
 
       expect(indexerMocks.build).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('markAsMissing', () => {
+    it('should call repository method', async () => {
+      await service.markAsMissing(dummyPath);
+      expect(integrityRepoMocks.markAsMissingByPath).toHaveBeenCalledWith(dummyPath);
     });
   });
 });

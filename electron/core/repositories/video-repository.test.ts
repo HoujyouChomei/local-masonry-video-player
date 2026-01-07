@@ -48,6 +48,18 @@ describe('VideoRepository (Mocked DB)', () => {
       expect(result).toEqual({ id: '1', path: '/test.mp4' });
     });
 
+    it('findById should query by id', () => {
+      mockGet.mockReturnValue({ id: '1', path: '/test.mp4' });
+
+      const result = repo.findById('1');
+
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT * FROM videos WHERE id = ?')
+      );
+      expect(mockGet).toHaveBeenCalledWith('1');
+      expect(result).toEqual({ id: '1', path: '/test.mp4' });
+    });
+
     it('create should insert video record', () => {
       const input = {
         id: '123',
@@ -85,7 +97,7 @@ describe('VideoRepository (Mocked DB)', () => {
     });
 
     it('toggleFavoriteById should flip is_favorite flag by ID', () => {
-      // Setup: 既存レコードの取得モック
+      // Setup: 既存レコードの取得モックと更新モックを振り分ける
       mockPrepare.mockImplementation((sql: string) => {
         if (sql.includes('SELECT * FROM videos WHERE id = ?')) {
           return {
@@ -108,6 +120,72 @@ describe('VideoRepository (Mocked DB)', () => {
 
       // 0 -> 1 に更新されることを確認
       expect(mockRun).toHaveBeenCalledWith(1, '1');
+    });
+
+    it('deleteById should delete record', () => {
+      repo.deleteById('del-id');
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM videos WHERE id = ?')
+      );
+      expect(mockRun).toHaveBeenCalledWith('del-id');
+    });
+  });
+
+  describe('Bulk & Complex Queries', () => {
+    it('findManyByPaths should handle multiple paths with correct placeholders', () => {
+      mockAll.mockReturnValue([]);
+      const paths = ['/a.mp4', '/b.mp4', '/c.mp4'];
+
+      repo.findManyByPaths(paths);
+
+      // プレースホルダーが3つ生成されているか確認
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('IN (?,?,?)'));
+      expect(mockAll).toHaveBeenCalledWith('/a.mp4', '/b.mp4', '/c.mp4');
+    });
+
+    it('findManyByPaths should return empty array if input is empty', () => {
+      const result = repo.findManyByPaths([]);
+      expect(result).toEqual([]);
+      expect(mockPrepare).not.toHaveBeenCalled();
+    });
+
+    it('findManyByTagIds should filter by tags with HAVING clause', () => {
+      mockAll.mockReturnValue([]);
+      const tagIds = ['tag1', 'tag2'];
+
+      repo.findManyByTagIds(tagIds);
+
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('IN (?,?)'));
+      // タグの数だけ一致することを要求する HAVING COUNT 句の確認
+      expect(mockPrepare).toHaveBeenCalledWith(
+        expect.stringContaining('HAVING COUNT(DISTINCT vt.tag_id) = ?')
+      );
+      // 引数: タグIDリスト + タグの個数(2)
+      expect(mockAll).toHaveBeenCalledWith('tag1', 'tag2', 2);
+    });
+
+    it('findManyByTagIds should return empty array if input is empty', () => {
+      const result = repo.findManyByTagIds([]);
+      expect(result).toEqual([]);
+      expect(mockPrepare).not.toHaveBeenCalled();
+    });
+
+    it('findPathsByDirectory should query with LIKE prefix', () => {
+      mockAll.mockReturnValue([{ id: '1', path: '/folder/video.mp4' }]);
+
+      repo.findPathsByDirectory('/folder');
+
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('path LIKE ?'));
+      // 前方一致用の % が付与されているか
+      expect(mockAll).toHaveBeenCalledWith('/folder%');
+    });
+
+    it('deleteManyByIds should handle multiple IDs', () => {
+      const ids = ['1', '2', '3'];
+      repo.deleteManyByIds(ids);
+
+      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('IN (?,?,?)'));
+      expect(mockRun).toHaveBeenCalledWith('1', '2', '3');
     });
   });
 });

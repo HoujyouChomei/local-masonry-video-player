@@ -146,7 +146,8 @@ export const Header = () => {
   return (
     <header
       className={cn(
-        'border-border/40 bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 flex h-16 border-b backdrop-blur transition-transform duration-300',
+        // ▼▼▼ 変更: backdrop-blur を削除し、bg-gray-950 (不透明) に固定 ▼▼▼
+        'border-border/40 sticky top-0 z-50 flex h-16 border-b bg-gray-950/80 transition-transform duration-300',
         !isHeaderVisible && !isSelectionMode && '-translate-y-full',
         isSelectionMode ? 'border-indigo-900/50 px-0' : 'items-center justify-between px-2 md:px-6'
       )}

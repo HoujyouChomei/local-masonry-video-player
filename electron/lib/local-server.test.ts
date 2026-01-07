@@ -1,7 +1,9 @@
 // electron/lib/local-server.test.ts
 
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { Readable } from 'stream';
+import http from 'http';
 
 // --- Mocks Setup ---
 
@@ -24,6 +26,8 @@ vi.mock('./store', () => ({
     get: vi.fn((key) => {
       if (key === 'libraryFolders') return ['/allowed/lib'];
       if (key === 'folderPath') return '/allowed/current';
+      if (key === 'enableMobileConnection') return true;
+      if (key === 'authAccessToken') return 'test-token';
       return null;
     }),
   },
@@ -32,7 +36,7 @@ vi.mock('./store', () => ({
 // 3. File System (Partial Mock)
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
-  
+
   const mockFs = {
     ...actual,
     existsSync: vi.fn((p: string) => {
@@ -51,7 +55,7 @@ vi.mock('fs', async (importOriginal) => {
       s.push('mock-video-content');
       s.push(null);
       // サーバー側のクリーンアップで destroy が呼ばれるためモック化
-      s.destroy = vi.fn();
+      (s as any).destroy = vi.fn();
       return s;
     }),
     mkdirSync: vi.fn(),
@@ -62,7 +66,7 @@ vi.mock('fs', async (importOriginal) => {
 
   return {
     ...mockFs,
-    default: mockFs, // import fs from 'fs' に対応
+    default: mockFs,
   };
 });
 
@@ -75,7 +79,6 @@ vi.mock('child_process', () => {
     killed: false,
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mockExecFile = vi.fn((...args: any[]) => {
     const callback = args[args.length - 1];
     if (typeof callback === 'function') {
@@ -94,6 +97,20 @@ vi.mock('child_process', () => {
   };
 });
 
+// サーバーインスタンスを保持してテスト後に閉じるための細工
+let serverInstance: http.Server | null = null;
+vi.mock('http', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('http')>();
+  return {
+    ...actual,
+    createServer: (handler: any) => {
+      const s = actual.createServer(handler);
+      serverInstance = s;
+      return s;
+    },
+  };
+});
+
 // Import the module under test AFTER mocks
 import { startLocalServer, getServerPort } from './local-server';
 
@@ -107,6 +124,13 @@ describe('Local Server Integration', () => {
     baseUrl = `http://127.0.0.1:${port}`;
   });
 
+  afterAll(() => {
+    // テスト終了後にサーバーを閉じる (ポート解放)
+    if (serverInstance) {
+      serverInstance.close();
+    }
+  });
+
   // テスト用ヘルパー
   const request = async (
     endpoint: string,
@@ -115,6 +139,11 @@ describe('Local Server Integration', () => {
   ) => {
     const url = new URL(baseUrl + endpoint);
     Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+
+    // 認証トークンを付与 (本来は不要だが将来的なRemoteテスト互換のため)
+    if (!url.searchParams.has('token') && !headers['Authorization']) {
+      url.searchParams.append('token', 'test-token');
+    }
     return fetch(url.toString(), { headers });
   };
 
@@ -133,6 +162,16 @@ describe('Local Server Integration', () => {
       const attackPath = '/allowed/lib/../../etc/passwd';
       const res = await request('/video', { path: attackPath });
       expect(res.status).toBe(403);
+    });
+
+    it('should allow localhost requests even without token (Local Access)', async () => {
+      // トークンなしのリクエスト
+      const url = new URL(baseUrl + '/video');
+      url.searchParams.append('path', '/allowed/lib/exists.mp4');
+
+      // Localhostからのアクセスは常に許可される仕様
+      const res = await fetch(url.toString());
+      expect(res.status).toBe(200);
     });
   });
 

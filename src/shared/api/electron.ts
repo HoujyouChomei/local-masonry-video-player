@@ -12,8 +12,6 @@ import {
 } from '@/shared/types/electron';
 import { Playlist } from '@/shared/types/playlist';
 
-// ... (Videos, Settings, Dialogs & System, Favorites are same except system expansion) ...
-
 // --- Videos ---
 export const fetchVideos = async (folderPath: string): Promise<VideoFile[]> => {
   return getApiClient().videos.getAll(folderPath);

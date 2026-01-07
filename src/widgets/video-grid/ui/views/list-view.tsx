@@ -22,110 +22,108 @@ import { VideoListItem } from '@/entities/video/ui/video-list-item';
 import { SortableVideoListItem } from '../sortable-video-list-item';
 import { GridHeader } from '../components/grid-header';
 import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
+import { VideoGridItemInteractions } from '../video-grid-item';
 
 interface ListViewProps {
   videos: VideoFile[];
   isSortable: boolean;
   onReorder: (videos: VideoFile[]) => void;
-  // ▼▼▼ 変更: 型定義を更新 ▼▼▼
-  onVideoClick: (video: VideoFile, e: React.MouseEvent) => void;
-  onRenameOpen: (video: VideoFile) => void;
-  onPointerDown: (video: VideoFile, e: React.PointerEvent) => void;
-  onPointerMove: (e: React.PointerEvent) => void;
-  onPointerUp: (e: React.PointerEvent) => void;
-  onPointerLeave: (e: React.PointerEvent) => void;
-  onDragStart?: () => void;
+  interactions: VideoGridItemInteractions;
 }
 
-export const ListView = ({
-  videos,
-  isSortable,
-  onReorder,
-  onVideoClick,
-  onRenameOpen,
-  onPointerDown,
-  onPointerMove,
-  onPointerUp,
-  onPointerLeave,
-  onDragStart,
-}: ListViewProps) => {
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+export const ListView = React.memo(
+  ({ videos, isSortable, onReorder, interactions }: ListViewProps) => {
+    const sensors = useSensors(
+      useSensor(PointerSensor, {
+        activationConstraint: {
+          distance: 8,
+        },
+      }),
+      useSensor(KeyboardSensor, {
+        coordinateGetter: sortableKeyboardCoordinates,
+      })
+    );
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    const handleDragEnd = (event: DragEndEvent) => {
+      const { active, over } = event;
 
-    if (active.id !== over?.id) {
-      const oldIndex = videos.findIndex((v) => v.path === active.id);
-      const newIndex = videos.findIndex((v) => v.path === over?.id);
+      if (active.id !== over?.id) {
+        const oldIndex = videos.findIndex((v) => v.path === active.id);
+        const newIndex = videos.findIndex((v) => v.path === over?.id);
 
-      if (oldIndex !== -1 && newIndex !== -1) {
-        const newOrder = arrayMove(videos, oldIndex, newIndex);
-        onReorder(newOrder);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const newOrder = arrayMove(videos, oldIndex, newIndex);
+          onReorder(newOrder);
+        }
       }
-    }
-  };
+    };
 
-  const renderListItem = (video: VideoFile, index: number) => {
-    const contextMenu = <VideoContextMenu video={video} onRename={() => onRenameOpen(video)} />;
+    const renderListItem = (video: VideoFile, index: number) => {
+      const contextMenu = (
+        <VideoContextMenu video={video} onRename={() => interactions.onRenameOpen(video)} />
+      );
 
-    if (isSortable) {
+      if (isSortable) {
+        return (
+          <SortableVideoListItem
+            key={video.path}
+            video={video}
+            index={index}
+            onClick={interactions.onVideoClick}
+            contextMenuSlot={contextMenu}
+            // ▼▼▼ 修正: ラップせずに直接渡す (SortableVideoListItem内で (video, e) で呼んでくれるため) ▼▼▼
+            onPointerDown={interactions.onPointerDown}
+            onPointerMove={interactions.onPointerMove}
+            onPointerUp={interactions.onPointerUp}
+            onPointerLeave={interactions.onPointerLeave}
+          />
+        );
+      }
+
       return (
-        <SortableVideoListItem
-          key={video.path}
+        <VideoListItem
+          key={video.id}
           video={video}
           index={index}
-          onClick={onVideoClick}
+          onClick={interactions.onVideoClick}
           contextMenuSlot={contextMenu}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerLeave={onPointerLeave}
+          // Note: VideoListItemは生のイベントハンドラを期待するため、こちらはラップしてvideoを注入する
+          onPointerDown={(e) => interactions.onPointerDown(video, e)}
+          onPointerMove={interactions.onPointerMove}
+          onPointerUp={interactions.onPointerUp}
+          onPointerLeave={interactions.onPointerLeave}
+          onDragStart={interactions.onDragStart}
         />
       );
-    }
+    };
 
     return (
-      <VideoListItem
-        key={video.id}
-        video={video}
-        index={index}
-        onClick={onVideoClick}
-        contextMenuSlot={contextMenu}
-        onPointerDown={(e) => onPointerDown(video, e)}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={onPointerLeave}
-        onDragStart={onDragStart}
-      />
+      <div className="w-full">
+        <GridHeader />
+
+        {isSortable ? (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={videos.map((v) => v.path)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="flex flex-col gap-1">
+                {videos.map((video, index) => renderListItem(video, index))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        ) : (
+          <div className="flex flex-col gap-1">
+            {videos.map((video, index) => renderListItem(video, index))}
+          </div>
+        )}
+      </div>
     );
-  };
+  }
+);
 
-  return (
-    <div className="w-full">
-      <GridHeader />
-
-      {isSortable ? (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={videos.map((v) => v.path)} strategy={verticalListSortingStrategy}>
-            <div className="flex flex-col gap-1">
-              {videos.map((video, index) => renderListItem(video, index))}
-            </div>
-          </SortableContext>
-        </DndContext>
-      ) : (
-        <div className="flex flex-col gap-1">
-          {videos.map((video, index) => renderListItem(video, index))}
-        </div>
-      )}
-    </div>
-  );
-};
+ListView.displayName = 'ListView';

@@ -6,43 +6,36 @@ import { FavoriteButton } from '@/features/toggle-favorite/ui/favorite-button';
 import { DeleteVideoButton } from '@/features/delete-video/ui/delete-video-button';
 import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { VideoFile } from '@/shared/types/video';
-import { useSettingsStore } from '@/shared/stores/settings-store';
-import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
+import { GridStyle } from '@/shared/types/electron';
 
-interface VideoGridItemProps {
-  video: VideoFile;
-  onClick: (video: VideoFile, e: React.MouseEvent) => void;
+// インタラクション系Propsをまとめる型定義
+export interface VideoGridItemInteractions {
+  onVideoClick: (video: VideoFile, e: React.MouseEvent) => void;
   onRenameOpen: (video: VideoFile) => void;
+  onDragStart: () => void;
   onPointerDown: (video: VideoFile, e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
   onPointerLeave: (e: React.PointerEvent) => void;
-  onDragStart: () => void;
+}
+
+interface VideoGridItemProps {
+  video: VideoFile;
+  gridStyle: GridStyle;
+  isModalOpen: boolean;
+  isSelectionMode: boolean;
+  interactions: VideoGridItemInteractions;
 }
 
 export const VideoGridItem = React.memo(
-  ({
-    video,
-    onClick,
-    onRenameOpen,
-    onPointerDown,
-    onPointerMove,
-    onPointerUp,
-    onPointerLeave,
-    onDragStart,
-  }: VideoGridItemProps) => {
-    const gridStyle = useSettingsStore((s) => s.gridStyle);
-    const isModalOpen = useVideoPlayerStore((s) => s.isOpen);
-
+  ({ video, gridStyle, isModalOpen, isSelectionMode, interactions }: VideoGridItemProps) => {
     const isSelected = useSelectionStore((s) => s.selectedVideoIds.includes(video.id));
-    const isSelectionMode = useSelectionStore((s) => s.isSelectionMode);
 
     const showActions = !isSelectionMode;
 
     const actions = showActions ? (
       <>
-        {/* ▼▼▼ 変更: videoIdを渡す ▼▼▼ */}
         <DeleteVideoButton
           videoId={video.id}
           size="sm"
@@ -53,23 +46,25 @@ export const VideoGridItem = React.memo(
       </>
     ) : null;
 
-    const contextMenu = <VideoContextMenu video={video} onRename={() => onRenameOpen(video)} />;
+    const contextMenu = (
+      <VideoContextMenu video={video} onRename={() => interactions.onRenameOpen(video)} />
+    );
 
     return (
       <VideoCard
         video={video}
         gridStyle={gridStyle}
-        onClick={onClick}
+        onClick={interactions.onVideoClick}
         isModalOpen={isModalOpen}
         actionsSlot={actions}
         contextMenuSlot={contextMenu}
         isSelectionMode={isSelectionMode}
         isSelected={isSelected}
-        onPointerDown={(e) => onPointerDown(video, e)}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerLeave={onPointerLeave}
-        onDragStart={onDragStart}
+        onPointerDown={(e) => interactions.onPointerDown(video, e)}
+        onPointerMove={interactions.onPointerMove}
+        onPointerUp={interactions.onPointerUp}
+        onPointerLeave={interactions.onPointerLeave}
+        onDragStart={interactions.onDragStart}
       />
     );
   }

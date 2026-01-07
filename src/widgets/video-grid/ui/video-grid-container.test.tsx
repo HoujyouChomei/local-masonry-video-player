@@ -22,18 +22,38 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
+// Hoist mock functions
+const {
+  mockOpenVideo,
+  mockReorderPlaylist,
+  mockSaveFolderOrder,
+  mockEnterSelectionMode,
+  mockExitSelectionMode,
+  mockToggleSelection,
+  mockSelectRange,
+} = vi.hoisted(() => ({
+  mockOpenVideo: vi.fn(),
+  mockReorderPlaylist: vi.fn(),
+  mockSaveFolderOrder: vi.fn(),
+  mockEnterSelectionMode: vi.fn(),
+  mockExitSelectionMode: vi.fn(),
+  mockToggleSelection: vi.fn(),
+  mockSelectRange: vi.fn(),
+}));
+
 // 1. Mock Child Component (VideoGridLayout)
+// Update mock to use interactions prop
 vi.mock('./video-grid-layout', () => ({
-  VideoGridLayout: vi.fn(({ videos, onFetchMore, onVideoClick, onReorder, onRenameOpen }) => (
+  VideoGridLayout: vi.fn(({ videos, onFetchMore, onReorder, interactions }) => (
     <div data-testid="layout-mock">
       <div data-testid="video-count">{videos.length}</div>
       <button data-testid="fetch-more-btn" onClick={onFetchMore}>
         Fetch More
       </button>
       {videos.map((v: VideoFile) => (
-        <div key={v.id} data-testid="video-item" onClick={(e) => onVideoClick(v, e)}>
+        <div key={v.id} data-testid="video-item" onClick={(e) => interactions.onVideoClick(v, e)}>
           {v.name}
-          <button data-testid={`rename-${v.id}`} onClick={() => onRenameOpen(v)}>
+          <button data-testid={`rename-${v.id}`} onClick={() => interactions.onRenameOpen(v)}>
             Rename
           </button>
         </div>
@@ -45,68 +65,75 @@ vi.mock('./video-grid-layout', () => ({
   )),
 }));
 
-// 2. Mock Global Stores
-const mockOpenVideo = vi.fn();
-const mockReorderPlaylist = vi.fn();
-const mockSaveFolderOrder = vi.fn();
-
+// 2. Mock Global Stores (Same as before)
 vi.mock('@/shared/stores/settings-store', () => ({
-  useSettingsStore: (selector: (state: unknown) => unknown) =>
-    selector({
+  useSettingsStore: (selector?: (state: unknown) => unknown) => {
+    const state = {
       sortOption: 'date-desc',
       layoutMode: 'masonry',
       chunkSize: 10,
       gridStyle: 'modern',
       folderPath: '/test/videos',
-      mobileColumnCount: 1, // Added
-    }),
+      mobileColumnCount: 1,
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/shared/stores/ui-store', () => ({
-  useUIStore: (selector: (state: unknown) => unknown) =>
-    selector({
+  useUIStore: (selector?: (state: unknown) => unknown) => {
+    const state = {
       showFavoritesOnly: false,
       selectedPlaylistId: null,
       viewMode: 'folder',
       isSelectionMode: false,
       selectedVideoIds: [],
-      enterSelectionMode: vi.fn(),
-      exitSelectionMode: vi.fn(),
-      toggleSelection: vi.fn(),
-      selectRange: vi.fn(),
-    }),
+      enterSelectionMode: mockEnterSelectionMode,
+      exitSelectionMode: mockExitSelectionMode,
+      toggleSelection: mockToggleSelection,
+      selectRange: mockSelectRange,
+      selectedTagIds: [],
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/features/video-player/model/store', () => ({
-  useVideoPlayerStore: (selector: (state: unknown) => unknown) =>
-    selector({
+  useVideoPlayerStore: (selector?: (state: unknown) => unknown) => {
+    const state = {
       openVideo: mockOpenVideo,
       isOpen: false,
-    }),
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/features/search-videos/model/store', () => ({
-  useSearchStore: (selector: (state: unknown) => unknown) =>
-    selector({
+  useSearchStore: (selector?: (state: unknown) => unknown) => {
+    const state = {
       query: '',
       searchScope: 'folder',
       debouncedQuery: '',
-    }),
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
 vi.mock('@/shared/stores/selection-store', () => ({
-  useSelectionStore: (selector: (state: unknown) => unknown) =>
-    selector({
+  useSelectionStore: (selector?: (state: unknown) => unknown) => {
+    const state = {
       isSelectionMode: false,
       selectedVideoIds: [],
-      enterSelectionMode: vi.fn(),
-      exitSelectionMode: vi.fn(),
-      toggleSelection: vi.fn(),
-      selectRange: vi.fn(),
-    }),
+      enterSelectionMode: mockEnterSelectionMode,
+      exitSelectionMode: mockExitSelectionMode,
+      toggleSelection: mockToggleSelection,
+      selectRange: mockSelectRange,
+    };
+    return selector ? selector(state) : state;
+  },
 }));
 
-// 3. Mock Custom Hooks
+// 3. Mock Custom Hooks (Same as before)
 vi.mock('../lib/use-filtered-videos', () => ({
   useFilteredVideos: ({ videos }: { videos: VideoFile[] }) => videos || [],
 }));
@@ -139,12 +166,11 @@ vi.mock('../model/use-external-drop', () => ({
   }),
 }));
 
-// Mock useIsMobile
 vi.mock('@/shared/lib/use-is-mobile', () => ({
-  useIsMobile: () => false, // Default to PC
+  useIsMobile: () => false,
 }));
 
-// 4. Mock API Mutations
+// 4. Mock API Mutations (Same as before)
 vi.mock('@/entities/playlist/model/use-playlists', () => ({
   useReorderPlaylist: () => ({ mutate: mockReorderPlaylist }),
 }));

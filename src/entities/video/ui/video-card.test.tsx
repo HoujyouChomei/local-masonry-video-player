@@ -76,30 +76,32 @@ Object.defineProperty(window, 'electron', {
 // 3. Mock Stores with Strict Types
 type StoreSelector<T, U> = (state: T) => U;
 
+// ▼▼▼ 修正: selectorがない場合はstate全体を返すように変更 ▼▼▼
+
 vi.mock('@/shared/stores/drag-store', () => {
-  const useDragStore = <U,>(selector: StoreSelector<typeof mocks.dragStoreState, U>) =>
-    selector(mocks.dragStoreState);
+  const useDragStore = <U,>(selector?: StoreSelector<typeof mocks.dragStoreState, U>) =>
+    selector ? selector(mocks.dragStoreState) : mocks.dragStoreState;
   useDragStore.getState = () => mocks.dragStoreState;
   return { useDragStore };
 });
 
 vi.mock('@/shared/stores/selection-store', () => {
-  const useSelectionStore = <U,>(selector: StoreSelector<typeof mocks.selectionState, U>) =>
-    selector(mocks.selectionState);
+  const useSelectionStore = <U,>(selector?: StoreSelector<typeof mocks.selectionState, U>) =>
+    selector ? selector(mocks.selectionState) : mocks.selectionState;
   useSelectionStore.getState = () => mocks.selectionState;
   return { useSelectionStore };
 });
 
 vi.mock('@/shared/stores/settings-store', () => {
-  const useSettingsStore = <U,>(selector: StoreSelector<typeof mocks.settingsState, U>) =>
-    selector(mocks.settingsState);
+  const useSettingsStore = <U,>(selector?: StoreSelector<typeof mocks.settingsState, U>) =>
+    selector ? selector(mocks.settingsState) : mocks.settingsState;
   useSettingsStore.getState = () => mocks.settingsState;
   return { useSettingsStore };
 });
 
 vi.mock('@/shared/stores/ui-store', () => {
-  const useUIStore = <U,>(selector: StoreSelector<typeof mocks.uiState, U>) =>
-    selector(mocks.uiState);
+  const useUIStore = <U,>(selector?: StoreSelector<typeof mocks.uiState, U>) =>
+    selector ? selector(mocks.uiState) : mocks.uiState;
   useUIStore.getState = () => mocks.uiState;
   return { useUIStore };
 });

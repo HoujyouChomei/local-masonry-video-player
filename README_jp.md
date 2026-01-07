@@ -12,9 +12,6 @@
 
 https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
-### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
-
-> **Note**: 本アプリケーションはWindowsでのみ動作確認をしています。
 
 ## 主な機能
 
@@ -26,6 +23,13 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 *   **モバイル連携**: **(実験機能)** 同一ネットワーク内のスマートフォンからQRコードで接続し、PC内の動画をストリーミング再生できます。
 *   **整理機能**: プレイリスト作成、タグ付け、お気に入り登録機能があります。
 *   **メタデータ収集**: **(要FFmpeg)** AI生成動画のプロンプト情報（JSON）、FPS、Codec等の技術情報を自動取得して表示・検索に使用できます。
+
+### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
+
+> **Note**:
+> 本アプリケーションはWindowsでのみ動作確認をしています。
+> また、個人のオープンソースプロジェクトであり有償認証を購入していないため、初回起動時にSmartScreenの警告が表示されます。
+> 少しでもセキュリティに不安を持つ方の使用は推奨しません。本アプリに限りませんが、AIなどを活用して事前にコードから安全性を確認してから使用することを推奨します。
 
 ## 検索機能
 
@@ -47,6 +51,11 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 ### 接続手順
 1.  PC側でアプリの `設定 (Settings) > EXPERIMENTAL` セクションを開きます。
 2.  `Mobile Connect` のトグルスイッチをONにします。
+> **※ 通信許可の確認**
+> モバイル連携をONにすると、スマートフォンと通信するためのサーバー機能が起動します。
+> その際、Windowsから「このアプリの機能のいくつかがファイアウォールでブロックされています」という確認画面が表示される場合があります。
+> 
+> スマホからのアクセスをしたい方は、**「アクセスを許可する」** を選択してください。
 3.  表示されたQRコードをスマートフォンで読み取ります。
 4.  ブラウザが立ち上がり、PC内のライブラリにアクセスできます。
 

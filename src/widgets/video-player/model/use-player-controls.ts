@@ -1,6 +1,6 @@
 // src/widgets/video-player/model/use-player-controls.ts
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { VideoFile } from '@/shared/types/video';
 
 interface UsePlayerControlsProps {
@@ -13,7 +13,7 @@ interface UsePlayerControlsProps {
   togglePlay: () => void;
   closeVideo: () => void;
   toggleFullscreen: () => void;
-  toggleInfoPanel: () => void; // ▼▼▼ 追加 ▼▼▼
+  toggleInfoPanel: () => void;
 }
 
 export const usePlayerControls = ({
@@ -26,7 +26,7 @@ export const usePlayerControls = ({
   togglePlay,
   closeVideo,
   toggleFullscreen,
-  toggleInfoPanel, // ▼▼▼ 追加 ▼▼▼
+  toggleInfoPanel,
 }: UsePlayerControlsProps) => {
   const [showControls, setShowControls] = useState(false);
 
@@ -49,8 +49,9 @@ export const usePlayerControls = ({
   // --- Mouse Handlers ---
   const handleMouseMove = useCallback(() => {
     if (Date.now() < interactionLockRef.current) return;
-    if (!showControls) setShowControls(true);
-  }, [showControls]);
+    // ステート更新を避けるため、既にtrueならセットしない
+    setShowControls((prev) => (prev ? prev : true));
+  }, []);
 
   const handleMouseLeave = useCallback(() => {
     setShowControls(false);
@@ -86,16 +87,10 @@ export const usePlayerControls = ({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // ▼▼▼ 修正: 入力要素への入力中はショートカットを無効化 ▼▼▼
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
-      // ▲▲▲ 修正ここまで ▲▲▲
 
       if (e.key === 'Escape') {
         if (isFullscreen) {
@@ -114,7 +109,6 @@ export const usePlayerControls = ({
         e.preventDefault();
         toggleFullscreen();
       }
-      // ▼▼▼ 追加: "I"キーでInfoパネル切り替え ▼▼▼
       if (e.key.toLowerCase() === 'i') {
         e.preventDefault();
         toggleInfoPanel();
@@ -154,15 +148,25 @@ export const usePlayerControls = ({
     togglePlay,
     toggleFullscreen,
     closeVideo,
-    toggleInfoPanel, // ▼▼▼ 追加 ▼▼▼
+    toggleInfoPanel,
   ]);
 
-  return {
-    showControls,
-    handleMouseMove,
-    handleMouseLeave,
-    handleContextMenu,
-    handleVideoClick,
-    handleDoubleClick,
-  };
+  return useMemo(
+    () => ({
+      showControls,
+      handleMouseMove,
+      handleMouseLeave,
+      handleContextMenu,
+      handleVideoClick,
+      handleDoubleClick,
+    }),
+    [
+      showControls,
+      handleMouseMove,
+      handleMouseLeave,
+      handleContextMenu,
+      handleVideoClick,
+      handleDoubleClick,
+    ]
+  );
 };

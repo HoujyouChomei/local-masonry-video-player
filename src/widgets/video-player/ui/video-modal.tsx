@@ -1,6 +1,6 @@
 // src/widgets/video-player/ui/video-modal.tsx
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -10,9 +10,132 @@ import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { RenameVideoDialog } from '@/features/rename-video/ui/rename-video-dialog';
 import { VideoModalFooter } from './video-modal-footer';
 import { VideoMetadataPanel } from './video-metadata-panel';
-// ▼▼▼ 追加インポート ▼▼▼
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { isNativeVideo, getStreamUrl } from '@/shared/lib/video-extensions';
+import { VideoFile } from '@/shared/types/video';
+
+// --- Sub Components ---
+
+interface PlayerHeaderButtonsProps {
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
+  onClose: () => void;
+}
+
+const PlayerHeaderButtons = React.memo(
+  ({ isFullscreen, onToggleFullscreen, onClose }: PlayerHeaderButtonsProps) => (
+    <div className="absolute top-4 right-4 z-10 flex gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onToggleFullscreen}
+        className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
+        title={isFullscreen ? 'Exit Fullscreen (F)' : 'Enter Fullscreen (F)'}
+      >
+        {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+      </Button>
+
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onClose}
+        className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
+        title="Close (Esc)"
+      >
+        <X className="h-5 w-5" />
+      </Button>
+    </div>
+  )
+);
+PlayerHeaderButtons.displayName = 'PlayerHeaderButtons';
+
+interface MainPlayerScreenProps {
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  src: string;
+  showControls: boolean;
+  autoPlayNext: boolean;
+  isFullscreen: boolean;
+  // Events
+  onMouseMove: () => void;
+  onMouseLeave: () => void;
+  onContextMenu: () => void;
+  onDoubleClick: () => void;
+  onVolumeChange: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
+  onEnded: () => void;
+  onClick: (e: React.MouseEvent<HTMLVideoElement>) => void;
+  onError: () => void;
+}
+
+const MainPlayerScreen = React.memo(
+  ({
+    videoRef,
+    src,
+    showControls,
+    autoPlayNext,
+    isFullscreen,
+    onMouseMove,
+    onMouseLeave,
+    onContextMenu,
+    onDoubleClick,
+    onVolumeChange,
+    onEnded,
+    onClick,
+    onError,
+  }: MainPlayerScreenProps) => (
+    <div
+      className={cn('relative w-full bg-black', isFullscreen ? 'h-full' : 'aspect-video')}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      onContextMenu={onContextMenu}
+      onDoubleClick={onDoubleClick}
+    >
+      <video
+        key="main-player" // Revert: Use constant key to recycle DOM element for performance
+        ref={videoRef}
+        src={src}
+        className={cn('h-full w-full object-contain', !showControls && 'hide-native-controls')}
+        controls={showControls}
+        controlsList="nodownload nofullscreen"
+        autoPlay
+        loop={!autoPlayNext}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
+        onVolumeChange={onVolumeChange}
+        onEnded={onEnded}
+        onClick={onClick}
+        onError={onError}
+      />
+    </div>
+  )
+);
+MainPlayerScreen.displayName = 'MainPlayerScreen';
+
+interface InfoSidePanelProps {
+  video: VideoFile;
+  onClick: (e: React.MouseEvent) => void;
+}
+
+const InfoSidePanel = React.memo(({ video, onClick }: InfoSidePanelProps) => (
+  <div
+    className="animate-in fade-in slide-in-from-left-2 absolute top-0 left-full z-50 ml-4 h-full duration-200"
+    onClick={onClick}
+  >
+    <VideoMetadataPanel video={video} />
+  </div>
+));
+InfoSidePanel.displayName = 'InfoSidePanel';
+
+interface PreloadPlayerProps {
+  url?: string;
+}
+
+const PreloadPlayer = React.memo(({ url }: PreloadPlayerProps) => {
+  if (!url) return null;
+  return <video key={url} src={url} className="hidden" preload="auto" muted width="0" height="0" />;
+});
+PreloadPlayer.displayName = 'PreloadPlayer';
+
+// --- Main Component ---
 
 export const VideoModal = () => {
   const {
@@ -45,8 +168,6 @@ export const VideoModal = () => {
   } = useVideoModalPlayer();
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
-
-  // ▼▼▼ 追加: 次の動画のURLを特定するロジック ▼▼▼
   const { playlist } = useVideoPlayerStore();
 
   const nextVideoUrl = useMemo(() => {
@@ -58,21 +179,14 @@ export const VideoModal = () => {
     const nextIndex = (currentIndex + 1) % playlist.length;
     const nextVideo = playlist[nextIndex];
 
-    // URL決定ロジック:
-    // 1. ネイティブ対応、またはWeb版(http...)なら src をそのまま使用
-    //    (Web版のHttpClientは src に適切なURLとトークンをセット済み)
     if (isNativeVideo(nextVideo.path) || nextVideo.src.startsWith('http')) {
       return nextVideo.src;
     }
 
-    // 2. Electron版で非ネイティブならストリーム用URLを生成 (トランスコード用)
     return getStreamUrl(nextVideo.thumbnailSrc, nextVideo.path);
   }, [selectedVideo, playlist]);
-  // ▲▲▲ 追加ここまで ▲▲▲
 
   if (!isOpen || !selectedVideo) return null;
-
-  const shouldBeFullscreen = isFullscreen;
 
   return (
     <div
@@ -85,85 +199,44 @@ export const VideoModal = () => {
       <div onClick={closeVideo} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
 
       {/* Wrapper */}
-      <div
-        className={cn('relative', shouldBeFullscreen ? 'h-full w-full' : 'mx-4 w-full max-w-6xl')}
-      >
+      <div className={cn('relative', isFullscreen ? 'h-full w-full' : 'mx-4 w-full max-w-6xl')}>
         <ContextMenu>
           <ContextMenuTrigger asChild>
             {/* Modal Content (Main) */}
             <div
               className={cn(
                 'relative z-50 overflow-hidden bg-gray-950 shadow-2xl ring-1 ring-white/10',
-                shouldBeFullscreen
+                isFullscreen
                   ? 'fixed inset-0 h-full w-full max-w-none rounded-none'
                   : 'h-auto w-full rounded-xl'
               )}
               onClick={(e) => e.stopPropagation()}
-              // ▼▼▼ Attach Touch Handlers Here ▼▼▼
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
-              {/* Close Button / Fullscreen Toggle */}
-              <div className="absolute top-4 right-4 z-10 flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={toggleFullscreen}
-                  className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-                  title="Toggle Fullscreen (F)"
-                >
-                  {isFullscreen ? (
-                    <Minimize2 className="h-5 w-5" />
-                  ) : (
-                    <Maximize2 className="h-5 w-5" />
-                  )}
-                </Button>
+              <PlayerHeaderButtons
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={toggleFullscreen}
+                onClose={closeVideo}
+              />
 
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={closeVideo}
-                  className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-
-              {/* Video Player */}
-              <div
-                className={cn(
-                  'relative w-full bg-black',
-                  shouldBeFullscreen ? 'h-full' : 'aspect-video'
-                )}
+              <MainPlayerScreen
+                videoRef={videoRef}
+                src={currentSrc}
+                showControls={showControls}
+                autoPlayNext={autoPlayNext}
+                isFullscreen={isFullscreen}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onContextMenu={handleContextMenu}
                 onDoubleClick={handleDoubleClick}
-              >
-                <video
-                  // ▼▼▼ 変更: keyを固定文字列にしてDOM再利用を強制 ▼▼▼
-                  key="main-player"
-                  ref={videoRef}
-                  src={currentSrc}
-                  className={cn(
-                    'h-full w-full object-contain',
-                    !showControls && 'hide-native-controls'
-                  )}
-                  controls={showControls}
-                  controlsList="nodownload nofullscreen"
-                  autoPlay
-                  loop={!autoPlayNext}
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
-                  onVolumeChange={handleVolumeChange}
-                  onEnded={handleVideoEnded}
-                  onClick={handleVideoClick}
-                  onError={handleError}
-                />
-              </div>
+                onVolumeChange={handleVolumeChange}
+                onEnded={handleVideoEnded}
+                onClick={handleVideoClick}
+                onError={handleError}
+              />
 
-              {/* Metadata Footer: モバイル以外、かつ非フルスクリーン時のみ表示 */}
-              {!shouldBeFullscreen && (
+              {!isFullscreen && (
                 <VideoModalFooter
                   video={selectedVideo}
                   autoPlayNext={autoPlayNext}
@@ -184,29 +257,13 @@ export const VideoModal = () => {
           />
         </ContextMenu>
 
-        {/* Side Panel (Separate) */}
-        {!shouldBeFullscreen && isInfoPanelOpen && (
-          <div
-            className="animate-in fade-in slide-in-from-left-2 absolute top-0 left-full z-50 ml-4 h-full duration-200"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <VideoMetadataPanel video={selectedVideo} />
-          </div>
+        {/* Side Panel */}
+        {!isFullscreen && isInfoPanelOpen && (
+          <InfoSidePanel video={selectedVideo} onClick={(e) => e.stopPropagation()} />
         )}
       </div>
 
-      {/* ▼▼▼ 追加: 次の動画を裏で読み込むための隠しプレイヤー ▼▼▼ */}
-      {nextVideoUrl && (
-        <video
-          key={nextVideoUrl} // URLが変わるたびにリセット
-          src={nextVideoUrl}
-          className="hidden"
-          preload="auto"
-          muted
-          width="0"
-          height="0"
-        />
-      )}
+      <PreloadPlayer url={nextVideoUrl} />
 
       {isRenameOpen && (
         <RenameVideoDialog

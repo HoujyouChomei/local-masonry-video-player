@@ -14,10 +14,6 @@
 
 https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
-### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
-
-> **Note**: This application has been tested on Windows only.
-
 ## Features
 
 *   **Masonry Grid Layout**: Displays videos in a tile layout without gaps while maintaining aspect ratios.
@@ -28,6 +24,14 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 *   **Mobile Connect**: **(Experimental)** Connect from a smartphone on the same network via QR code to stream videos from your PC.
 *   **Organization**: Create playlists, add tags, and favorite your videos.
 *   **Metadata Harvesting**: **(Requires FFmpeg)** Automatically extracts and displays AI generation prompts (JSON), FPS, Codec, and other technical information for search and filtering.
+
+### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
+
+> **Note**: This application has been tested on Windows only.
+>
+> Since this is a personal open-source project and does not use a paid code signing certificate, a **SmartScreen warning** will appear upon the first launch.
+>
+> If you have any security concerns, use is not recommended. As with any software, it is recommended to verify the safety of the source code (e.g., using AI tools) before running it.
 
 ## Search Functionality
 
@@ -49,6 +53,11 @@ When enabled in the settings, this feature runs the PC app as a "server", allowi
 ### Connection Steps
 1.  Open the `Settings` > `EXPERIMENTAL` section in the app on your PC.
 2.  Turn **ON** the `Mobile Connect` toggle.
+> **Note: Firewall Permissions**
+> Enabling mobile integration activates a server function to communicate with your smartphone.
+> At this time, Windows may display a security alert stating that "Windows Defender Firewall has blocked some features of this app."
+> 
+> To allow connections from your smartphone, please select **"Allow access"**.
 3.  Scan the displayed QR code with your smartphone.
 4.  The browser will open, allowing access to the PC library.
 
@@ -166,6 +175,9 @@ If this occurs, try one of the following solutions:
 *   **Automatic Recovery**:
     *   **Inode Tracking**: Updates paths automatically by verifying file system Inode numbers for moves within the same volume.
     *   **Hash Verification**: Verifies identity using file size and partial hashes to restore metadata when moved to a different volume or if the Inode changes.
+
+## Performance
+*   **Startup is kinda fast for Electron.**
 
 ## Roadmap
 

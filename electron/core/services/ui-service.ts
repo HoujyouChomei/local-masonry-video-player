@@ -47,7 +47,9 @@ export class UIService {
     const isCurrentlyFullScreen = window.isFullScreen();
 
     if (enable) {
+      // フルスクリーン化のリクエスト
       if (this.previousFullScreenState === null) {
+        // 現在の状態を保存（解除時に戻すため）
         this.previousFullScreenState = isCurrentlyFullScreen;
       }
 
@@ -55,11 +57,21 @@ export class UIService {
         window.setFullScreen(true);
       }
     } else {
+      // フルスクリーン解除のリクエスト
       if (this.previousFullScreenState !== null) {
+        // 保存された状態があれば、そこに戻す
+        // (例: もともとフルスクリーンだったならフルスクリーンのまま、通常なら通常に戻す)
         if (isCurrentlyFullScreen !== this.previousFullScreenState) {
           window.setFullScreen(this.previousFullScreenState);
         }
+        // 状態をリセット
         this.previousFullScreenState = null;
+      } else {
+        // 保存された状態がない場合 (F11キー等でユーザーが手動変更した場合など)
+        // 解除リクエストなので、現在フルスクリーンなら解除する
+        if (isCurrentlyFullScreen) {
+          window.setFullScreen(false);
+        }
       }
     }
   }

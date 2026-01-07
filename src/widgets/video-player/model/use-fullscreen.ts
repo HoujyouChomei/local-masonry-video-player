@@ -1,6 +1,6 @@
 // src/widgets/video-player/model/use-fullscreen.ts
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { setFullScreenApi } from '@/shared/api/electron';
 
 export const useFullscreen = (isOpen: boolean) => {
@@ -37,11 +37,10 @@ export const useFullscreen = (isOpen: boolean) => {
     };
   }, []);
 
-  // ▼▼▼ Added: Sync with Browser Fullscreen API (e.g. for Mobile Gesture Exit) ▼▼▼
+  // Sync with Browser Fullscreen API
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isDocFullscreen = !!document.fullscreenElement;
-      // 状態が不一致の場合のみ更新 (toggleFullscreenからの変更と区別するため)
       if (isDocFullscreen !== isFullscreenRef.current) {
         setIsFullscreen(isDocFullscreen);
         isFullscreenRef.current = isDocFullscreen;
@@ -49,7 +48,6 @@ export const useFullscreen = (isOpen: boolean) => {
     };
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
-    // Safari/Older browsers support (Just in case, though Vite/React often polyfills)
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     return () => {
@@ -58,8 +56,11 @@ export const useFullscreen = (isOpen: boolean) => {
     };
   }, []);
 
-  return {
-    isFullscreen,
-    toggleFullscreen,
-  };
+  return useMemo(
+    () => ({
+      isFullscreen,
+      toggleFullscreen,
+    }),
+    [isFullscreen, toggleFullscreen]
+  );
 };
