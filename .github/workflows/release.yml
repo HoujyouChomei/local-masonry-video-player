@@ -1,10 +1,10 @@
 name: Build and Release
 
 on:
-  workflow_dispatch: # 手動実行用
+  workflow_dispatch:
   push:
     tags:
-      - 'v*' # vから始まるタグ (v0.1.0など) がプッシュされたら実行
+      - 'v*'
 
 permissions:
   contents: write
@@ -26,17 +26,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # ▼▼▼ 追加: リリース前にテストを実行して安全性を確保 ▼▼▼
-      # テストに失敗するとここで止まるため、壊れたバージョンがリリースされるのを防げます
-      - name: Run Tests
-        run: npm test
-        env:
-          CI: true
+      # LintやTestは次回以降で良いとのことなので省略
 
       - name: Build Vite & Electron
-        # package.jsonの "dist" コマンドを実行
-        # "npm run build" は Viteビルド + tsc
-        # electron-builder は package.json のスクリプトに含まれていない場合は直接叩く
         run: |
           npm run build
           npx electron-builder --win --x64 --publish never
@@ -45,11 +37,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          # リリースに添付するファイル (Zipファイルを指定)
-          files: |
-            release/*.zip
-            release/*.exe
-          draft: true # 下書きとして作成（公開前に確認可能）
+          # ▼▼▼ 修正: 存在しないexeを削除し、zipだけを明示的に指定 ▼▼▼
+          files: release/*.zip
+          
+          draft: true
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
