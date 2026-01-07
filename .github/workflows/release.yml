@@ -26,6 +26,13 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      # ▼▼▼ 追加: リリース前にテストを実行して安全性を確保 ▼▼▼
+      # テストに失敗するとここで止まるため、壊れたバージョンがリリースされるのを防げます
+      - name: Run Tests
+        run: npm test
+        env:
+          CI: true
+
       - name: Build Vite & Electron
         # package.jsonの "dist" コマンドを実行
         # "npm run build" は Viteビルド + tsc
