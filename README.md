@@ -166,7 +166,7 @@ If this occurs, try one of the following solutions:
 
 ### Data & Search
 *   **SQLite**: Manages metadata, settings, and playlists in a single `.db` file.
-*   **Hybrid Search**: High-speed search implementation fully utilizing SQLite's Full-Text Search module (**FTS5**).
+*   **Search Capability**: Search implementation based on SQLite's FTS5 module.
 *   **Portable Data Structure**: Application settings and the database (`userData`) are stored in the same directory as the executable.
 
 ### File Integrity & Recovery
