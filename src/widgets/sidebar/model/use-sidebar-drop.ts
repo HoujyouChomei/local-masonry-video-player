@@ -1,4 +1,4 @@
-// src/shared/lib/use-sidebar-drop.ts
+// src/widgets/sidebar/model/use-sidebar-drop.ts
 
 import { useState, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -32,7 +32,7 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
     if (isSelectionMode && selectedVideoIds.length > 0) {
       const allQueries = queryClient.getQueryCache().findAll();
       const allKnownVideos = new Map<string, string>();
-      
+
       for (const query of allQueries) {
         const data = query.state.data;
         if (Array.isArray(data)) {
@@ -44,7 +44,7 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
           }
         }
       }
-      return selectedVideoIds.map(id => allKnownVideos.get(id)).filter((p): p is string => !!p);
+      return selectedVideoIds.map((id) => allKnownVideos.get(id)).filter((p): p is string => !!p);
     }
 
     // 2. Single Drag
@@ -94,7 +94,7 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
           // IDベース処理
           const ids = resolveIds();
           if (ids.length === 0) return;
-          
+
           addToPlaylist({ playlistId: targetId, videoIds: ids });
           toast.success(`Added ${ids.length} videos to "${targetName}"`);
         } else if (type === 'folder') {
@@ -104,7 +104,7 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
 
           // Self-drop prevention
           if (paths.some((p) => p.startsWith(targetId))) {
-             // return;
+            // return;
           }
 
           await performMove({ filePaths: paths, targetFolder: targetId });

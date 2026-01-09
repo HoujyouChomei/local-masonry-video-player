@@ -9,7 +9,7 @@ import { useUIStore } from '@/shared/stores/ui-store';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useSidebarDrop } from '@/shared/lib/use-sidebar-drop';
+import { useSidebarDrop } from '@/widgets/sidebar/model/use-sidebar-drop';
 import {
   ContextMenu,
   ContextMenuContent,

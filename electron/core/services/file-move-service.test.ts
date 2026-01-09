@@ -42,11 +42,11 @@ describe('FileMoveService', () => {
 
   it('should auto-rename file if destination exists', async () => {
     const source = path.normalize('/source/video.mp4');
-    const dest1 = path.join(targetDir, 'video.mp4');
+    // dest1変数は使用されていないため削除
     const dest2 = path.join(targetDir, 'video (1).mp4');
 
-    // dest1は存在する -> access解決
-    // dest2は存在しない -> access拒否
+    // dest1 (video.mp4) は存在する -> access解決
+    // dest2 (video (1).mp4) は存在しない -> access拒否
     vi.mocked(fs.access)
       .mockResolvedValueOnce(undefined) // dest1 exists
       .mockRejectedValueOnce(new Error('ENOENT')); // dest2 missing

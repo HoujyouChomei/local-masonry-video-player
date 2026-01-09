@@ -47,7 +47,15 @@ export const useVideoPlayback = ({
 
   const canPlayNative = isNativeVideo(video.path);
 
-  // ▼▼▼ 修正: ロード/アンロード判定を統合し、スクロール監視を削除 ▼▼▼
+  // ▼▼▼ 1. 暗転対策: ソース変更時に即座にサムネイル表示に戻す ▼▼▼
+  const separator = video.src.includes('?') ? '&' : '?';
+  const srcUrl = shouldLoadVideo ? `${video.src}${separator}_v=${viewId}` : undefined;
+
+  useEffect(() => {
+    setIsVideoReady(false);
+  }, [viewId]);
+
+  // ロード/アンロード判定
   useEffect(() => {
     if (!canPlayNative) return;
 
@@ -69,9 +77,6 @@ export const useVideoPlayback = ({
       if (!shouldLoadVideo) return;
 
       // ロード解除（即時実行）
-      // 以前のスクロール監視ロジック(checkPruning)は削除しました。
-      // 親コンポーネント(VideoCard)がIntersectionObserverでinViewを管理しており、
-      // 画面外に出た時点で inView が false になるため、ここで自動的にアンロードされます。
       debounceTimer = setTimeout(() => {
         setShouldLoadVideo(false);
         setIsVideoReady(false);
@@ -91,31 +96,21 @@ export const useVideoPlayback = ({
     canPlayNative,
   ]);
 
-  // ▼▼▼ 削除: 個別のスクロールイベントリスナー (checkPruning) ▼▼▼
-  /*
-  useEffect(() => {
-    if (!shouldLoadVideo) return;
-    if (!elementRef.current) return;
-    ...
-    window.addEventListener('scroll', onScroll, { passive: true });
-    ...
-  }, [shouldLoadVideo, elementRef]);
-  */
-
-  // Watchdog logic (Stalled recovery)
+  // ▼▼▼ 3. Watchdogの常時監視: setTimeout -> setInterval, 8000 -> 2000 ▼▼▼
   useEffect(() => {
     if (!canPlayNative) return;
 
-    let watchdogTimer: NodeJS.Timeout;
+    let watchdogInterval: NodeJS.Timeout;
     if (inView && shouldLoadVideo) {
-      watchdogTimer = setTimeout(() => {
+      // 2秒ごとにチェックし続ける（ループ2周目以降のスタックも検知可能に）
+      watchdogInterval = setInterval(() => {
         const vid = videoRef.current;
         if (inView && vid && vid.readyState < 3) {
           setViewId((prev) => prev + 1);
         }
-      }, 8000);
+      }, 2000);
     }
-    return () => clearTimeout(watchdogTimer);
+    return () => clearInterval(watchdogInterval);
   }, [inView, shouldLoadVideo, viewId, video.name, canPlayNative]);
 
   const handleLoadedMetadata = () => {
@@ -142,12 +137,12 @@ export const useVideoPlayback = ({
       }
     }
 
+    // 0.1秒シーク（元のコードのまま維持）
     if (vid.duration > 0.1) {
       vid.currentTime = 0.1;
     }
 
     if (shouldUpdateDB) {
-      // ▼▼▼ 修正: path -> id ▼▼▼
       updateVideoMetadataApi(video.id, vid.duration, vid.videoWidth, vid.videoHeight);
     }
   };
@@ -155,11 +150,24 @@ export const useVideoPlayback = ({
   const handleSeeked = () => {
     const vid = videoRef.current;
     if (inView && shouldLoadVideo && vid) {
-      vid.play().catch(() => setIsPlaying(false));
+      // ▼▼▼ 1. 暗転対策: 再生が成功してからサムネを消す ▼▼▼
+      vid
+        .play()
+        .then(() => {
+          setIsPlaying(true);
+          setIsVideoReady(true);
+        })
+        .catch(() => setIsPlaying(false));
     }
   };
 
-  const handleLoadedData = () => setIsVideoReady(true);
+  const handleLoadedData = () => {
+    // ▼▼▼ 1. 暗転対策: シークする場合はここではReadyにしない ▼▼▼
+    const vid = videoRef.current;
+    if (vid && vid.duration <= 0.1) {
+      setIsVideoReady(true);
+    }
+  };
 
   const handleError = () => {
     if (inView && shouldLoadVideo) {
@@ -186,9 +194,6 @@ export const useVideoPlayback = ({
   const handleEnded = () => {
     if (videoRef.current) videoRef.current.currentTime = 0.1;
   };
-
-  const separator = video.src.includes('?') ? '&' : '?';
-  const srcUrl = shouldLoadVideo ? `${video.src}${separator}_v=${viewId}` : undefined;
 
   return {
     videoRef,

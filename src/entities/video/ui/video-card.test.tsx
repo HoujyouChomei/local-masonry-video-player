@@ -5,6 +5,8 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VideoCard } from './video-card';
 import { VideoFile } from '@/shared/types/video';
+// ▼▼▼ 追加: useVideoDrag をインポート (モック対象) ▼▼▼
+import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 
 // --- Mocks Setup ---
 
@@ -76,8 +78,6 @@ Object.defineProperty(window, 'electron', {
 // 3. Mock Stores with Strict Types
 type StoreSelector<T, U> = (state: T) => U;
 
-// ▼▼▼ 修正: selectorがない場合はstate全体を返すように変更 ▼▼▼
-
 vi.mock('@/shared/stores/drag-store', () => {
   const useDragStore = <U,>(selector?: StoreSelector<typeof mocks.dragStoreState, U>) =>
     selector ? selector(mocks.dragStoreState) : mocks.dragStoreState;
@@ -144,7 +144,6 @@ vi.mock('./video-card-overlay', () => ({
   VideoCardOverlay: () => <div data-testid="overlay">Overlay</div>,
 }));
 
-// Mock ContextMenu completely to avoid internal state issues
 vi.mock('@/components/ui/context-menu', () => ({
   ContextMenu: ({
     children,
@@ -163,9 +162,18 @@ vi.mock('@/components/ui/context-menu', () => ({
   ContextMenuTrigger: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-// Mock useIsMobile
 vi.mock('@/shared/lib/use-is-mobile', () => ({
-  useIsMobile: () => false, // Always PC mode for these tests
+  useIsMobile: () => false,
+}));
+
+// ▼▼▼ 追加: useVideoDrag の実体をインポートせず、テスト内で挙動を定義するためには
+// ここでモック化するのではなく、実際のロジック（hooks）を使ってテストしたいところですが、
+// useVideoDrag自体が別のファイルにあるため、ここでは「Integration Test」的に
+// useVideoDrag を実際に呼び出すラッパーを作るのが正解です。
+// ただし、useVideoDrag 内で startDragApi を呼んでいるため、そこをモックする必要があります。
+
+vi.mock('@/shared/api/electron', () => ({
+  startDragApi: mocks.startDrag,
 }));
 
 // --- Test Data ---
@@ -180,6 +188,17 @@ const mockVideo: VideoFile = {
   updatedAt: 1000,
   width: 1920,
   height: 1080,
+};
+
+// ▼▼▼ 追加: テスト用ラッパーコンポーネント ▼▼▼
+// VideoCard は純粋なコンポーネントになったため、ドラッグ機能を注入してテストする
+const TestVideoCardWrapper = (props: React.ComponentProps<typeof VideoCard>) => {
+  const { handleDragStart, handleDragEnd } = useVideoDrag({
+    videoPath: props.video.path,
+    videoId: props.video.id,
+  });
+
+  return <VideoCard {...props} onDragStart={handleDragStart} onDragEnd={handleDragEnd} />;
 };
 
 describe('VideoCard', () => {
@@ -230,9 +249,6 @@ describe('VideoCard', () => {
         <VideoCard video={mockVideo} isModalOpen={false} isSelectionMode={true} isSelected={true} />
       );
 
-      // In selection mode, actionsSlot (overlay buttons) might be hidden by parent logic,
-      // but VideoSelectionOverlay is rendered.
-      // We check for data-selected attribute.
       const img = getVideoThumbnail(container);
       const card = img.closest('.video-card');
       expect(card?.getAttribute('data-selected')).toBe('true');
@@ -240,8 +256,9 @@ describe('VideoCard', () => {
   });
 
   describe('3. Drag and Drop Logic (Critical)', () => {
+    // ▼▼▼ 修正: ラッパーを使用してレンダリング ▼▼▼
     it('initiates single file drag when not in selection mode', () => {
-      const { container } = render(<VideoCard video={mockVideo} isModalOpen={false} />);
+      const { container } = render(<TestVideoCardWrapper video={mockVideo} isModalOpen={false} />);
 
       const img = getVideoThumbnail(container);
       const card = img.closest('div[draggable="true"]');
@@ -251,7 +268,6 @@ describe('VideoCard', () => {
 
       expect(mocks.setDraggedFilePath).toHaveBeenCalledWith(mockVideo.path);
       expect(mocks.setDraggedVideoId).toHaveBeenCalledWith(mockVideo.id);
-      // startDragApi was mocked as startDrag
       expect(mocks.startDrag).toHaveBeenCalledWith(mockVideo.path);
     });
 
@@ -269,7 +285,7 @@ describe('VideoCard', () => {
       mockQueryCache.findAll.mockReturnValue([{ state: { data: mockCachedVideos } }]);
 
       const { container } = render(
-        <VideoCard
+        <TestVideoCardWrapper
           video={mockVideo} // v1
           isModalOpen={false}
           isSelectionMode={true}
@@ -294,7 +310,7 @@ describe('VideoCard', () => {
       mocks.selectionState.selectedVideoIds = ['v2', 'v3'];
 
       const { container } = render(
-        <VideoCard
+        <TestVideoCardWrapper
           video={mockVideo} // v1 is NOT selected
           isModalOpen={false}
           isSelectionMode={true}

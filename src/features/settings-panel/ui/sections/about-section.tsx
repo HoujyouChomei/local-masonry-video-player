@@ -64,8 +64,7 @@ export const AboutSection = () => {
         </h3>
 
         <div className="text-muted-foreground mb-3 text-[10px] leading-relaxed">
-          {/* ▼▼▼ 修正: バージョンを v0.2.1 に更新 ▼▼▼ */}
-          <p>Local Masonry Video Player v0.2.1</p>
+          <p>Local Masonry Video Player v0.2.2</p>
           <p>Powered by Electron, Vite & Open Source Software.</p>
         </div>
 

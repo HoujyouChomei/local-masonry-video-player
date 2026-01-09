@@ -7,7 +7,7 @@ import { VideoFile } from '@/shared/types/video';
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { useVideoMetadata } from '../model/use-video-metadata';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
+// 削除: import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 
 interface VideoListItemProps {
   video: VideoFile;
@@ -19,7 +19,10 @@ interface VideoListItemProps {
   onPointerMove?: (e: React.PointerEvent) => void;
   onPointerUp?: (e: React.PointerEvent) => void;
   onPointerLeave?: (e: React.PointerEvent) => void;
-  onDragStart?: () => void;
+
+  // 変更: ドラッグイベントを受け取る
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 export const VideoListItem = ({
@@ -32,7 +35,8 @@ export const VideoListItem = ({
   onPointerMove,
   onPointerUp,
   onPointerLeave,
-  onDragStart: onDragStartExternal,
+  onDragStart,
+  onDragEnd,
 }: VideoListItemProps) => {
   const { containerRef, shouldLoadMetadata, duration, handleLoadedMetadata } =
     useVideoMetadata(video);
@@ -42,20 +46,11 @@ export const VideoListItem = ({
 
   const thumbnailUrl = video.thumbnailSrc;
 
-  // DnD Hook
-  const { handleDragStart, handleDragEnd } = useVideoDrag({
-    videoPath: video.path,
-    videoId: video.id,
-  });
+  // 削除: useVideoDrag
 
   const [isHandleHovered, setIsHandleHovered] = useState(false);
 
   const isNativeDraggable = !dragHandle || !isHandleHovered;
-
-  const handleDragStartCombined = (e: React.DragEvent) => {
-    onDragStartExternal?.();
-    handleDragStart(e);
-  };
 
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -81,8 +76,8 @@ export const VideoListItem = ({
             ref={containerRef}
             onClick={(e) => onClick?.(video, e)}
             draggable={isNativeDraggable}
-            onDragStart={isNativeDraggable ? handleDragStartCombined : undefined}
-            onDragEnd={isNativeDraggable ? handleDragEnd : undefined}
+            onDragStart={isNativeDraggable ? onDragStart : undefined}
+            onDragEnd={isNativeDraggable ? onDragEnd : undefined}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}

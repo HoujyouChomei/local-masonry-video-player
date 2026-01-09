@@ -41,7 +41,10 @@ interface VideoCardProps {
   onPointerMove?: (e: React.PointerEvent) => void;
   onPointerUp?: (e: React.PointerEvent) => void;
   onPointerLeave?: (e: React.PointerEvent) => void;
-  onDragStart?: () => void;
+
+  // 変更: ドラッグイベント自体を受け取る
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
 }
 
 export const VideoCard = React.memo(
@@ -60,6 +63,7 @@ export const VideoCard = React.memo(
     onPointerUp,
     onPointerLeave,
     onDragStart,
+    onDragEnd,
   }: VideoCardProps) => {
     // カスタムフックを使用
     const {
@@ -71,14 +75,15 @@ export const VideoCard = React.memo(
       inView,
       elementRef,
       setRefs,
-      handleDragStartCombined,
-      handleDragEnd,
+      handleDragStart, // ロジックからそのままパススルー
+      handleDragEnd, // ロジックからそのままパススルー
       handleMouseEnter,
       handleMouseLeave,
       handleMenuOpenChange,
     } = useVideoCardLogic({
       video,
-      onDragStartExternal: onDragStart,
+      onDragStart,
+      onDragEnd,
     });
 
     return (
@@ -91,7 +96,7 @@ export const VideoCard = React.memo(
               onMouseEnter={shouldTrackHover ? handleMouseEnter : undefined}
               onMouseLeave={shouldTrackHover ? handleMouseLeave : undefined}
               draggable
-              onDragStart={handleDragStartCombined}
+              onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}

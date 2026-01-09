@@ -4,16 +4,19 @@ import { useInView } from 'react-intersection-observer';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
+// 削除: import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { VideoFile } from '@/shared/types/video';
 
 interface UseVideoCardLogicProps {
   video: VideoFile;
-  onDragStartExternal?: () => void;
+  // 変更: ドラッグハンドラを外部から受け取る
+  onDragStart?: (e: React.DragEvent) => void;
+  onDragEnd?: (e: React.DragEvent) => void;
+  // 以前の onDragStartExternal は onDragStart 内で処理されるべきため削除、または統合
 }
 
-export const useVideoCardLogic = ({ video, onDragStartExternal }: UseVideoCardLogicProps) => {
+export const useVideoCardLogic = ({ video, onDragStart, onDragEnd }: UseVideoCardLogicProps) => {
   const initialAspectRatio = video.width && video.height ? video.width / video.height : undefined;
 
   const [aspectRatio, setAspectRatio] = useState<number | undefined>(initialAspectRatio);
@@ -61,18 +64,9 @@ export const useVideoCardLogic = ({ video, onDragStartExternal }: UseVideoCardLo
     [inViewRef]
   );
 
-  const { handleDragStart, handleDragEnd } = useVideoDrag({
-    videoPath: video.path,
-    videoId: video.id,
-  });
+  // 削除: useVideoDrag の呼び出し
 
-  const handleDragStartCombined = useCallback(
-    (e: React.DragEvent) => {
-      onDragStartExternal?.();
-      handleDragStart(e);
-    },
-    [handleDragStart, onDragStartExternal]
-  );
+  // 削除: handleDragStartCombined (Widget層で結合するため不要、そのまま渡す)
 
   const handleMouseEnter = useCallback(() => {
     setIsHoveredState(true);
@@ -109,8 +103,9 @@ export const useVideoCardLogic = ({ video, onDragStartExternal }: UseVideoCardLo
     inView,
     elementRef,
     setRefs,
-    handleDragStartCombined,
-    handleDragEnd,
+    // そのまま返す
+    handleDragStart: onDragStart,
+    handleDragEnd: onDragEnd,
     handleMouseEnter,
     handleMouseLeave,
     handleMenuOpenChange,

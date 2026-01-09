@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Playlist } from '@/shared/types/playlist';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useRenamePlaylist, useDeletePlaylist } from '@/entities/playlist/model/use-playlists';
-import { useSidebarDrop } from '@/shared/lib/use-sidebar-drop';
+import { useSidebarDrop } from '@/widgets/sidebar/model/use-sidebar-drop';
 import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
 
 interface PlaylistNameInputProps {

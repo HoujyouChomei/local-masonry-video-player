@@ -26,7 +26,10 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # ▼▼▼ 復活: テストを実行 (Lintは除外) ▼▼▼
+      # ▼▼▼ 追加: Lintチェックを実行 ▼▼▼
+      - name: Run Lint
+        run: npm run lint
+
       - name: Run Tests
         run: npm test
         env:

@@ -36,7 +36,6 @@ test.describe('Settings & External Tools', () => {
     // FFmpeg Binary のステータス確認
     // "Valid" テキストが含まれ、かつ緑色(text-green-500)であることを確認したいが、
     // まずは "Valid" テキストが表示されていることを確認
-    const ffmpegStatus = settingsPanel.locator('div').filter({ hasText: 'FFmpeg Binary' }).nth(1); // 親divを探索
     await expect(page.getByText('Valid').first()).toBeVisible();
 
     // FFprobe Binary のステータス確認

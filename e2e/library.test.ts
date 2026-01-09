@@ -80,17 +80,58 @@ test.describe('Library & Data Management', () => {
     await expect(page.getByText('Rename')).toBeVisible();
     await expect(page.getByText('Delete from Disk')).toBeVisible();
 
-    // ▼▼▼ 追加: FFmpegがある場合のみ Normalize オプションを確認 ▼▼▼
     if (ctx.hasFFmpeg) {
-      // Experimental設定がデフォルトでOFFの場合、最初は表示されない可能性があるが、
-      // test-utils.ts の設定注入では enableExperimentalNormalize を指定していないためデフォルト(false)
-      // なので、本来は設定をONにしてから確認する必要がある。
-      // ただし、もしデフォルトでONにするか、あるいは設定変更テストを含めるべき。
-      // 今回は厳密さを求めて「設定がOFFなら表示されないこと」も確認できるが、
-      // シンプルにスキップするか、設定を変更するフローを入れる。
-      // config.json 生成時に enableExperimentalNormalize: true を入れるのが最も簡単。
+      // Normalize option check skipped for simplicity
     }
 
     await page.keyboard.press('Escape');
+  });
+
+  test('Desktop: should switch to List View and verify drag handle visibility', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // 1. List View に切り替え (Masonry -> List)
+    const layoutButton = page.locator('button[title*="Current: Masonry"]');
+
+    if (await layoutButton.isVisible()) {
+      await layoutButton.click();
+    }
+
+    await page.waitForTimeout(500);
+
+    // 2. リストアイテムの表示確認
+    const listItems = page.locator('[data-selected]');
+    await expect(listItems.first()).toBeVisible();
+
+    // 3. カスタムソートモードに切り替え
+    await page.getByTitle('Sort Videos').click();
+    // メニューが表示されるのを待つ
+    const customOption = page.getByRole('menuitem', { name: /Custom/ });
+    await expect(customOption).toBeVisible();
+    await customOption.click();
+
+    // 4. ドラッグハンドルの表示確認
+    const dragHandle = page.locator('[title="Drag to Reorder"]').first();
+    await expect(dragHandle).toBeVisible();
+
+    // UIの安定化待ち (メニューが閉じるアニメーション等を考慮)
+    await page.waitForTimeout(500);
+
+    // 5. 後始末: 設定を元に戻す (Masonry & Newest First)
+    // ソートを戻すためにメニューを再度開く
+    await page.getByTitle('Sort Videos').click();
+
+    // メニューが確実に開いたことを確認
+    await expect(page.locator('[role="menu"]')).toBeVisible();
+
+    const newestItem = page.getByRole('menuitem', { name: 'Newest First' });
+    await expect(newestItem).toBeVisible();
+    await newestItem.click();
+
+    // レイアウトを戻す
+    const listButton = page.locator('button[title*="Current: List"]');
+    if (await listButton.isVisible()) {
+      await listButton.click();
+    }
   });
 });
