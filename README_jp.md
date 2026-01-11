@@ -1,7 +1,3 @@
-ご指示の内容（実験的機能としての位置づけ、設定箇所の変更、ファイアウォール設定、再接続の仕様、Android限定など）を反映した `README_jp.md` です。
-
----
-
 [ [English](README.md) | 日本語 ]
 
 # Local Masonry Video Player
