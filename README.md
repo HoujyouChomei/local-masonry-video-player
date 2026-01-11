@@ -56,7 +56,7 @@ When enabled in the settings, this feature runs the PC app as a "server", allowi
 4.  The browser will open, allowing access to the PC library.
 
 > **About Security**:
-> The QR code contains a **authentication token** required for the connection. This ensures only authorized devices can access your library.
+> The QR code contains an **authentication token** required for the connection. This ensures only authorized devices can access your library.
 
 > **About Re-connection**:
 > Once connected successfully, you can open the URL (including the token) from your bookmarks or history to connect without scanning the QR code again (the Mobile Connect feature on your PC must be enabled).
