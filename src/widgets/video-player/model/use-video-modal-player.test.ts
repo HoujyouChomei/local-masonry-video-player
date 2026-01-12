@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useVideoModalPlayer } from './use-video-modal-player';
 import { VideoUpdateEvent } from '@/shared/types/electron';
@@ -174,7 +174,6 @@ describe('useVideoModalPlayer Integration Test', () => {
       name: 'v1',
       metadataStatus: 'completed',
     };
-    // プリフェッチロジックがエラーにならないようプレイリストも設定
     storeState.playlist = [storeState.selectedVideo];
 
     hook.rerender();
@@ -182,6 +181,9 @@ describe('useVideoModalPlayer Integration Test', () => {
     act(() => {
       vi.advanceTimersByTime(1000);
     });
+
+    // ▼▼▼ 修正箇所: 型キャストを追加して mockClear を呼び出す ▼▼▼
+    (videoElement.play as Mock).mockClear();
 
     return hook;
   };

@@ -48,8 +48,6 @@ export interface VideoUpdateInput {
   codec?: null;
 }
 
-// ▼▼▼ 追加: AIプロンプト(generation_params)を除外した軽量カラムリスト ▼▼▼
-// 一覧表示時に巨大なテキストデータを転送しないための最適化
 export const LITE_COLUMNS = `
   id, path, name, size, mtime, duration, width, height, 
   aspect_ratio, fps, codec, is_favorite, status, ino, 
@@ -63,24 +61,34 @@ export class VideoRepository {
   }
 
   findByPath(videoPath: string): VideoRow | undefined {
-    // 詳細取得用なので SELECT * (generation_params含む) のまま
     return this.db.prepare('SELECT * FROM videos WHERE path = ?').get(videoPath) as
       | VideoRow
       | undefined;
   }
 
   findById(id: string): VideoRow | undefined {
-    // 詳細取得用なので SELECT * (generation_params含む) のまま
     return this.db.prepare('SELECT * FROM videos WHERE id = ?').get(id) as VideoRow | undefined;
   }
 
   findManyByPaths(paths: string[]): VideoRow[] {
     if (paths.length === 0) return [];
-    const placeholders = paths.map(() => '?').join(',');
-    // ▼▼▼ 修正: Liteカラムを使用 ▼▼▼
-    return this.db
-      .prepare(`SELECT ${LITE_COLUMNS} FROM videos WHERE path IN (${placeholders})`)
-      .all(...paths) as VideoRow[];
+
+    // SQLiteの変数上限（通常999）を回避するため、安全なサイズでチャンク分割して実行する
+    const CHUNK_SIZE = 900;
+    const results: VideoRow[] = [];
+
+    for (let i = 0; i < paths.length; i += CHUNK_SIZE) {
+      const chunk = paths.slice(i, i + CHUNK_SIZE);
+      const placeholders = chunk.map(() => '?').join(',');
+
+      const rows = this.db
+        .prepare(`SELECT ${LITE_COLUMNS} FROM videos WHERE path IN (${placeholders})`)
+        .all(...chunk) as VideoRow[];
+
+      results.push(...rows);
+    }
+
+    return results;
   }
 
   findManyByTagIds(tagIds: string[]): VideoRow[] {
@@ -89,7 +97,6 @@ export class VideoRepository {
     const placeholders = tagIds.map(() => '?').join(',');
     const tagCount = tagIds.length;
 
-    // ▼▼▼ 修正: Liteカラムを使用 ▼▼▼
     return this.db
       .prepare(
         `
@@ -126,7 +133,6 @@ export class VideoRepository {
   }
 
   getFavorites(): VideoRow[] {
-    // ▼▼▼ 修正: Liteカラムを使用 ▼▼▼
     return this.db
       .prepare(
         `

@@ -1,9 +1,11 @@
+// src/features/settings-panel/ui/sections/external-tools-section.tsx
+
 import { FileCog, FolderOpen, CheckCircle, XCircle, Trash2 } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { selectFileApi } from '@/shared/api/electron';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 interface ExternalToolsSectionProps {
   isFFmpegValid: boolean | null;
@@ -19,10 +21,11 @@ export const ExternalToolsSection = ({
   setIsFFprobeValid,
 }: ExternalToolsSectionProps) => {
   const { ffmpegPath, setFFmpegPath, ffprobePath, setFFprobePath } = useSettingsStore();
-  const queryClient = useQueryClient();
+  const { invalidateAllVideoLists } = useVideoCache(); // 追加
 
   const refreshVideoList = () => {
-    queryClient.invalidateQueries({ queryKey: ['videos'] });
+    // 変更: 集約されたメソッドを使用
+    invalidateAllVideoLists();
   };
 
   const handleSelectFFmpeg = async () => {

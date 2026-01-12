@@ -1,6 +1,6 @@
 // src/entities/playlist/model/use-playlists.ts
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   fetchPlaylists,
   createPlaylistApi,
@@ -12,8 +12,7 @@ import {
 } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { Playlist } from '../../../shared/types/playlist';
-import { VideoFile } from '@/shared/types/video';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 export const usePlaylists = () => {
   return useQuery({
@@ -24,30 +23,26 @@ export const usePlaylists = () => {
 };
 
 export const useCreatePlaylist = () => {
-  const queryClient = useQueryClient();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
     mutationFn: (name: string) => createPlaylistApi(name),
-    onSuccess: (newPlaylist) => {
-      if (newPlaylist) {
-        queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-          return old ? [...old, newPlaylist] : [newPlaylist];
-        });
-      }
+    onSuccess: () => {
+      // 変更: 集約ロジックを使用
+      onPlaylistUpdated();
     },
   });
 };
 
 export const useDeletePlaylist = () => {
-  const queryClient = useQueryClient();
   const { selectedPlaylistId, setViewMode } = useUIStore();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
     mutationFn: (id: string) => deletePlaylistApi(id),
     onSuccess: (_, deletedId) => {
-      queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-        return old ? old.filter((p) => p.id !== deletedId) : [];
-      });
+      // 変更: 集約ロジックを使用
+      onPlaylistUpdated();
 
       if (selectedPlaylistId === deletedId) {
         setViewMode('folder');
@@ -57,102 +52,68 @@ export const useDeletePlaylist = () => {
 };
 
 export const useAddToPlaylist = () => {
-  const queryClient = useQueryClient();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
-    // ▼▼▼ 変更: videoId ▼▼▼
     mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
       addVideoToPlaylistApi(playlistId, videoId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
-        queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-          return old
-            ? old.map((p) => (p.id === updatedPlaylist.id ? updatedPlaylist : p))
-            : [updatedPlaylist];
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ['playlist-videos', updatedPlaylist.id],
-        });
+        // 変更: 集約ロジックを使用
+        onPlaylistUpdated(updatedPlaylist.id);
       }
     },
   });
 };
 
 export const useRemoveFromPlaylist = () => {
-  const queryClient = useQueryClient();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
-    // ▼▼▼ 変更: videoId ▼▼▼
     mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
       removeVideoFromPlaylistApi(playlistId, videoId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
-        queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-          return old
-            ? old.map((p) => (p.id === updatedPlaylist.id ? updatedPlaylist : p))
-            : [updatedPlaylist];
-        });
-
-        queryClient.setQueryData<VideoFile[]>(
-          ['playlist-videos', updatedPlaylist.id],
-          (oldVideos) => {
-            if (!oldVideos) return [];
-            return oldVideos.filter((v) => updatedPlaylist.videoPaths.includes(v.path));
-          }
-        );
-
-        queryClient.invalidateQueries({
-          queryKey: ['playlist-videos', updatedPlaylist.id],
-        });
+        // 変更: 集約ロジックを使用
+        onPlaylistUpdated(updatedPlaylist.id);
       }
     },
   });
 };
 
 export const useRenamePlaylist = () => {
-  const queryClient = useQueryClient();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => updatePlaylistMetaApi(id, name),
-    onSuccess: (updatedPlaylist) => {
-      if (updatedPlaylist) {
-        queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-          return old
-            ? old.map((p) => (p.id === updatedPlaylist.id ? updatedPlaylist : p))
-            : [updatedPlaylist];
-        });
-      }
+    onSuccess: () => {
+      // 変更: 集約ロジックを使用
+      onPlaylistUpdated();
     },
   });
 };
 
 export const useReorderPlaylist = () => {
-  const queryClient = useQueryClient();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
-    // ▼▼▼ 変更: newVideoIds ▼▼▼
     mutationFn: ({ playlistId, newVideoIds }: { playlistId: string; newVideoIds: string[] }) =>
       reorderPlaylistApi(playlistId, newVideoIds),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
-        queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-          return old
-            ? old.map((p) => (p.id === updatedPlaylist.id ? updatedPlaylist : p))
-            : [updatedPlaylist];
-        });
+        // 変更: 集約ロジックを使用
+        onPlaylistUpdated(updatedPlaylist.id);
       }
     },
   });
 };
 
 export const useCreateAndAddToPlaylist = () => {
-  const queryClient = useQueryClient();
   const { setEditingPlaylistId } = useUIStore();
   const { setSidebarOpen } = useSettingsStore();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   return useMutation({
-    // ▼▼▼ 変更: videoId ▼▼▼
     mutationFn: async (videoId: string) => {
       const newPlaylist = await createPlaylistApi('New Playlist');
       if (!newPlaylist) throw new Error('Failed to create playlist');
@@ -162,9 +123,9 @@ export const useCreateAndAddToPlaylist = () => {
     },
     onSuccess: (playlist) => {
       if (playlist) {
-        queryClient.setQueryData<Playlist[]>(['playlists'], (old) => {
-          return old ? [...old, playlist] : [playlist];
-        });
+        // 変更: 集約ロジックを使用
+        onPlaylistUpdated(playlist.id);
+
         setSidebarOpen(true);
         setEditingPlaylistId(playlist.id);
       }

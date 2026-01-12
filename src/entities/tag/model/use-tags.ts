@@ -1,6 +1,6 @@
 // src/entities/tag/model/use-tags.ts
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   fetchTagsActiveApi,
   fetchTagsByFolderApi,
@@ -11,6 +11,7 @@ import {
   unassignTagApi,
   fetchVideosByTagApi,
 } from '@/shared/api/electron';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 // ... (Queriesは変更なし) ...
 
@@ -54,44 +55,43 @@ export const useVideosByTag = (tagIds: string[]) => {
 // --- Mutations ---
 
 export const useCreateTag = () => {
-  const queryClient = useQueryClient();
+  const { onTagsUpdated } = useVideoCache(); // 追加
 
   return useMutation({
     mutationFn: (name: string) => createTagApi(name),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tags', 'all'] });
+      // 変更: 集約ロジックを使用
+      onTagsUpdated();
+      // useTagsAllのキーも onTagsUpdated 内か、あるいはここでのみ必要なキーがあれば追加で操作
+      // 現状 onTagsUpdated は ['tags'] を無効化しており、
+      // useTagsAll は ['tags', 'all'] なので fuzzy matching で更新されるはずだが、
+      // 念のため useVideoCache 側で ['tags'] 配下を全て無効化するように実装済み。
     },
   });
 };
 
 export const useAssignTag = () => {
-  const queryClient = useQueryClient();
+  const { onTagsUpdated } = useVideoCache(); // 追加
 
   return useMutation({
     mutationFn: ({ videoId, tagId }: { videoId: string; tagId: string }) =>
       assignTagApi(videoId, tagId),
     onSuccess: (_, variables) => {
-      const { videoId } = variables;
-      queryClient.invalidateQueries({ queryKey: ['video-tags', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] });
-      queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
+      // 変更: 集約ロジックを使用
+      onTagsUpdated([variables.videoId]);
     },
   });
 };
 
 export const useUnassignTag = () => {
-  const queryClient = useQueryClient();
+  const { onTagsUpdated } = useVideoCache(); // 追加
 
   return useMutation({
     mutationFn: ({ videoId, tagId }: { videoId: string; tagId: string }) =>
       unassignTagApi(videoId, tagId),
     onSuccess: (_, variables) => {
-      const { videoId } = variables;
-      queryClient.invalidateQueries({ queryKey: ['video-tags', videoId] });
-      queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] });
-      // ▼▼▼ 修正: tagIdを指定せず、tag-videosキーを持つ全てのクエリを無効化する ▼▼▼
-      // これにより ['tag-videos', ['tagA', 'tagB']] のような配列キーのキャッシュも更新される
-      queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
+      // 変更: 集約ロジックを使用
+      onTagsUpdated([variables.videoId]);
     },
   });
 };

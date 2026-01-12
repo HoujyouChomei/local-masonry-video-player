@@ -1,9 +1,8 @@
 // src/widgets/video-player/model/use-player-playback.ts
 
-import { useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
-import { isNativeVideo, getStreamUrl } from '@/shared/lib/video-extensions';
 
 export const usePlayerPlayback = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -11,30 +10,11 @@ export const usePlayerPlayback = () => {
   const { selectedVideo, isOpen, closeVideo, playNext, playPrev } = useVideoPlayerStore();
   const { volume, isMuted, setVolumeState, autoPlayNext, toggleAutoPlayNext } = useSettingsStore();
 
-  const [isErrorFallback, setIsErrorFallback] = useState(false);
-
-  useEffect(() => {
-    setIsErrorFallback(false);
-  }, [selectedVideo?.id]);
-
+  // URL生成ロジックの二重管理を廃止し、APIクライアントから提供された src をそのまま使用する
   const currentSrc = useMemo(() => {
     if (!selectedVideo) return '';
-
-    if (isErrorFallback) {
-      if (selectedVideo.src.startsWith('http')) return selectedVideo.src;
-      return getStreamUrl(selectedVideo.thumbnailSrc, selectedVideo.path);
-    }
-
-    if (isNativeVideo(selectedVideo.path)) {
-      return selectedVideo.src;
-    }
-
-    if (selectedVideo.src.startsWith('http')) {
-      return selectedVideo.src;
-    }
-
-    return getStreamUrl(selectedVideo.thumbnailSrc, selectedVideo.path);
-  }, [selectedVideo, isErrorFallback]);
+    return selectedVideo.src;
+  }, [selectedVideo]);
 
   // ▼▼▼ Added: Explicit load() to reset decoder pipeline on src change ▼▼▼
   useEffect(() => {
@@ -88,15 +68,8 @@ export const usePlayerPlayback = () => {
 
   const handleError = useCallback(() => {
     if (!selectedVideo) return;
-
-    if (isErrorFallback || selectedVideo.src.startsWith('http')) {
-      console.error('Video playback failed (Transcoding or Fallback).');
-      return;
-    }
-
-    console.warn('Native playback failed. Falling back to transcoding...');
-    setIsErrorFallback(true);
-  }, [selectedVideo, isErrorFallback]);
+    console.error(`Video playback failed: ${selectedVideo.path}`);
+  }, [selectedVideo]);
 
   return useMemo(
     () => ({

@@ -1,48 +1,26 @@
 // src/features/rename-video/model/use-rename-video.ts
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { VideoFile } from '@/shared/types/video';
+import { useMutation } from '@tanstack/react-query';
 import { renameVideoApi } from '@/shared/api/electron';
-import { useSettingsStore } from '@/shared/stores/settings-store';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 interface RenameVideoVariables {
-  id: string; // Changed from oldPath
+  id: string;
   newFileName: string;
 }
 
 export const useRenameVideo = () => {
-  const queryClient = useQueryClient();
-  const folderPath = useSettingsStore((state) => state.folderPath);
+  const { onVideoUpdated } = useVideoCache(); // 追加
 
   const { mutate: renameVideo, isPending } = useMutation({
-    // ▼▼▼ 変更: IDを渡す ▼▼▼
     mutationFn: ({ id, newFileName }: RenameVideoVariables) => renameVideoApi(id, newFileName),
 
-    onSuccess: (updatedVideoFile, variables) => {
+    onSuccess: (updatedVideoFile) => {
       if (!updatedVideoFile) return;
 
-      const { id } = variables;
-
-      // 1. フォルダビューのキャッシュを更新
-      queryClient.setQueryData<VideoFile[]>(['videos', folderPath], (oldData) => {
-        if (!oldData) return [];
-        return oldData.map((video) => (video.id === id ? updatedVideoFile : video));
-      });
-
-      // 2. グローバルお気に入りビュー
-      queryClient.setQueryData<VideoFile[]>(['all-favorites-videos'], (oldData) => {
-        if (!oldData) return [];
-        return oldData.map((video) => (video.id === id ? updatedVideoFile : video));
-      });
-
-      // 3. お気に入りリスト (IDリストなので更新不要だが、念のため)
-      // IDは不変なのでパス変更による影響はない
-
-      // 4. その他のビュー (Playlist, Tag, Search) も必要に応じて更新
-      // 一括で無効化する方が安全
-      queryClient.invalidateQueries({ queryKey: ['playlist-videos'] });
-      queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
-      queryClient.invalidateQueries({ queryKey: ['search'] });
+      // 変更: 集約されたロジックを使用
+      // これだけで、フォルダ/お気に入り/タグ/検索結果 すべてのビューで名前が更新される
+      onVideoUpdated(updatedVideoFile);
     },
   });
 

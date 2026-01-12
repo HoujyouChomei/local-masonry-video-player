@@ -1,7 +1,7 @@
 {
   "name": "local-masonry-video-player",
   "productName": "Local Masonry Video Player",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "private": true,
   "main": "dist-electron/electron/main.js",
   "scripts": {

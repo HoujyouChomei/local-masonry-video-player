@@ -60,6 +60,18 @@ export class MetadataHarvester {
     if (this.isRunning) return;
     this.isRunning = true;
 
+    // ▼▼▼ 追加: 中断された処理のリセット (Processing -> Pending) ▼▼▼
+    try {
+      const stuckCount = this.metaRepo.resetStuckProcessingStatus();
+      if (stuckCount > 0) {
+        console.log(
+          `[MetadataHarvester] Reset ${stuckCount} stuck 'processing' videos to 'pending'.`
+        );
+      }
+    } catch (e) {
+      console.error('[MetadataHarvester] Failed to reset stuck processing status:', e);
+    }
+
     // 不完全なデータの再スキャンを予約
     try {
       const resetCount = this.metaRepo.resetIncompleteMetadataStatus();

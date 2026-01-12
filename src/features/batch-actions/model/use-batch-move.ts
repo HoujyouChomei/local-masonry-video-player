@@ -1,12 +1,13 @@
 // src/features/batch-actions/model/use-batch-move.ts
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { selectFolder, moveVideosApi } from '@/shared/api/electron';
 import { useSelectionStore } from '@/shared/stores/selection-store';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 export const useBatchMove = () => {
-  const queryClient = useQueryClient();
   const { clearSelection, exitSelectionMode } = useSelectionStore();
+  const { invalidateAllVideoLists } = useVideoCache(); // 追加
 
   const { mutateAsync: performMove, isPending } = useMutation({
     mutationFn: async ({
@@ -20,11 +21,8 @@ export const useBatchMove = () => {
     },
     onSuccess: (movedCount) => {
       if (movedCount > 0) {
-        queryClient.invalidateQueries({ queryKey: ['videos'] });
-        queryClient.invalidateQueries({ queryKey: ['all-favorites-videos'] });
-        queryClient.invalidateQueries({ queryKey: ['favorites'] });
-        queryClient.invalidateQueries({ queryKey: ['playlists'] });
-        queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
+        // 変更: 集約されたロジックを使用
+        invalidateAllVideoLists();
 
         clearSelection();
         exitSelectionMode();
@@ -41,7 +39,7 @@ export const useBatchMove = () => {
 
   return {
     handleBatchMove,
-    performMove, // ▼▼▼ 公開: ダイアログなしで直接実行用 ▼▼▼
+    performMove,
     isPending,
   };
 };

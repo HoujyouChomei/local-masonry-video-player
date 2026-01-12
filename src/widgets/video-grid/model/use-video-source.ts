@@ -1,8 +1,7 @@
 // src/widgets/video-grid/model/use-video-source.ts
 
 import { useEffect } from 'react';
-// ▼▼▼ 修正: keepPreviousData を追加インポート ▼▼▼
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query'; // useQueryClient 削除
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSearchStore } from '@/features/search-videos/model/store';
 import {
@@ -13,12 +12,13 @@ import {
   searchVideosApi,
 } from '@/shared/api/electron';
 import { SearchOptions } from '@/shared/types/electron';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 export const useVideoSource = (folderPath: string) => {
   const { viewMode, selectedPlaylistId, selectedTagIds } = useUIStore();
   const { searchScope, debouncedQuery } = useSearchStore();
 
-  const queryClient = useQueryClient();
+  const { syncMetadata } = useVideoCache(); // 追加
 
   const isGlobalMode = viewMode === 'all-favorites';
   const isPlaylistMode = viewMode === 'playlist';
@@ -53,7 +53,6 @@ export const useVideoSource = (folderPath: string) => {
   const queryInfo = useQuery({
     queryKey,
     queryFn: () => {
-      // 1. Search API (Global or Context)
       if (shouldUseSearchApi) {
         const options: SearchOptions = {};
 
@@ -63,7 +62,7 @@ export const useVideoSource = (folderPath: string) => {
           } else if (isPlaylistMode && selectedPlaylistId) {
             options.playlistId = selectedPlaylistId;
           } else if (isTagMode) {
-            // No options needed for tag context
+            // No options
           } else {
             options.folderPath = folderPath;
           }
@@ -72,28 +71,25 @@ export const useVideoSource = (folderPath: string) => {
         return searchVideosApi(debouncedQuery, selectedTagIds, options);
       }
 
-      // 2. Existing Modes
       if (isGlobalMode) return fetchFavoriteVideos();
       if (isPlaylistMode && selectedPlaylistId) return fetchPlaylistVideosApi(selectedPlaylistId);
       if (isTagMode && selectedTagIds.length > 0) return fetchVideosByTagApi(selectedTagIds);
 
-      // 3. Default Folder View
       return fetchVideos(folderPath);
     },
     enabled: true,
     staleTime: 0,
     refetchOnMount: true,
-    // ▼▼▼ 追加: これが暗転を防ぐ魔法のオプションです ▼▼▼
-    // キーが変わっても、次のデータが来るまで前のデータを維持します
     placeholderData: keepPreviousData,
   });
 
   useEffect(() => {
     if (queryInfo.isSuccess && !queryInfo.isFetching) {
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+      // 変更: 動画リスト取得完了時に、関連データ（お気に入りIDリスト等）も同期する
+      // 直接キーを指定せず、useVideoCacheのメソッドを使用
+      syncMetadata();
     }
-  }, [queryInfo.isSuccess, queryInfo.isFetching, queryClient]);
+  }, [queryInfo.isSuccess, queryInfo.isFetching, syncMetadata]);
 
   return {
     ...queryInfo,

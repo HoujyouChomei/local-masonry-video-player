@@ -1,27 +1,27 @@
 // src/features/batch-actions/model/use-batch-playlist.ts
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import {
   addVideoToPlaylistApi,
   createPlaylistApi,
   removeVideoFromPlaylistApi,
 } from '@/shared/api/electron';
 import { useSelectionStore } from '@/shared/stores/selection-store';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 export const useBatchPlaylist = () => {
-  const queryClient = useQueryClient();
   const { clearSelection, exitSelectionMode } = useSelectionStore();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   const { mutate: addToPlaylist, isPending: isAdding } = useMutation({
-    // ▼▼▼ 変更: videoIds ▼▼▼
     mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
       for (const id of videoIds) {
         await addVideoToPlaylistApi(playlistId, id);
       }
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
-      queryClient.invalidateQueries({ queryKey: ['playlist-videos', variables.playlistId] });
+      // 変更: 集約されたロジックを使用
+      onPlaylistUpdated(variables.playlistId);
 
       clearSelection();
       exitSelectionMode();
@@ -29,7 +29,6 @@ export const useBatchPlaylist = () => {
   });
 
   const { mutate: createAndAdd, isPending: isCreating } = useMutation({
-    // ▼▼▼ 変更: videoIds ▼▼▼
     mutationFn: async ({ name, videoIds }: { name: string; videoIds: string[] }) => {
       const newPlaylist = await createPlaylistApi(name);
       if (!newPlaylist) throw new Error('Failed to create playlist');
@@ -39,8 +38,10 @@ export const useBatchPlaylist = () => {
       }
       return newPlaylist;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
+    onSuccess: (newPlaylist) => {
+      // 変更: 集約されたロジックを使用
+      onPlaylistUpdated(newPlaylist.id);
+
       clearSelection();
       exitSelectionMode();
     },
@@ -54,18 +55,17 @@ export const useBatchPlaylist = () => {
 };
 
 export const useBatchRemoveFromPlaylist = () => {
-  const queryClient = useQueryClient();
   const { clearSelection, exitSelectionMode } = useSelectionStore();
+  const { onPlaylistUpdated } = useVideoCache(); // 追加
 
   const { mutate: removeFromPlaylist, isPending } = useMutation({
-    // ▼▼▼ 変更: videoIds ▼▼▼
     mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
       const promises = videoIds.map((id) => removeVideoFromPlaylistApi(playlistId, id));
       await Promise.all(promises);
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['playlists'] });
-      queryClient.invalidateQueries({ queryKey: ['playlist-videos', variables.playlistId] });
+      // 変更: 集約されたロジックを使用
+      onPlaylistUpdated(variables.playlistId);
 
       clearSelection();
       exitSelectionMode();

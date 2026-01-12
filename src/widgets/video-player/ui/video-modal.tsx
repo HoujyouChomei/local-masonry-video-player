@@ -11,7 +11,6 @@ import { RenameVideoDialog } from '@/features/rename-video/ui/rename-video-dialo
 import { VideoModalFooter } from './video-modal-footer';
 import { VideoMetadataPanel } from './video-metadata-panel';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
-import { isNativeVideo, getStreamUrl } from '@/shared/lib/video-extensions';
 import { VideoFile } from '@/shared/types/video';
 
 // --- Sub Components ---
@@ -90,7 +89,7 @@ const MainPlayerScreen = React.memo(
       onDoubleClick={onDoubleClick}
     >
       <video
-        key="main-player" // Revert: Use constant key to recycle DOM element for performance
+        key="main-player"
         ref={videoRef}
         src={src}
         className={cn('h-full w-full object-contain', !showControls && 'hide-native-controls')}
@@ -179,11 +178,8 @@ export const VideoModal = () => {
     const nextIndex = (currentIndex + 1) % playlist.length;
     const nextVideo = playlist[nextIndex];
 
-    if (isNativeVideo(nextVideo.path) || nextVideo.src.startsWith('http')) {
-      return nextVideo.src;
-    }
-
-    return getStreamUrl(nextVideo.thumbnailSrc, nextVideo.path);
+    // 変更: video.src をそのまま使用 (二重管理の廃止)
+    return nextVideo.src;
   }, [selectedVideo, playlist]);
 
   if (!isOpen || !selectedVideo) return null;

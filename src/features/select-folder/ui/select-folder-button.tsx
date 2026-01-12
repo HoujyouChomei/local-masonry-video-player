@@ -3,9 +3,9 @@
 import { FolderOpen } from 'lucide-react';
 import { selectFolder } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { useUIStore } from '@/shared/stores/ui-store'; // 追加
+import { useUIStore } from '@/shared/stores/ui-store';
 import { Button } from '@/components/ui/button';
-import { useQueryClient } from '@tanstack/react-query';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 interface SelectFolderButtonProps {
   className?: string;
@@ -13,8 +13,8 @@ interface SelectFolderButtonProps {
 
 export const SelectFolderButton = ({ className }: SelectFolderButtonProps) => {
   const { setFolderPath, addLibraryFolder } = useSettingsStore();
-  const { resetView } = useUIStore(); // 追加
-  const queryClient = useQueryClient();
+  const { resetView } = useUIStore();
+  const { invalidateAllVideoLists } = useVideoCache(); // 追加
 
   const handleSelect = async () => {
     const path = await selectFolder();
@@ -22,9 +22,10 @@ export const SelectFolderButton = ({ className }: SelectFolderButtonProps) => {
       await setFolderPath(path);
       await addLibraryFolder(path);
 
-      resetView(); // フォルダ変更時にUIリセット
+      resetView();
 
-      await queryClient.invalidateQueries({ queryKey: ['videos'] });
+      // フォルダ変更時は全てのリストをクリアして再取得するのが適切
+      invalidateAllVideoLists();
     }
   };
 

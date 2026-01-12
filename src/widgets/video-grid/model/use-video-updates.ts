@@ -1,60 +1,53 @@
 // src/widgets/video-grid/model/use-video-updates.ts
 
-import { useEffect, useRef, useCallback } from 'react'; // useCallback 追加
+import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { VideoFile } from '@/shared/types/video';
 import { VideoUpdateEvent } from '@/shared/types/electron';
 import { onVideoUpdateApi } from '@/shared/api/electron';
+import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
 
 export const useVideoUpdates = (folderPath: string) => {
   const queryClient = useQueryClient();
+  // 変更: フックからメソッドを取得
+  const { onVideoDeletedByPath, invalidateRefreshedLists } = useVideoCache();
 
-  // デバウンス用タイマーRef
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 更新が必要なキーの集合を保持（デバウンス期間中に溜める）
   const pendingRefreshKeys = useRef<Set<string>>(new Set());
-
   const DEBOUNCE_MS = 500;
 
-  // ▼▼▼ 修正: useCallbackでラップ ▼▼▼
   const triggerRefresh = useCallback(() => {
     if (refreshTimerRef.current) {
       clearTimeout(refreshTimerRef.current);
     }
 
     refreshTimerRef.current = setTimeout(() => {
-      // 溜まった更新リクエストを実行
-      const keys = pendingRefreshKeys.current;
+      // 変更: 集約されたメソッドを使用
+      invalidateRefreshedLists(pendingRefreshKeys.current);
 
-      if (keys.has('videos')) queryClient.invalidateQueries({ queryKey: ['videos', folderPath] });
-      if (keys.has('favorites')) {
-        queryClient.invalidateQueries({ queryKey: ['all-favorites-videos'] });
-        queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      }
-      if (keys.has('playlists')) {
-        queryClient.invalidateQueries({ queryKey: ['playlists'] });
-        queryClient.invalidateQueries({ queryKey: ['playlist-videos'] });
-      }
-      if (keys.has('tags')) {
-        queryClient.invalidateQueries({ queryKey: ['tag-videos'] });
-        queryClient.invalidateQueries({ queryKey: ['tags', 'sidebar'] });
-      }
-
-      // クリア
-      keys.clear();
+      pendingRefreshKeys.current.clear();
       refreshTimerRef.current = null;
     }, DEBOUNCE_MS);
-  }, [queryClient, folderPath]); // 依存配列
+  }, [invalidateRefreshedLists]); // 依存関係変更
 
   useEffect(() => {
     const unsubscribe = onVideoUpdateApi((events: VideoUpdateEvent[]) => {
-      // 配列を展開して処理
       events.forEach((event) => {
-        // 1. サムネイル更新
+        // 1. サムネイル更新 (ここだけは特殊かつ頻度が高いため、直接キャッシュ操作を残すか、
+        //    useVideoCacheに onThumbnailUpdated を作っても良いが、現状は fuzzy matching で
+        //    対応する形に整理する)
         if (event.type === 'thumbnail') {
-          const updateThumbnailInCache = (queryKey: unknown[]) => {
-            queryClient.setQueriesData<VideoFile[]>({ queryKey }, (oldData) => {
+          // キャッシュバスター更新ロジック
+          // useVideoCache側で管理するキー全てに対して実行
+          const VIDEO_LIST_KEYS = [
+            'videos',
+            'all-favorites-videos',
+            'playlist-videos',
+            'tag-videos',
+          ];
+
+          VIDEO_LIST_KEYS.forEach((key) => {
+            queryClient.setQueriesData<VideoFile[]>({ queryKey: [key] }, (oldData) => {
               if (!oldData) return [];
               return oldData.map((v) => {
                 if (v.path === event.path) {
@@ -67,31 +60,20 @@ export const useVideoUpdates = (folderPath: string) => {
                 return v;
               });
             });
-          };
-
-          updateThumbnailInCache(['videos', folderPath]);
-          updateThumbnailInCache(['all-favorites-videos']);
-          updateThumbnailInCache(['tag-videos']);
+          });
           return;
         }
 
         // 2. 削除 (Delete)
         if (event.type === 'delete') {
-          queryClient.setQueryData<VideoFile[]>(['videos', folderPath], (oldData) => {
-            if (!oldData) return [];
-            return oldData.filter((v) => v.path !== event.path);
-          });
-          queryClient.setQueryData<VideoFile[]>(['all-favorites-videos'], (oldData) => {
-            if (!oldData) return [];
-            return oldData.filter((v) => v.path !== event.path);
-          });
-          queryClient.setQueryData<string[]>(['favorites'], (oldData) => {
-            if (!oldData) return [];
-            return oldData.filter((p) => p !== event.path);
-          });
+          // 変更: パスベースの削除メソッドを使用
+          onVideoDeletedByPath(event.path);
 
           pendingRefreshKeys.current.add('playlists');
           pendingRefreshKeys.current.add('tags');
+          // お気に入りIDリストの整合性を取るため favorites も追加
+          pendingRefreshKeys.current.add('favorites');
+
           triggerRefresh();
           return;
         }
@@ -113,5 +95,5 @@ export const useVideoUpdates = (folderPath: string) => {
         clearTimeout(refreshTimerRef.current);
       }
     };
-  }, [queryClient, folderPath, triggerRefresh]); // triggerRefreshを依存に追加
+  }, [queryClient, folderPath, triggerRefresh, onVideoDeletedByPath]); // 依存関係変更
 };
