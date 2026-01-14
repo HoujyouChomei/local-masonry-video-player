@@ -3,6 +3,7 @@
 import { useRef, useEffect, useCallback, useMemo } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
+import { logger } from '@/shared/lib/logger';
 
 export const usePlayerPlayback = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -10,26 +11,19 @@ export const usePlayerPlayback = () => {
   const { selectedVideo, isOpen, closeVideo, playNext, playPrev } = useVideoPlayerStore();
   const { volume, isMuted, setVolumeState, autoPlayNext, toggleAutoPlayNext } = useSettingsStore();
 
-  // URL生成ロジックの二重管理を廃止し、APIクライアントから提供された src をそのまま使用する
   const currentSrc = useMemo(() => {
     if (!selectedVideo) return '';
     return selectedVideo.src;
   }, [selectedVideo]);
 
-  // ▼▼▼ Added: Explicit load() to reset decoder pipeline on src change ▼▼▼
   useEffect(() => {
     if (videoRef.current && currentSrc) {
-      // DOM再利用時にデコーダーコンテキストをリセットするためにload()を呼ぶ
       videoRef.current.load();
-      // 自動再生が効かないケースへの保険 (通常はautoPlay属性で動作する)
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
         playPromise.catch((error) => {
-          // ユーザー操作直後でない場合、ブラウザのポリシーでブロックされることがあるが、
-          // モーダルプレイヤーのコンテキストでは通常問題ない。
-          // エラーログは抑制する（DOMException: The play() request was interrupted... 等）
           if (error.name !== 'AbortError') {
-            console.warn('[Player] Auto-play prevented:', error);
+            logger.warn('[Player] Auto-play prevented:', error);
           }
         });
       }
@@ -68,7 +62,7 @@ export const usePlayerPlayback = () => {
 
   const handleError = useCallback(() => {
     if (!selectedVideo) return;
-    console.error(`Video playback failed: ${selectedVideo.path}`);
+    logger.error(`Video playback failed: ${selectedVideo.path}`);
   }, [selectedVideo]);
 
   return useMemo(

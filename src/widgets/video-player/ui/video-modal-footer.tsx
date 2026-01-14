@@ -33,8 +33,6 @@ interface VideoModalFooterProps {
   onToggleInfoPanel: () => void;
 }
 
-// --- Sub Components (Memoized) ---
-
 const TitleSection = React.memo(
   ({
     video,
@@ -110,7 +108,6 @@ const ControlsSection = React.memo(
           isMobile ? 'w-full justify-between' : 'ml-4 gap-2'
         )}
       >
-        {/* Playback Controls */}
         <div
           className={cn(
             'flex items-center',
@@ -143,7 +140,6 @@ const ControlsSection = React.memo(
           </Button>
         </div>
 
-        {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
@@ -165,7 +161,6 @@ const ControlsSection = React.memo(
             )}
           </Button>
 
-          {/* モバイル時は削除ボタンを表示しない */}
           {!isMobile && (
             <DeleteVideoButton
               videoId={video.id}
@@ -258,8 +253,6 @@ const MetadataSection = React.memo(
   }
 );
 MetadataSection.displayName = 'MetadataSection';
-
-// --- Main Component (Memoized) ---
 
 export const VideoModalFooter = React.memo(
   ({

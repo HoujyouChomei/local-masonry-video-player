@@ -6,17 +6,16 @@ import {
   unassignTagFromVideosApi,
   createTagApi,
 } from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 export const useBatchTag = () => {
-  const { onTagsUpdated } = useVideoCache(); // 追加
+  const { onTagsUpdated } = useVideoCache();
 
   const { mutate: batchAssign, isPending: isAssigning } = useMutation({
     mutationFn: async ({ videoIds, tagId }: { videoIds: string[]; tagId: string }) => {
       await assignTagToVideosApi(videoIds, tagId);
     },
     onSuccess: (_, variables) => {
-      // 変更: 集約されたロジックを使用
       onTagsUpdated(variables.videoIds);
     },
   });
@@ -26,7 +25,6 @@ export const useBatchTag = () => {
       await unassignTagFromVideosApi(videoIds, tagId);
     },
     onSuccess: (_, variables) => {
-      // 変更: 集約されたロジックを使用
       onTagsUpdated(variables.videoIds);
     },
   });
@@ -36,7 +34,6 @@ export const useBatchTag = () => {
       return await createTagApi(name);
     },
     onSuccess: () => {
-      // 変更: タグ一覧のみ更新 (動画への付与はまだなのでID指定なし)
       onTagsUpdated();
     },
   });

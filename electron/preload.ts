@@ -9,7 +9,13 @@ import {
   VideoUpdateEvent,
   SearchOptions,
   ConnectionInfo,
+  MoveResponse,
+  WindowState,
 } from '../src/shared/types/electron';
+
+interface FileWithPath extends File {
+  path: string;
+}
 
 contextBridge.exposeInMainWorld('electron', {
   getVideos: (folderPath: string): Promise<VideoFile[]> =>
@@ -35,7 +41,6 @@ contextBridge.exposeInMainWorld('electron', {
   getSubdirectories: (dirPath: string): Promise<DirectoryEntry[]> =>
     ipcRenderer.invoke('get-subdirectories', dirPath),
 
-  // ▼▼▼ 追加 ▼▼▼
   getDirectoryTree: (dirPath: string): Promise<string[]> =>
     ipcRenderer.invoke('get-directory-tree', dirPath),
 
@@ -50,7 +55,7 @@ contextBridge.exposeInMainWorld('electron', {
   renameVideo: (id: string, newFileName: string): Promise<VideoFile | null> =>
     ipcRenderer.invoke('rename-video', id, newFileName),
 
-  moveVideos: (videoPaths: string[], targetFolderPath: string): Promise<number> =>
+  moveVideos: (videoPaths: string[], targetFolderPath: string): Promise<MoveResponse> =>
     ipcRenderer.invoke('move-videos', videoPaths, targetFolderPath),
 
   downloadVideo: (url: string, targetFolderPath: string): Promise<VideoFile | null> =>
@@ -84,6 +89,17 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.invoke('get-playlist-videos', playlistId),
 
   setFullScreen: (enable: boolean) => ipcRenderer.invoke('set-fullscreen', enable),
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  toggleMaximizeWindow: () => ipcRenderer.invoke('window-toggle-maximize'),
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+  getWindowState: (): Promise<WindowState> => ipcRenderer.invoke('get-window-state'),
+  onWindowStateChange: (callback: (state: WindowState) => void) => {
+    const subscription = (_event: IpcRendererEvent, state: WindowState) => callback(state);
+    ipcRenderer.on('window-state-changed', subscription);
+    return () => {
+      ipcRenderer.removeListener('window-state-changed', subscription);
+    };
+  },
 
   saveFolderOrder: (folderPath: string, videoPaths: string[]): Promise<void> =>
     ipcRenderer.invoke('save-folder-order', folderPath, videoPaths),
@@ -97,7 +113,6 @@ contextBridge.exposeInMainWorld('electron', {
     height: number
   ): Promise<void> => ipcRenderer.invoke('update-video-metadata', videoId, duration, width, height),
 
-  // Tag API
   createTag: (name: string): Promise<Tag> => ipcRenderer.invoke('create-tag', name),
   getTagsActive: (): Promise<Tag[]> => ipcRenderer.invoke('get-tags-active'),
   getTagsByFolder: (folderPath: string): Promise<Tag[]> =>
@@ -130,11 +145,12 @@ contextBridge.exposeInMainWorld('electron', {
     try {
       return webUtils.getPathForFile(file);
     } catch {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      return (file as any).path || '';
+      return (file as FileWithPath).path || '';
     }
   },
 
   getConnectionInfo: (): Promise<ConnectionInfo | null> =>
     ipcRenderer.invoke('get-connection-info'),
+
+  openLogFolder: () => ipcRenderer.invoke('open-log-folder'),
 });

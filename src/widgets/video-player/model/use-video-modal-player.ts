@@ -21,11 +21,9 @@ export const useVideoModalPlayer = () => {
     setIsInfoPanelOpen((prev) => !prev);
   }, []);
 
-  // --- 1. Base Playback Hook ---
   const playback = usePlayerPlayback();
   const { isOpen: isPlaybackOpen, closeVideo, playNext, playPrev } = playback;
 
-  // --- 2. Fullscreen Hook ---
   const fullscreen = useFullscreen(isPlaybackOpen);
 
   const handleToggleFullscreen = useCallback(() => {
@@ -39,7 +37,6 @@ export const useVideoModalPlayer = () => {
     }
   }, [fullscreen, openInFullscreen, closeVideo]);
 
-  // --- 3. Controls Hook ---
   const controls = usePlayerControls({
     isOpen: isPlaybackOpen,
     selectedVideo: playback.selectedVideo,
@@ -53,7 +50,6 @@ export const useVideoModalPlayer = () => {
     toggleInfoPanel,
   });
 
-  // --- 4. Sub-Hooks (Side Effects) ---
   usePlayerSync(isPlaybackOpen, selectedVideo);
   usePlayerHistory(isPlaybackOpen, closeVideo);
 
@@ -62,7 +58,6 @@ export const useVideoModalPlayer = () => {
     onSwipeRight: playPrev,
   });
 
-  // --- 5. UI State Management ---
   if (!isPlaybackOpen && isInfoPanelOpen) {
     setIsInfoPanelOpen(false);
   }
@@ -87,7 +82,6 @@ export const useVideoModalPlayer = () => {
 
   const isContentHidden = openInFullscreen && !hasEnteredFullscreen && !fullscreen.isFullscreen;
 
-  // 最終的な戻り値オブジェクトをメモ化
   return useMemo(
     () => ({
       selectedVideo: playback.selectedVideo,

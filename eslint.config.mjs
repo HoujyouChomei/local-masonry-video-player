@@ -6,7 +6,6 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  // ▼▼▼ 修正: src/components/ui (shadcn) をLint対象外に追加 ▼▼▼
   { ignores: ['dist', 'dist-electron', 'release', 'src/components/ui'] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],

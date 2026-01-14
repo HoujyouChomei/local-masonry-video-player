@@ -33,10 +33,8 @@ export const ExperimentalSection = ({ isFFmpegValid }: ExperimentalSectionProps)
 
         {isExpanded && (
           <div className="animate-in fade-in slide-in-from-top-1 mt-3 space-y-6">
-            {/* Mobile Connection (Always Visible on PC) */}
             <MobileConnectionSection />
 
-            {/* Normalize Video (Visible only if FFmpeg is valid) */}
             {isFFmpegValid && (
               <div className="border-border/30 flex items-start justify-between gap-3 border-t pt-4">
                 <div className="space-y-1">

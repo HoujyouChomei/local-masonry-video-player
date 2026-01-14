@@ -5,16 +5,15 @@ import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
 import { DBMigrator } from './db-migrator';
+import { logger } from './logger';
 
 let db: Database.Database | null = null;
 
-// デバッグ用: インスタンスID (初期化されるたびに変わる)
 const instanceId = Math.floor(Math.random() * 10000);
 
 export const getDB = () => {
-  // console.log(`[DB] getDB called. InstanceID: ${instanceId}, DB State: ${db ? 'Initialized' : 'NULL'}`);
   if (!db) {
-    console.error(`[DB Error] getDB called but DB is null. InstanceID: ${instanceId}`);
+    logger.error(`[DB Error] getDB called but DB is null. InstanceID: ${instanceId}`);
     throw new Error('Database not initialized. Call initDB() first.');
   }
   return db;
@@ -22,13 +21,13 @@ export const getDB = () => {
 
 export const initDB = () => {
   if (db) {
-    console.log(`[DB] Already initialized. InstanceID: ${instanceId}`);
+    logger.debug(`[DB] Already initialized. InstanceID: ${instanceId}`);
     return db;
   }
 
   const dbPath = path.join(app.getPath('userData'), 'library.db');
-  console.log(`[DB] Initializing... InstanceID: ${instanceId}`);
-  console.log(`[DB] Path: ${dbPath}`);
+  logger.debug(`[DB] Initializing... InstanceID: ${instanceId}`);
+  logger.debug(`[DB] Path: ${dbPath}`);
 
   const dbDir = path.dirname(dbPath);
   if (!fs.existsSync(dbDir)) {
@@ -44,7 +43,7 @@ export const initDB = () => {
     const currentVersion = db.pragma('user_version', { simple: true }) as number;
 
     if (currentVersion === 0) {
-      console.log('[DB] Creating fresh schema (v1)...');
+      logger.info('[DB] Creating fresh schema (v1)...');
       createSchema(db);
       db.pragma('user_version = 1');
     }
@@ -52,33 +51,32 @@ export const initDB = () => {
     const migrator = new DBMigrator(db);
     migrator.migrate();
 
-    console.log(`[DB] Initialization successful. InstanceID: ${instanceId}`);
+    logger.debug(`[DB] Initialization successful. InstanceID: ${instanceId}`);
     return db;
   } catch (error) {
-    console.error('[DB] Initialization FAILED:', error);
+    logger.error('[DB] Initialization FAILED:', error);
     throw error;
   }
 };
 
 const createSchema = (db: Database.Database) => {
   const runTransaction = db.transaction(() => {
-    // 1. Videos Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS videos (
         id TEXT PRIMARY KEY,                 -- UUID
-        path TEXT NOT NULL UNIQUE,           -- 絶対パス
-        name TEXT,                           -- ファイル名
+        path TEXT NOT NULL UNIQUE,           -- Absolute path
+        name TEXT,                           -- Filename
         
         file_hash TEXT,                      -- Partial Hash
         size INTEGER,                        -- Bytes
-        mtime INTEGER,                       -- 更新日時 (Unix MS)
+        mtime INTEGER,                       -- Modified time (Unix MS)
         
-        duration REAL,                       -- 秒
+        duration REAL,                       -- Seconds
         width INTEGER,
         height INTEGER,
         aspect_ratio REAL,
-        fps REAL,                            -- フレームレート
-        codec TEXT,                          -- ビデオコーデック
+        fps REAL,                            -- Frame rate
+        codec TEXT,                          -- Video codec
         
         thumbnail_path TEXT,
         blurhash TEXT,
@@ -99,7 +97,6 @@ const createSchema = (db: Database.Database) => {
       );
     `);
 
-    // Videos Indices
     db.exec(`CREATE INDEX IF NOT EXISTS idx_videos_path ON videos(path);`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_videos_status ON videos(status);`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_videos_ino ON videos(ino);`);
@@ -107,7 +104,6 @@ const createSchema = (db: Database.Database) => {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_videos_name ON videos(name);`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_videos_metadata_status ON videos(metadata_status);`);
 
-    // 2. Playlists Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS playlists (
         id TEXT PRIMARY KEY,
@@ -117,7 +113,6 @@ const createSchema = (db: Database.Database) => {
       );
     `);
 
-    // 3. Playlist Items Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS playlist_items (
         playlist_id TEXT NOT NULL,
@@ -134,7 +129,6 @@ const createSchema = (db: Database.Database) => {
       `CREATE INDEX IF NOT EXISTS idx_playlist_items_lookup ON playlist_items(playlist_id, rank);`
     );
 
-    // 4. Folder Sort Orders Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS folder_sort_orders (
         folder_path TEXT NOT NULL,
@@ -148,7 +142,6 @@ const createSchema = (db: Database.Database) => {
       `CREATE INDEX IF NOT EXISTS idx_folder_sort_lookup ON folder_sort_orders(folder_path, rank);`
     );
 
-    // 5. Tags Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS tags (
         id TEXT PRIMARY KEY,
@@ -158,7 +151,6 @@ const createSchema = (db: Database.Database) => {
     `);
     db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_name ON tags(name);`);
 
-    // 6. Video Tags Table
     db.exec(`
       CREATE TABLE IF NOT EXISTS video_tags (
         video_id TEXT NOT NULL,
@@ -173,7 +165,6 @@ const createSchema = (db: Database.Database) => {
     db.exec(`CREATE INDEX IF NOT EXISTS idx_video_tags_tag_id ON video_tags(tag_id);`);
     db.exec(`CREATE INDEX IF NOT EXISTS idx_video_tags_video_id ON video_tags(video_id);`);
 
-    // 7. FTS5 Table & Triggers (For Hybrid Search)
     try {
       db.exec(`
         CREATE VIRTUAL TABLE IF NOT EXISTS videos_fts USING fts5(
@@ -228,8 +219,6 @@ const createSchema = (db: Database.Database) => {
         END;
       `);
 
-      // ▼▼▼ 修正: WHEN句を追加して、無関係なカラム更新時のインデックス再構築を防ぐ ▼▼▼
-      // IS NOT を使用することで NULL 比較も正しく処理する
       db.exec(`
         CREATE TRIGGER IF NOT EXISTS videos_au AFTER UPDATE ON videos
         WHEN old.name IS NOT new.name 
@@ -258,7 +247,7 @@ const createSchema = (db: Database.Database) => {
         END;
       `);
     } catch (e) {
-      console.warn('FTS5 creation failed. Search capability might be limited.', e);
+      logger.warn('FTS5 creation failed. Search capability might be limited.', e);
     }
   });
 

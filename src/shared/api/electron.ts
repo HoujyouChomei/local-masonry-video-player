@@ -9,10 +9,10 @@ import {
   SearchOptions,
   VideoUpdateEvent,
   ConnectionInfo,
+  MoveResponse,
 } from '@/shared/types/electron';
 import { Playlist } from '@/shared/types/playlist';
 
-// --- Videos ---
 export const fetchVideos = async (folderPath: string): Promise<VideoFile[]> => {
   return getApiClient().videos.getAll(folderPath);
 };
@@ -42,7 +42,6 @@ export const updateVideoMetadataApi = async (
   return getApiClient().videos.updateMetadata(videoId, duration, width, height);
 };
 
-// --- Settings ---
 export const fetchSettings = async (): Promise<AppSettings> => {
   return getApiClient().settings.get();
 };
@@ -58,7 +57,6 @@ export const resetAccessTokenApi = async (): Promise<string> => {
   return getApiClient().settings.resetAccessToken();
 };
 
-// --- Dialogs & System ---
 export const selectFolder = async (): Promise<string | null> => {
   return getApiClient().system.selectFolder();
 };
@@ -83,7 +81,6 @@ export const setFullScreenApi = async (enable: boolean): Promise<void> => {
   return getApiClient().system.setFullScreen(enable);
 };
 
-// --- Favorites ---
 export const fetchFavorites = async (): Promise<string[]> => {
   return getApiClient().favorites.getAll();
 };
@@ -96,12 +93,10 @@ export const toggleFavoriteApi = async (videoId: string): Promise<string[]> => {
   return getApiClient().favorites.toggle(videoId);
 };
 
-// --- File Operations ---
 export const fetchSubdirectories = async (dirPath: string): Promise<DirectoryEntry[]> => {
   return getApiClient().system.getSubdirectories(dirPath);
 };
 
-// ▼▼▼ 追加 ▼▼▼
 export const getDirectoryTreeApi = async (dirPath: string): Promise<string[]> => {
   return getApiClient().system.getDirectoryTree(dirPath);
 };
@@ -128,7 +123,7 @@ export const renameVideoApi = async (
 export const moveVideosApi = async (
   videoPaths: string[],
   targetFolderPath: string
-): Promise<number> => {
+): Promise<MoveResponse> => {
   return getApiClient().videos.move(videoPaths, targetFolderPath);
 };
 
@@ -143,7 +138,6 @@ export const normalizeVideoApi = async (path: string): Promise<VideoFile | null>
   return getApiClient().videos.normalize(path);
 };
 
-// --- Playlists ---
 export const fetchPlaylists = async (): Promise<Playlist[]> => {
   return getApiClient().playlists.getAll();
 };
@@ -185,7 +179,6 @@ export const fetchPlaylistVideosApi = async (playlistId: string): Promise<VideoF
   return getApiClient().playlists.getVideos(playlistId);
 };
 
-// --- Sorting ---
 export const saveFolderOrderApi = async (
   folderPath: string,
   videoPaths: string[]
@@ -197,7 +190,6 @@ export const fetchFolderOrderApi = async (folderPath: string): Promise<string[]>
   return getApiClient().sorting.getFolderOrder(folderPath);
 };
 
-// --- Tags ---
 export const createTagApi = async (name: string): Promise<Tag | null> => {
   return getApiClient().tags.create(name);
 };
@@ -241,12 +233,10 @@ export const unassignTagFromVideosApi = async (
   return getApiClient().tags.unassignFromVideos(videoIds, tagId);
 };
 
-// --- Events ---
 export const onVideoUpdateApi = (callback: (events: VideoUpdateEvent[]) => void): (() => void) => {
   return getApiClient().events.onVideoUpdate(callback);
 };
 
-// --- Drag & Drop ---
 export const startDragApi = (files: string | string[]): void => {
   getApiClient().system.startDrag(files);
 };
@@ -257,4 +247,8 @@ export const getFilePathApi = (file: File): string => {
 
 export const getConnectionInfoApi = async (): Promise<ConnectionInfo | null> => {
   return getApiClient().system.getConnectionInfo();
+};
+
+export const openLogFolderApi = async (): Promise<void> => {
+  return getApiClient().system.openLogFolder();
 };

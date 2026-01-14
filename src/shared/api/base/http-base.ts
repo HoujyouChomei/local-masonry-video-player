@@ -1,6 +1,7 @@
 // src/shared/api/base/http-base.ts
 
 import { VideoFile } from '@/shared/types/video';
+import { logger } from '@/shared/lib/logger';
 
 export class HttpBase {
   protected token: string | null = null;
@@ -38,7 +39,6 @@ export class HttpBase {
   ): Promise<T> {
     const { method = 'GET', body, params } = options;
 
-    // クエリパラメータの構築
     const queryParams = new URLSearchParams();
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -54,7 +54,6 @@ export class HttpBase {
     const queryString = queryParams.toString();
     const endpoint = queryString ? `${path}?${queryString}` : path;
 
-    // ヘッダー構築
     const headers = new Headers();
     if (this.token) {
       headers.set('Authorization', `Bearer ${this.token}`);
@@ -75,7 +74,7 @@ export class HttpBase {
     const res = await fetch(`/api${endpoint}`, fetchOptions);
 
     if (res.status === 401 || res.status === 403) {
-      console.error('Authentication failed. Please scan the QR code again.');
+      logger.error('Authentication failed. Please scan the QR code again.');
       throw new Error('Unauthorized');
     }
 
@@ -83,7 +82,6 @@ export class HttpBase {
       throw new Error(`API Error: ${res.status} ${res.statusText}`);
     }
 
-    // レスポンスボディのパース (空の場合は空オブジェクトを返す)
     const text = await res.text();
     return text ? JSON.parse(text) : ({} as T);
   }
@@ -92,18 +90,13 @@ export class HttpBase {
     let thumb = video.thumbnailSrc;
 
     if (typeof window !== 'undefined') {
-      // Case A: Desktop版の最適化により file:// が返ってきた場合
-      // モバイルブラウザは file:// にアクセスできないため、HTTP経由のAPIパスに書き換える
       if (thumb.startsWith('file://')) {
         const origin = window.location.origin;
         thumb = `${origin}/thumbnail?path=${encodeURIComponent(video.path)}&t=${video.updatedAt}&size=${video.size}`;
         if (this.token) {
           thumb += `&token=${this.token}`;
         }
-      }
-      // Case B: 従来の http://127.0.0.1... が返ってきた場合 (サムネイル未生成時など)
-      // PCローカルのIPになっているため、モバイルからアクセス可能なホスト名に書き換える
-      else if (thumb.includes('127.0.0.1')) {
+      } else if (thumb.includes('127.0.0.1')) {
         const currentHost = window.location.hostname;
         const currentPort = window.location.port;
 
@@ -116,14 +109,11 @@ export class HttpBase {
           }
           thumb = url.toString();
         } catch {
-          // URLパース失敗時のフォールバック
           thumb = thumb.replace('127.0.0.1', currentHost);
         }
       }
     }
 
-    // 動画本体のURL (ストリーミング用)
-    // モバイル環境では常にAPIサーバー経由でアクセスさせる
     const streamUrlPath = `/video?path=${encodeURIComponent(video.path)}`;
     const streamUrl = this.token ? `${streamUrlPath}&token=${this.token}` : streamUrlPath;
 

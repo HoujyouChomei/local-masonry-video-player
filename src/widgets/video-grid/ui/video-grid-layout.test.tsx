@@ -5,18 +5,12 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { VideoGridLayout } from './video-grid-layout';
 import { VideoFile } from '@/shared/types/video';
-// 型定義をインポート（vi.mock内で使用するため）
 import type { VideoGridItemInteractions } from './video-grid-item';
 
-// --- Mocks ---
-
-// 1. SelectFolderButton Mock
 vi.mock('@/features/select-folder/ui/select-folder-button', () => ({
   SelectFolderButton: () => <button data-testid="select-folder-btn">Select Folder</button>,
 }));
 
-// 2. VideoCard & ListItem Mocks
-// MockVideoProps を削除し、インラインで型定義
 vi.mock('@/entities/video/ui/video-card', () => ({
   VideoCard: ({
     video,
@@ -62,7 +56,6 @@ vi.mock('./sortable-video-list-item', () => ({
   ),
 }));
 
-// 3. Feature Components Mocks
 vi.mock('@/features/delete-video/ui/delete-video-button', () => ({
   DeleteVideoButton: () => <button data-testid="delete-btn">Delete</button>,
 }));
@@ -75,14 +68,12 @@ vi.mock('@/entities/video/ui/video-card-context-menu', () => ({
   VideoCardContextMenu: () => <div data-testid="context-menu">Context Menu</div>,
 }));
 
-// 4. Rename Dialog Mock
 vi.mock('@/features/rename-video/ui/rename-video-dialog', () => ({
   RenameVideoDialog: ({ videoName }: { videoName: string }) => (
     <div data-testid="rename-dialog">Renaming: {videoName}</div>
   ),
 }));
 
-// 5. External Library Mocks
 vi.mock('react-masonry-css', () => ({
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="masonry-grid">{children}</div>
@@ -95,8 +86,6 @@ vi.mock('react-infinite-scroll-component', () => ({
   ),
 }));
 
-// 6. View Mocks (MasonryView / ListView)
-// any を回避し、型を適用
 vi.mock('./views/masonry-view', () => ({
   MasonryView: ({
     videos,
@@ -139,8 +128,6 @@ vi.mock('./views/list-view', () => ({
   ),
 }));
 
-// --- Test Data ---
-
 const mockVideos: VideoFile[] = [
   {
     id: '1',
@@ -164,7 +151,6 @@ const mockVideos: VideoFile[] = [
   },
 ];
 
-// --- Default Props Helper ---
 const defaultInteractions = {
   onVideoClick: vi.fn(),
   onRenameOpen: vi.fn(),
@@ -210,7 +196,6 @@ describe('VideoGridLayout Integration Test', () => {
       expect(screen.getByText(/Select a folder/i)).toBeTruthy();
     });
 
-    // ▼▼▼ 修正: ローディング中は null ではなくインジケータが表示されることを確認 ▼▼▼
     it('should show Loader when isLoading is true (Initial Loading)', () => {
       const { container } = render(
         <VideoGridLayout {...defaultProps} videos={[]} totalVideosCount={0} isLoading={true} />

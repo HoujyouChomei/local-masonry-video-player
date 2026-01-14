@@ -27,7 +27,6 @@ interface BatchTagDialogProps {
 }
 
 export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: BatchTagDialogProps) => {
-  // モード管理ステートを削除し、常に追加モードとして動作
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -53,7 +52,6 @@ export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: Batch
     try {
       const newTag = await createTagAsync(trimmed);
       if (newTag) {
-        // 作成して即追加
         batchAssign(
           { videoIds: selectedVideoIds, tagId: newTag.id },
           {
@@ -85,7 +83,6 @@ export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: Batch
           </DialogDescription>
         </DialogHeader>
 
-        {/* Feedback Toast (Inline) */}
         {feedback && (
           <div className="animate-in fade-in slide-in-from-top-1 flex items-center justify-center bg-green-500/10 px-4 py-2 text-xs text-green-500">
             <Check className="mr-1 h-3 w-3" /> {feedback}

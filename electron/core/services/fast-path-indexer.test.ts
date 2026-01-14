@@ -3,10 +3,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: {
+    isPackaged: false,
+    getPath: vi.fn(() => '/tmp'),
+  },
+}));
+
 import path from 'path';
 import { FastPathIndexer } from './fast-path-indexer';
 
-// fs/promises モック
 vi.mock('fs/promises', () => ({
   default: {
     readdir: vi.fn(),
@@ -23,29 +30,22 @@ describe('FastPathIndexer', () => {
   });
 
   it('should index video files recursively', async () => {
-    // モックデータ:
-    // root/
-    //   video1.mp4
-    //   sub/
-    //     video2.webm
-    //     image.jpg (無視されるべき)
     const mockDirentsRoot = [
       { name: 'video1.mp4', isFile: () => true, isDirectory: () => false },
       { name: 'sub', isFile: () => false, isDirectory: () => true },
-      { name: '.hidden', isFile: () => false, isDirectory: () => true }, // 無視
+      { name: '.hidden', isFile: () => false, isDirectory: () => true },
     ];
     const mockDirentsSub = [
       { name: 'video2.webm', isFile: () => true, isDirectory: () => false },
-      { name: 'image.jpg', isFile: () => true, isDirectory: () => false }, // 無視
+      { name: 'image.jpg', isFile: () => true, isDirectory: () => false },
     ];
 
     vi.mocked(fs.readdir)
-      .mockResolvedValueOnce(mockDirentsRoot as any) // root
-      .mockResolvedValueOnce(mockDirentsSub as any); // sub
+      .mockResolvedValueOnce(mockDirentsRoot as any)
+      .mockResolvedValueOnce(mockDirentsSub as any);
 
     await indexer.build(['/root']);
 
-    // 検証
     const candidates1 = indexer.getCandidates('video1.mp4');
     expect(candidates1).toHaveLength(1);
     expect(candidates1[0]).toContain('video1.mp4');
@@ -63,7 +63,6 @@ describe('FastPathIndexer', () => {
 
     vi.mocked(fs.readdir).mockResolvedValue(mockDirents as any);
 
-    // 2つのフォルダをスキャン
     await indexer.build(['/dir1', '/dir2']);
 
     const candidates = indexer.getCandidates('video.mp4');

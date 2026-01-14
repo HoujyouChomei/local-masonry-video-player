@@ -1,13 +1,19 @@
 // electron/core/repositories/playlist-repository.test.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn(() => ''),
+    isPackaged: false,
+  },
+}));
+
 import { PlaylistRepository } from './playlist-repository';
 
-// --- DB Mock Setup ---
 const mockRun = vi.fn();
 const mockGet = vi.fn();
 const mockAll = vi.fn();
-// トランザクションモック: 渡された関数を即時実行する関数を返す
 const mockTransaction = vi.fn((fn) => () => fn());
 
 const mockPrepare = vi.fn((_sql: string) => ({
@@ -33,7 +39,6 @@ describe('PlaylistRepository', () => {
 
   describe('getById', () => {
     it('should return playlist with video paths', () => {
-      // 1. プレイリスト情報の取得
       mockGet.mockReturnValue({
         id: 'p1',
         name: 'My Playlist',
@@ -41,8 +46,6 @@ describe('PlaylistRepository', () => {
         updated_at: 2000,
       });
 
-      // 2. プレイリスト内の動画パス取得 (getVideoPaths)
-      // JOINやORDER BYが含まれるクエリの戻り値をモック
       mockAll.mockReturnValue([{ path: '/v1.mp4' }, { path: '/v2.mp4' }]);
 
       const result = repo.getById('p1');
@@ -52,7 +55,6 @@ describe('PlaylistRepository', () => {
       );
       expect(mockGet).toHaveBeenCalledWith('p1');
 
-      // getVideoPaths のクエリ確認
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SELECT v.path'));
       expect(mockAll).toHaveBeenCalledWith('p1');
 
@@ -74,15 +76,12 @@ describe('PlaylistRepository', () => {
 
   describe('getAll', () => {
     it('should return all playlists with video paths', () => {
-      // プレイリスト一覧
       mockAll.mockReturnValueOnce([
         { id: 'p1', name: 'P1', created_at: 100, updated_at: 100 },
         { id: 'p2', name: 'P2', created_at: 200, updated_at: 200 },
       ]);
 
-      // p1 の動画パス取得
       mockAll.mockReturnValueOnce([{ path: '/v1.mp4' }]);
-      // p2 の動画パス取得
       mockAll.mockReturnValueOnce([]);
 
       const result = repo.getAll();
@@ -132,33 +131,27 @@ describe('PlaylistRepository', () => {
 
   describe('addVideo', () => {
     it('should add video if not exists', () => {
-      // 重複チェック: 存在しない (undefined)
       mockGet.mockReturnValueOnce(undefined);
 
-      // 最大ランク取得: 5
       mockGet.mockReturnValueOnce({ maxRank: 5 });
 
       repo.addVideo('p1', 'v1');
 
-      // INSERT実行 (rank = 6)
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO playlist_items')
       );
       expect(mockRun).toHaveBeenCalledWith('p1', 'v1', 6, expect.any(Number));
 
-      // touch (updated_at更新) が呼ばれる
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE playlists SET updated_at')
       );
     });
 
     it('should skip adding if video already exists in playlist', () => {
-      // 重複チェック: 存在する
       mockGet.mockReturnValueOnce({ 1: 1 });
 
       repo.addVideo('p1', 'v1');
 
-      // INSERTは呼ばれない
       expect(mockPrepare).not.toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO playlist_items')
       );
@@ -174,7 +167,6 @@ describe('PlaylistRepository', () => {
       );
       expect(mockRun).toHaveBeenCalledWith('p1', 'v1');
 
-      // touch が呼ばれる
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE playlists SET updated_at')
       );
@@ -188,17 +180,13 @@ describe('PlaylistRepository', () => {
       repo.reorderVideos('p1', videoIds);
 
       expect(mockTransaction).toHaveBeenCalled();
-      // UPDATE文の準備
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE playlist_items'));
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('SET rank = ?'));
 
-      // 3回実行されるはず (v1->0, v2->1, v3->2)
-      // 引数: index, playlistId, videoId
       expect(mockRun).toHaveBeenCalledWith(0, 'p1', 'v1');
       expect(mockRun).toHaveBeenCalledWith(1, 'p1', 'v2');
       expect(mockRun).toHaveBeenCalledWith(2, 'p1', 'v3');
 
-      // touch が呼ばれる
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('UPDATE playlists SET updated_at')
       );

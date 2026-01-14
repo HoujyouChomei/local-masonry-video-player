@@ -6,7 +6,6 @@ import { sendJson, sendError } from '../utils';
 
 const favoriteService = new FavoriteService();
 
-// ヘルパー: リクエストボディをJSONとして読み込む
 const readBody = async <T>(req: IncomingMessage): Promise<T> => {
   const buffers = [];
   for await (const chunk of req) {
@@ -24,7 +23,6 @@ export const handleFavoritesRequest = async (
   const method = req.method;
   const pathname = url.pathname;
 
-  // GET /api/favorites
   if (pathname === '/api/favorites' && method === 'GET') {
     try {
       const favorites = await favoriteService.getFavorites();
@@ -35,7 +33,6 @@ export const handleFavoritesRequest = async (
     }
   }
 
-  // POST /api/favorites/toggle
   if (pathname === '/api/favorites/toggle' && method === 'POST') {
     try {
       const { videoId } = await readBody<{ videoId: string }>(req);
@@ -48,5 +45,5 @@ export const handleFavoritesRequest = async (
     }
   }
 
-  return false; // Not handled
+  return false;
 };

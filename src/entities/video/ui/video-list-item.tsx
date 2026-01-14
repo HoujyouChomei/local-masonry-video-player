@@ -7,7 +7,6 @@ import { VideoFile } from '@/shared/types/video';
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { useVideoMetadata } from '../model/use-video-metadata';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-// 削除: import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 
 interface VideoListItemProps {
   video: VideoFile;
@@ -20,7 +19,6 @@ interface VideoListItemProps {
   onPointerUp?: (e: React.PointerEvent) => void;
   onPointerLeave?: (e: React.PointerEvent) => void;
 
-  // 変更: ドラッグイベントを受け取る
   onDragStart?: (e: React.DragEvent) => void;
   onDragEnd?: (e: React.DragEvent) => void;
 }
@@ -45,8 +43,6 @@ export const VideoListItem = ({
   const isSelected = selectedVideoIds.includes(video.id);
 
   const thumbnailUrl = video.thumbnailSrc;
-
-  // 削除: useVideoDrag
 
   const [isHandleHovered, setIsHandleHovered] = useState(false);
 

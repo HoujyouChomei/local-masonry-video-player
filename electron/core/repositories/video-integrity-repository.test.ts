@@ -11,7 +11,7 @@ const mockPrepare = vi.fn(() => ({
   get: mockGet,
   all: mockAll,
 }));
-const mockTransaction = vi.fn((fn) => () => fn()); // トランザクションは実行可能な関数を返すようにモック
+const mockTransaction = vi.fn((fn) => () => fn());
 
 vi.mock('../../lib/db', () => ({
   getDB: () => ({
@@ -20,14 +20,12 @@ vi.mock('../../lib/db', () => ({
   }),
 }));
 
-// Electron app path mock
 vi.mock('electron', () => ({
   app: {
     getPath: () => '/tmp',
   },
 }));
 
-// fs mock for thumbnail deletion logic in deleteExpiredMissingVideos
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(false),
@@ -47,7 +45,6 @@ describe('VideoIntegrityRepository', () => {
 
   it('markAsMissing should update status to missing', () => {
     repo.markAsMissing(['1', '2']);
-    // SQLの空白や改行に依存しないようにキーワードでチェック
     expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE videos'));
     expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining("SET status = 'missing'"));
     expect(mockRun).toHaveBeenCalled();
@@ -107,21 +104,15 @@ describe('VideoIntegrityRepository', () => {
     repo.upsertMany(toInsert, toUpdate);
 
     expect(mockTransaction).toHaveBeenCalled();
-    // insertとupdateで合計2回runが呼ばれるはず
     expect(mockRun).toHaveBeenCalledTimes(2);
   });
 
   it('deleteExpiredMissingVideos should delete old missing videos', () => {
-    // 削除対象のレコードを返すようにモック
     mockAll.mockReturnValue([{ id: 'old-1', path: '/old.mp4' }]);
 
     repo.deleteExpiredMissingVideos(30);
 
     expect(mockTransaction).toHaveBeenCalled();
-    // 1. DELETE playlist_items
-    // 2. DELETE folder_sort_orders
-    // 3. DELETE video_tags
-    // 4. DELETE videos
     expect(mockRun).toHaveBeenCalledTimes(4);
   });
 });

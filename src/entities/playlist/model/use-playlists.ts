@@ -12,7 +12,7 @@ import {
 } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 export const usePlaylists = () => {
   return useQuery({
@@ -23,12 +23,11 @@ export const usePlaylists = () => {
 };
 
 export const useCreatePlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: (name: string) => createPlaylistApi(name),
     onSuccess: () => {
-      // 変更: 集約ロジックを使用
       onPlaylistUpdated();
     },
   });
@@ -36,12 +35,11 @@ export const useCreatePlaylist = () => {
 
 export const useDeletePlaylist = () => {
   const { selectedPlaylistId, setViewMode } = useUIStore();
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: (id: string) => deletePlaylistApi(id),
     onSuccess: (_, deletedId) => {
-      // 変更: 集約ロジックを使用
       onPlaylistUpdated();
 
       if (selectedPlaylistId === deletedId) {
@@ -52,14 +50,13 @@ export const useDeletePlaylist = () => {
 };
 
 export const useAddToPlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
       addVideoToPlaylistApi(playlistId, videoId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
-        // 変更: 集約ロジックを使用
         onPlaylistUpdated(updatedPlaylist.id);
       }
     },
@@ -67,14 +64,13 @@ export const useAddToPlaylist = () => {
 };
 
 export const useRemoveFromPlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
       removeVideoFromPlaylistApi(playlistId, videoId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
-        // 変更: 集約ロジックを使用
         onPlaylistUpdated(updatedPlaylist.id);
       }
     },
@@ -82,26 +78,24 @@ export const useRemoveFromPlaylist = () => {
 };
 
 export const useRenamePlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: ({ id, name }: { id: string; name: string }) => updatePlaylistMetaApi(id, name),
     onSuccess: () => {
-      // 変更: 集約ロジックを使用
       onPlaylistUpdated();
     },
   });
 };
 
 export const useReorderPlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: ({ playlistId, newVideoIds }: { playlistId: string; newVideoIds: string[] }) =>
       reorderPlaylistApi(playlistId, newVideoIds),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
-        // 変更: 集約ロジックを使用
         onPlaylistUpdated(updatedPlaylist.id);
       }
     },
@@ -111,7 +105,7 @@ export const useReorderPlaylist = () => {
 export const useCreateAndAddToPlaylist = () => {
   const { setEditingPlaylistId } = useUIStore();
   const { setSidebarOpen } = useSettingsStore();
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   return useMutation({
     mutationFn: async (videoId: string) => {
@@ -123,7 +117,6 @@ export const useCreateAndAddToPlaylist = () => {
     },
     onSuccess: (playlist) => {
       if (playlist) {
-        // 変更: 集約ロジックを使用
         onPlaylistUpdated(playlist.id);
 
         setSidebarOpen(true);

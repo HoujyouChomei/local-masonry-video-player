@@ -18,9 +18,8 @@ import { AlertCircle } from 'lucide-react';
 interface RenameVideoDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  videoId: string; // Added
-  videoName: string; // Display & Initial Value
-  // videoPath は不要になったため削除
+  videoId: string;
+  videoName: string;
 }
 
 export const RenameVideoDialog = ({
@@ -49,7 +48,6 @@ export const RenameVideoDialog = ({
 
   const handleSave = () => {
     if (newFileName.trim() && !error && !isPending) {
-      // ▼▼▼ 変更: IDを渡す ▼▼▼
       renameVideo(
         { id: videoId, newFileName: newFileName.trim() },
         {

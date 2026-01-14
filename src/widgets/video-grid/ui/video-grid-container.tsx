@@ -23,7 +23,6 @@ interface VideoGridContainerProps {
 }
 
 export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContainerProps) => {
-  // Global Stores
   const layoutMode = useSettingsStore((s) => s.layoutMode);
   const gridStyle = useSettingsStore((s) => s.gridStyle);
   const mobileColumnCount = useSettingsStore((s) => s.mobileColumnCount);
@@ -39,7 +38,6 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
   const isPlaylistMode = useUIStore((state) => state.viewMode === 'playlist');
   const isTagMode = useUIStore((state) => state.viewMode === 'tag-results');
 
-  // Hooks
   const { dropHandlers } = useExternalDrop();
 
   const { allSortedVideos, isLoading, isError, error, sortOption } = useVideoGridState(folderPath);
@@ -62,7 +60,6 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
     handleDragStart,
   } = useVideoGridInteractions(folderPath, allSortedVideos);
 
-  // Scroll Reset
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [folderPath, debouncedQuery, selectedTagIds]);
@@ -70,8 +67,6 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
   const containerPadding =
     layoutMode === 'masonry' && deferredGridStyle === 'mosaic' ? 'p-0' : 'p-4';
 
-  // --- Optimization: Group Interactions ---
-  // このオブジェクトの参照が変わらない限り、VideoGridLayout以下の純粋なコンポーネントは再レンダリングされない
   const interactions: VideoGridItemInteractions = useMemo(
     () => ({
       onVideoClick: handleVideoClick,
@@ -103,14 +98,12 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
       {...dropHandlers}
     >
       <VideoGridLayout
-        // Data & Status
         videos={visibleVideos}
         totalVideosCount={allSortedVideos.length}
         isLoading={isLoading}
         isError={isError}
         error={error}
         searchQuery={searchQuery}
-        // View Configuration
         columnCount={deferredColumnCount}
         isGlobalMode={isGlobalMode}
         isPlaylistMode={isPlaylistMode}
@@ -122,10 +115,8 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
         layoutMode={layoutMode}
         sortOption={sortOption}
         onReorder={handleReorder}
-        // Pagination
         hasMore={hasMore}
         onFetchMore={handleFetchMore}
-        // Interactions (Grouped)
         interactions={interactions}
       />
 

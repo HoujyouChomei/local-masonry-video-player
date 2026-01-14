@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef, RefObject } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-// useUIStore のインポートを削除 (scrollDirectionが不要になるため)
 import { VideoFile } from '../../../shared/types/video';
 import { updateVideoMetadataApi } from '@/shared/api/electron';
 import { isNativeVideo } from '@/shared/lib/video-extensions';
+import { logger } from '@/shared/lib/logger';
 
 interface UseVideoPlaybackProps {
   video: VideoFile;
@@ -47,7 +47,6 @@ export const useVideoPlayback = ({
 
   const canPlayNative = isNativeVideo(video.path);
 
-  // ▼▼▼ 1. 暗転対策: ソース変更時に即座にサムネイル表示に戻す ▼▼▼
   const separator = video.src.includes('?') ? '&' : '?';
   const srcUrl = shouldLoadVideo ? `${video.src}${separator}_v=${viewId}` : undefined;
 
@@ -55,19 +54,16 @@ export const useVideoPlayback = ({
     setIsVideoReady(false);
   }, [viewId]);
 
-  // ロード/アンロード判定
   useEffect(() => {
     if (!canPlayNative) return;
 
     let debounceTimer: NodeJS.Timeout;
 
-    // モーダルが開いていない、かつ (ホバーモードならホバー中 / 通常なら画面内) の場合にロード
     const shouldPlay = !isModalOpen && (effectivePlayOnHover ? isHovered : inView);
 
     if (shouldPlay) {
       if (shouldLoadVideo) return;
 
-      // ロード開始（設定された遅延時間後に実行）
       debounceTimer = setTimeout(() => {
         setShouldLoadVideo(true);
         setViewId((prev) => prev + 1);
@@ -76,7 +72,6 @@ export const useVideoPlayback = ({
     } else {
       if (!shouldLoadVideo) return;
 
-      // ロード解除（即時実行）
       debounceTimer = setTimeout(() => {
         setShouldLoadVideo(false);
         setIsVideoReady(false);
@@ -96,13 +91,11 @@ export const useVideoPlayback = ({
     canPlayNative,
   ]);
 
-  // ▼▼▼ 3. Watchdogの常時監視: setTimeout -> setInterval, 8000 -> 2000 ▼▼▼
   useEffect(() => {
     if (!canPlayNative) return;
 
     let watchdogInterval: NodeJS.Timeout;
     if (inView && shouldLoadVideo) {
-      // 2秒ごとにチェックし続ける（ループ2周目以降のスタックも検知可能に）
       watchdogInterval = setInterval(() => {
         const vid = videoRef.current;
         if (inView && vid && vid.readyState < 3) {
@@ -137,7 +130,6 @@ export const useVideoPlayback = ({
       }
     }
 
-    // 0.1秒シーク（元のコードのまま維持）
     if (vid.duration > 0.1) {
       vid.currentTime = 0.1;
     }
@@ -150,7 +142,6 @@ export const useVideoPlayback = ({
   const handleSeeked = () => {
     const vid = videoRef.current;
     if (inView && shouldLoadVideo && vid) {
-      // ▼▼▼ 1. 暗転対策: 再生が成功してからサムネを消す ▼▼▼
       vid
         .play()
         .then(() => {
@@ -162,7 +153,6 @@ export const useVideoPlayback = ({
   };
 
   const handleLoadedData = () => {
-    // ▼▼▼ 1. 暗転対策: シークする場合はここではReadyにしない ▼▼▼
     const vid = videoRef.current;
     if (vid && vid.duration <= 0.1) {
       setIsVideoReady(true);
@@ -171,7 +161,7 @@ export const useVideoPlayback = ({
 
   const handleError = () => {
     if (inView && shouldLoadVideo) {
-      console.error(`[Error] ${video.name} -> Retry`);
+      logger.warn(`[Error] ${video.name} -> Retry`);
       setTimeout(() => setViewId((prev) => prev + 1), 1000);
     }
   };

@@ -5,6 +5,7 @@ import path from 'path';
 import { VideoService } from './video-service';
 import { FFmpegService } from './ffmpeg-service';
 import { NotificationService } from './notification-service';
+import { logger } from '../../lib/logger';
 
 type WorkerMessage =
   | { type: 'file-added'; path: string }
@@ -32,7 +33,7 @@ export class FileWatcherService {
   }
 
   private initWorker() {
-    const workerPath = path.join(__dirname, '../../workers/file-watcher.worker.js');
+    const workerPath = path.join(__dirname, 'worker.js');
 
     try {
       this.worker = new Worker(workerPath);
@@ -42,18 +43,18 @@ export class FileWatcherService {
       });
 
       this.worker.on('error', (err) => {
-        console.error('[FileWatcherService] Worker error:', err);
+        logger.error('[FileWatcherService] Worker error:', err);
       });
 
       this.worker.on('exit', (code) => {
         if (code !== 0) {
-          console.error(`[FileWatcherService] Worker stopped with exit code ${code}`);
+          logger.error(`[FileWatcherService] Worker stopped with exit code ${code}`);
         }
       });
 
-      console.log('[FileWatcherService] Worker initialized');
+      logger.debug('[FileWatcherService] Worker initialized');
     } catch (error) {
-      console.error('[FileWatcherService] Failed to initialize worker:', error);
+      logger.error('[FileWatcherService] Failed to initialize worker:', error);
     }
   }
 
@@ -85,13 +86,13 @@ export class FileWatcherService {
 
       switch (msg.type) {
         case 'file-added':
-          console.log(`[Watcher] File Added: ${normalizedPath}`);
+          logger.debug(`[Watcher] File Added: ${normalizedPath}`);
           await this.videoService.getVideo(normalizedPath);
           event = { type: 'add', path: normalizedPath };
           break;
 
         case 'file-deleted': {
-          console.log(`[Watcher] File Deleted: ${normalizedPath}`);
+          logger.debug(`[Watcher] File Deleted: ${normalizedPath}`);
           const result = await this.videoService.handleFileMissing(normalizedPath);
           if (result === 'recovered') {
             event = { type: 'update', path: normalizedPath };
@@ -102,7 +103,7 @@ export class FileWatcherService {
         }
 
         case 'file-changed':
-          console.log(`[Watcher] File Changed: ${normalizedPath}`);
+          logger.debug(`[Watcher] File Changed: ${normalizedPath}`);
           await this.videoService.getVideo(normalizedPath);
           event = { type: 'update', path: normalizedPath };
           break;
@@ -112,7 +113,7 @@ export class FileWatcherService {
         this.notifier.notify(event);
       }
     } catch (error) {
-      console.error(`[FileWatcherService] Error handling message ${msg.type}:`, error);
+      logger.error(`[FileWatcherService] Error handling message ${msg.type}:`, error);
     }
   }
 }

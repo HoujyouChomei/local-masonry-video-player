@@ -5,7 +5,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { VideoListItem } from '@/entities/video/ui/video-list-item';
 import { VideoFile } from '@/shared/types/video';
-import { GripVertical } from 'lucide-react'; // アイコン追加
+import { GripVertical } from 'lucide-react';
 
 interface SortableVideoListItemProps {
   video: VideoFile;
@@ -13,7 +13,6 @@ interface SortableVideoListItemProps {
   onClick: (video: VideoFile, e: React.MouseEvent) => void;
   contextMenuSlot?: React.ReactNode;
 
-  // Interactions
   onPointerDown?: (video: VideoFile, e: React.PointerEvent) => void;
   onPointerMove?: (e: React.PointerEvent) => void;
   onPointerUp?: (e: React.PointerEvent) => void;
@@ -43,7 +42,6 @@ export const SortableVideoListItem = ({
     touchAction: 'none',
   };
 
-  // ハンドル部分にのみリスナーを付与
   const DragHandle = (
     <div
       {...listeners}
@@ -55,14 +53,13 @@ export const SortableVideoListItem = ({
   );
 
   return (
-    // 行全体には attributes (role, tabindex等) のみを付与し、listeners は除外
     <div ref={setNodeRef} style={style} {...attributes}>
       <VideoListItem
         video={video}
         index={index}
         onClick={onClick}
         contextMenuSlot={contextMenuSlot}
-        dragHandle={DragHandle} // ハンドルコンポーネントを渡す
+        dragHandle={DragHandle}
         onPointerDown={(e) => onPointerDown?.(video, e)}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}

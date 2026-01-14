@@ -3,22 +3,20 @@
 import { SettingsSliceCreator, CoreSlice } from './types';
 import { fetchSettings, saveSetting } from '@/shared/api/electron';
 import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
+import { logger } from '@/shared/lib/logger';
 
 export const createCoreSlice: SettingsSliceCreator<CoreSlice> = (set, get) => ({
-  // State
   folderPath: DEFAULT_SETTINGS.folderPath,
   libraryFolders: DEFAULT_SETTINGS.libraryFolders,
   expandedPaths: DEFAULT_SETTINGS.expandedPaths,
   isInitialized: false,
 
-  // Actions
   initialize: async () => {
     try {
       const settings = await fetchSettings();
-      // 他のスライスのステートも含めて一括更新
       set({ ...settings, isInitialized: true });
     } catch (error) {
-      console.error('Failed to load settings:', error);
+      logger.error('Failed to load settings:', error);
       set({ isInitialized: true });
     }
   },

@@ -3,12 +3,9 @@
 import { create } from 'zustand';
 
 interface SearchState {
-  // 入力中の生のテキスト
   query: string;
-  // 実際に検索に使用する確定テキスト (Global検索でのAPIリクエスト用)
   debouncedQuery: string;
 
-  // 検索範囲: 現在のフォルダ(JS) か ライブラリ全体(SQL) か
   searchScope: 'folder' | 'global';
 
   setQuery: (query: string) => void;

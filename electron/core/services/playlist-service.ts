@@ -56,10 +56,6 @@ export class PlaylistService {
     return this.playlistRepo.getById(id);
   }
 
-  /**
-   * 動画をプレイリストに追加
-   * ※ videoId は VideoRepository 等で解決済みであることを前提とする
-   */
   async addVideo(playlistId: string, videoId: string): Promise<Playlist | null> {
     const video = this.videoRepo.findById(videoId);
     if (!video) return null;

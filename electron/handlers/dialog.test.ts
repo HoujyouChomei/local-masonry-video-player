@@ -5,7 +5,6 @@ import { ipcMain, dialog, BrowserWindow } from 'electron';
 import { handleDialog } from './dialog';
 import path from 'path';
 
-// Electronモジュールをモック化
 vi.mock('electron', () => {
   const mockIpcMain = {
     handle: vi.fn(),
@@ -29,10 +28,8 @@ describe('handleDialog', () => {
   let selectFolderHandler: (() => Promise<string | null>) | undefined;
 
   beforeEach(() => {
-    // handleDialogを呼び出してIPCハンドラを登録
     handleDialog();
 
-    // 登録されたコールバック関数を取得
     const handleMock = vi.mocked(ipcMain.handle);
     if (handleMock.mock.calls.length > 0 && handleMock.mock.calls[0][0] === 'select-folder') {
       selectFolderHandler = handleMock.mock.calls[0][1] as () => Promise<string | null>;
@@ -95,7 +92,6 @@ describe('handleDialog', () => {
       filePaths: ['C:\\'],
     });
 
-    // path.dirname('C:\\') は 'C:\\' を返すため、この挙動をテスト
     expect(path.dirname('C:\\')).toBe('C:\\');
 
     const result = await selectFolderHandler?.();
@@ -118,7 +114,6 @@ describe('handleDialog', () => {
       filePaths: ['/'],
     });
 
-    // path.dirname('/') は '/' を返す
     expect(path.dirname('/')).toBe('/');
 
     const result = await selectFolderHandler?.();

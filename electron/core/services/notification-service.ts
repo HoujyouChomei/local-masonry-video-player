@@ -9,7 +9,6 @@ export class NotificationService {
   private queue: VideoUpdateEvent[] = [];
   private interval: NodeJS.Timeout | null = null;
 
-  // 500msごとにまとめて送信
   private readonly FLUSH_INTERVAL = 500;
 
   private constructor() {}
@@ -37,29 +36,22 @@ export class NotificationService {
   private flush() {
     if (this.queue.length === 0) return;
 
-    // バッファをコピーしてクリア
     const eventsToSend = [...this.queue];
     this.queue = [];
 
-    // 重複排除（同じパスに対する同じタイプのイベントが連続していれば1つにするなど）
-    // ここでは単純化のため、そのまま送る（受信側でデバウンスするため問題ない）
-
-    // 1. Desktop (IPC)
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('on-video-update', eventsToSend);
     }
 
-    // 2. Mobile (SSE)
     SSEHandler.getInstance().broadcast(eventsToSend);
   }
 
-  // アプリ終了時などにクリーンアップ
   public stop() {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
     }
-    this.flush(); // 残りを送信
+    this.flush();
   }
 }

@@ -4,7 +4,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleTags } from './tags';
 
-// 1. Hoisted Mocks (Service methods)
 const mocks = vi.hoisted(() => ({
   createTag: vi.fn(),
   getAllActiveTags: vi.fn(),
@@ -18,7 +17,6 @@ const mocks = vi.hoisted(() => ({
   unassignTagFromVideos: vi.fn(),
 }));
 
-// 2. Electron Mock
 const ipcHandlers = new Map<string, (...args: any[]) => Promise<any>>();
 
 vi.mock('electron', () => ({
@@ -29,7 +27,6 @@ vi.mock('electron', () => ({
   },
 }));
 
-// 3. Service Mock
 vi.mock('../core/services/tag-service', () => ({
   TagService: class {
     createTag = mocks.createTag;
@@ -49,7 +46,6 @@ describe('handlers/tags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     ipcHandlers.clear();
-    // ハンドラーを登録
     handleTags();
   });
 
@@ -92,7 +88,10 @@ describe('handlers/tags', () => {
   });
 
   it('should handle get-tags-all', async () => {
-    const mockTags = [{ id: '1', name: 'Tag 1' }, { id: '2', name: 'Tag 2' }];
+    const mockTags = [
+      { id: '1', name: 'Tag 1' },
+      { id: '2', name: 'Tag 2' },
+    ];
     mocks.getAllTags.mockReturnValue(mockTags);
 
     const result = await invoke('get-tags-all');

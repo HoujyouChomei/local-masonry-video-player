@@ -5,17 +5,16 @@ import { Search, X, Globe, Folder } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useSearchStore } from '../model/store';
-import { useUIStore } from '@/shared/stores/ui-store'; // 追加: ViewModeリセット用
+import { useUIStore } from '@/shared/stores/ui-store';
 import { cn } from '@/lib/utils';
 
 export const SearchBar = ({ className }: { className?: string }) => {
   const { query, setQuery, setDebouncedQuery, clearQuery, searchScope, setSearchScope } =
     useSearchStore();
 
-  const { setViewMode } = useUIStore(); // 追加
+  const { setViewMode } = useUIStore();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Ctrl+F / Cmd+F でフォーカス
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
@@ -31,15 +30,12 @@ export const SearchBar = ({ className }: { className?: string }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Debounce処理 (Global Scopeのみ)
   useEffect(() => {
     if (searchScope === 'folder') {
-      // Folderモードは即時反映 (JSフィルタリングなので高速)
       setDebouncedQuery(query);
       return;
     }
 
-    // GlobalモードはDB負荷軽減のため遅延させる
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
     }, 500);
@@ -47,27 +43,18 @@ export const SearchBar = ({ className }: { className?: string }) => {
     return () => clearTimeout(timer);
   }, [query, searchScope, setDebouncedQuery]);
 
-  // スコープ切り替え時のハンドラ
   const toggleScope = () => {
     const nextScope = searchScope === 'folder' ? 'global' : 'folder';
     setSearchScope(nextScope);
-
-    // GlobalモードになったらViewModeを強制的に切り替える準備
-    // (実際の切り替えはデータ取得側で行うが、UIの整合性を保つため)
-    if (nextScope === 'global' && query) {
-      // 既にクエリがある場合はGlobal検索結果を表示させるためにViewModeを変更するなどの処理が必要になるかも
-      // 現状は useVideoSource 側で自動的に分岐させるためここでは何もしない
-    }
   };
 
   const handleClear = () => {
     clearQuery();
     inputRef.current?.focus();
 
-    // クリア時はフォルダビューに戻す (Global検索結果から抜ける)
     if (searchScope === 'global') {
       setViewMode('folder');
-      setSearchScope('folder'); // UX: クリアしたらフォルダ検索に戻すのが自然
+      setSearchScope('folder');
     }
   };
 

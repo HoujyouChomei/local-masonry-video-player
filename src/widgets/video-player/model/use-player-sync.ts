@@ -6,18 +6,17 @@ import { harvestMetadataApi, fetchVideoDetailsApi, onVideoUpdateApi } from '@/sh
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { VideoUpdateEvent } from '@/shared/types/electron';
 import { VideoFile } from '@/shared/types/video';
+import { logger } from '@/shared/lib/logger';
 
 export const usePlayerSync = (isOpen: boolean, selectedVideo: VideoFile | null) => {
   const queryClient = useQueryClient();
   const { updateVideoData, playlist } = useVideoPlayerStore();
 
-  // プレイリストの最新状態をRefで保持 (useEffectの依存関係から外すため)
   const playlistRef = useRef(playlist);
   useEffect(() => {
     playlistRef.current = playlist;
   }, [playlist]);
 
-  // 1. 詳細データの遅延ロード (Lite -> Full)
   useEffect(() => {
     if (isOpen && selectedVideo) {
       if (selectedVideo.generationParams !== undefined) {
@@ -31,7 +30,7 @@ export const usePlayerSync = (isOpen: boolean, selectedVideo: VideoFile | null) 
             updateVideoData({ ...selectedVideo, ...fullVideo });
           }
         } catch (e) {
-          console.error('[PlayerSync] Failed to fetch full details:', e);
+          logger.error('[PlayerSync] Failed to fetch full details:', e);
         }
       };
 
@@ -39,13 +38,11 @@ export const usePlayerSync = (isOpen: boolean, selectedVideo: VideoFile | null) 
     }
   }, [isOpen, selectedVideo, updateVideoData]);
 
-  // 2. 次の動画をプリフェッチ (Auto Play Next高速化)
   const currentVideoId = selectedVideo?.id;
 
   useEffect(() => {
     if (!isOpen || !currentVideoId) return;
 
-    // Refから最新のプレイリストを参照
     const currentPlaylist = playlistRef.current;
     const currentIndex = currentPlaylist.findIndex((v) => v.id === currentVideoId);
     if (currentIndex === -1) return;
@@ -53,7 +50,6 @@ export const usePlayerSync = (isOpen: boolean, selectedVideo: VideoFile | null) 
     const nextIndex = (currentIndex + 1) % currentPlaylist.length;
     const nextVideo = currentPlaylist[nextIndex];
 
-    // 次の動画が存在し、かつ「軽量データ(Lite)」である場合のみ取得
     if (nextVideo && nextVideo.generationParams === undefined) {
       fetchVideoDetailsApi(nextVideo.path)
         .then((fullDetails) => {
@@ -61,18 +57,16 @@ export const usePlayerSync = (isOpen: boolean, selectedVideo: VideoFile | null) 
             updateVideoData({ ...nextVideo, ...fullDetails });
           }
         })
-        .catch((e) => console.error('[PlayerSync] Prefetch failed:', e));
+        .catch((e) => logger.warn('[PlayerSync] Prefetch failed:', e));
     }
-  }, [isOpen, currentVideoId, updateVideoData]); // playlist を依存配列から削除
+  }, [isOpen, currentVideoId, updateVideoData]);
 
-  // 3. メタデータ自動収集トリガー
   useEffect(() => {
     if (selectedVideo && selectedVideo.metadataStatus === 'pending') {
       harvestMetadataApi(selectedVideo.id);
     }
   }, [selectedVideo]);
 
-  // 4. リアルタイム更新の反映
   useEffect(() => {
     if (!isOpen || !selectedVideo) return;
 
@@ -88,7 +82,7 @@ export const usePlayerSync = (isOpen: boolean, selectedVideo: VideoFile | null) 
             updateVideoData(updatedVideo);
           }
         } catch (error) {
-          console.error('[PlayerSync] Failed to fetch updated video details:', error);
+          logger.error('[PlayerSync] Failed to fetch updated video details:', error);
         }
       }
     });

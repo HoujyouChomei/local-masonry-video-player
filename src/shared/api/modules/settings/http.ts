@@ -3,6 +3,7 @@
 import { HttpBase } from '../../base/http-base';
 import { SettingsApi } from '../../types';
 import { AppSettings } from '@/shared/types/electron';
+import { logger } from '@/shared/lib/logger';
 
 export class HttpSettings extends HttpBase implements SettingsApi {
   async get(): Promise<AppSettings> {
@@ -17,13 +18,13 @@ export class HttpSettings extends HttpBase implements SettingsApi {
       });
       return true;
     } catch (error) {
-      console.error('Failed to save settings:', error);
+      logger.error('Failed to save settings:', error);
       return false;
     }
   }
 
   async resetAccessToken(): Promise<string> {
-    console.warn('resetAccessToken is not available on mobile client.');
+    logger.warn('resetAccessToken is not available on mobile client.');
     return '';
   }
 }

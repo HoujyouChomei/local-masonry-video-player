@@ -3,7 +3,6 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { sendError } from '../utils';
 
-// Handlers
 import { handleVideosRequest } from './videos';
 import { handlePlaylistsRequest } from './playlists';
 import { handleTagsRequest } from './tags';
@@ -25,9 +24,8 @@ const handlers = [
 export const dispatchApiRequest = async (req: IncomingMessage, res: ServerResponse, url: URL) => {
   for (const handler of handlers) {
     const handled = await handler(req, res, url);
-    if (handled) return; // Response already sent
+    if (handled) return;
   }
 
-  // No handler matched
   return sendError(res, 'Endpoint not found', 404);
 };

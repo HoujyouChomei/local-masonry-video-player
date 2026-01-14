@@ -31,7 +31,6 @@ export const useDesktopInteractions = ({ videosRef }: UseDesktopInteractionsProp
 
   const handlePointerDown = useCallback(
     (video: VideoFile, e: React.PointerEvent) => {
-      // 左クリックのみ対象
       if (!e.isPrimary || e.button !== 0) return;
 
       isLongPressTriggeredRef.current = false;
@@ -40,7 +39,6 @@ export const useDesktopInteractions = ({ videosRef }: UseDesktopInteractionsProp
       longPressTimerRef.current = setTimeout(() => {
         isLongPressTriggeredRef.current = true;
 
-        // ロングプレス時の挙動: 選択モードの切り替え
         if (useSelectionStore.getState().isSelectionMode) {
           exitSelectionMode();
         } else {
@@ -58,7 +56,6 @@ export const useDesktopInteractions = ({ videosRef }: UseDesktopInteractionsProp
       const dx = Math.abs(e.clientX - pointerDownPosRef.current.x);
       const dy = Math.abs(e.clientY - pointerDownPosRef.current.y);
 
-      // 一定以上動いたらロングプレス判定をキャンセル（ドラッグ操作とみなす）
       if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
         clearLongPressTimer();
       }
@@ -74,9 +71,12 @@ export const useDesktopInteractions = ({ videosRef }: UseDesktopInteractionsProp
     clearLongPressTimer();
   }, [clearLongPressTimer]);
 
+  const handleDragStart = useCallback(() => {
+    clearLongPressTimer();
+  }, [clearLongPressTimer]);
+
   const handleVideoClick = useCallback(
     (video: VideoFile, e: React.MouseEvent) => {
-      // ロングプレスが発火済みの場合はクリックイベントを無視
       if (isLongPressTriggeredRef.current) {
         isLongPressTriggeredRef.current = false;
         e.preventDefault();
@@ -109,5 +109,6 @@ export const useDesktopInteractions = ({ videosRef }: UseDesktopInteractionsProp
     handlePointerMove,
     handlePointerUp,
     handlePointerLeave,
+    handleDragStart,
   };
 };

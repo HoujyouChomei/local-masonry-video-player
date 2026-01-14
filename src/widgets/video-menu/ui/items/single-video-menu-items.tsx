@@ -34,7 +34,7 @@ import { useUIStore } from '@/shared/stores/ui-store';
 import { useFavorites } from '@/features/toggle-favorite/model/use-favorite';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { toast } from 'sonner';
-import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface SingleVideoMenuItemsProps {
   video: VideoFile;
@@ -61,7 +61,7 @@ export const SingleVideoMenuItems = ({
   const { autoPlayNext, toggleAutoPlayNext, enableExperimentalNormalize } = useSettingsStore();
 
   const isPlaylistMode = viewMode === 'playlist' && selectedPlaylistId;
-  const isMobile = useIsMobile(); // 追加
+  const isMobile = useIsMobile();
 
   const handleNormalize = async () => {
     const toastId = toast.loading(`Normalizing: ${video.name}...`);
@@ -107,7 +107,6 @@ export const SingleVideoMenuItems = ({
         </>
       )}
 
-      {/* ▼▼▼ 修正: モバイル時はファイル操作・Explorer連携を非表示 ▼▼▼ */}
       {!isMobile && (
         <>
           <ContextMenuItem onSelect={() => revealInExplorerApi(video.id)}>
@@ -176,7 +175,6 @@ export const SingleVideoMenuItems = ({
         </ContextMenuItem>
       )}
 
-      {/* ▼▼▼ 修正: モバイル時は Normalize を非表示 ▼▼▼ */}
       {enableExperimentalNormalize && !isMobile && (
         <>
           <ContextMenuSeparator />
@@ -190,7 +188,6 @@ export const SingleVideoMenuItems = ({
         </>
       )}
 
-      {/* ▼▼▼ 修正: モバイル時は Delete を非表示 ▼▼▼ */}
       {!isMobile && (
         <>
           <ContextMenuSeparator />

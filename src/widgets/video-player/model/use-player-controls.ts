@@ -46,10 +46,8 @@ export const usePlayerControls = ({
     }
   }, [selectedVideo?.id]);
 
-  // --- Mouse Handlers ---
   const handleMouseMove = useCallback(() => {
     if (Date.now() < interactionLockRef.current) return;
-    // ステート更新を避けるため、既にtrueならセットしない
     setShowControls((prev) => (prev ? prev : true));
   }, []);
 
@@ -82,7 +80,6 @@ export const usePlayerControls = ({
     toggleFullscreen();
   }, [toggleFullscreen]);
 
-  // --- Global Event Listeners (Keyboard & Wheel) ---
   useEffect(() => {
     if (!isOpen) return;
 

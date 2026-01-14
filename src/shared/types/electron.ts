@@ -7,6 +7,7 @@ export interface SearchOptions {
   folderPath?: string;
   playlistId?: string;
   isFavorite?: boolean;
+  allowedRoots?: string[];
 }
 
 export type GridStyle = 'modern' | 'mosaic';
@@ -40,12 +41,10 @@ export interface AppSettings {
   enableExperimentalNormalize: boolean;
 
   enableLargeVideoRestriction: boolean;
-  largeVideoThreshold: number; // MB単位
+  largeVideoThreshold: number;
 
-  // Fullscreen Playback Setting
   openInFullscreen: boolean;
 
-  // Phase 25: Mobile Support
   enableMobileConnection: boolean;
   authAccessToken: string;
 }
@@ -72,36 +71,45 @@ export interface ConnectionInfo {
   port: number;
 }
 
-// API Interface
+export interface MoveResultDetail {
+  oldPath: string;
+  newPath: string;
+  success: boolean;
+  error?: string;
+  warning?: string;
+}
+
+export interface MoveResponse {
+  successCount: number;
+  results: MoveResultDetail[];
+}
+
+export interface WindowState {
+  isMaximized: boolean;
+  isFullScreen: boolean;
+}
+
 export interface IElectronAPI {
-  // Videos
   getVideos: (folderPath: string) => Promise<VideoFile[]>;
 
   searchVideos: (query: string, tagIds: string[], options: SearchOptions) => Promise<VideoFile[]>;
 
-  // Settings
   getSettings: () => Promise<AppSettings>;
   saveSettings: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => Promise<boolean>;
 
-  // Phase 25: Token Reset
   resetAccessToken: () => Promise<string>;
 
-  // Dialogs
   selectFolder: () => Promise<string | null>;
   selectFile: () => Promise<string | null>;
 
-  // External Tools Validation
   validateFFmpegPath: (path: string) => Promise<boolean>;
   validateFFprobePath: (path: string) => Promise<boolean>;
 
-  // Favorites
-  getFavorites: () => Promise<string[]>; // ID list
+  getFavorites: () => Promise<string[]>;
   getFavoriteVideos: () => Promise<VideoFile[]>;
-  toggleFavorite: (videoId: string) => Promise<string[]>; // ID list
+  toggleFavorite: (videoId: string) => Promise<string[]>;
 
-  // File Ops
   getSubdirectories: (dirPath: string) => Promise<DirectoryEntry[]>;
-  // ▼▼▼ 追加 ▼▼▼
   getDirectoryTree: (dirPath: string) => Promise<string[]>;
 
   deleteVideo: (id: string) => Promise<boolean>;
@@ -110,17 +118,15 @@ export interface IElectronAPI {
   revealInExplorer: (videoId: string) => Promise<void>;
   openPath: (filePath: string) => Promise<void>;
   renameVideo: (id: string, newFileName: string) => Promise<VideoFile | null>;
-  moveVideos: (videoPaths: string[], targetFolderPath: string) => Promise<number>;
+  moveVideos: (videoPaths: string[], targetFolderPath: string) => Promise<MoveResponse>;
 
   downloadVideo: (url: string, targetFolderPath: string) => Promise<VideoFile | null>;
   normalizeVideo: (path: string) => Promise<VideoFile | null>;
 
   getVideoDetails: (path: string) => Promise<VideoFile | null>;
 
-  // Harvest
   harvestMetadata: (videoId: string) => Promise<void>;
 
-  // Playlists
   getPlaylists: () => Promise<Playlist[]>;
   createPlaylist: (name: string) => Promise<Playlist>;
   deletePlaylist: (id: string) => Promise<Playlist[]>;
@@ -131,10 +137,13 @@ export interface IElectronAPI {
   reorderPlaylist: (playlistId: string, newVideoIds: string[]) => Promise<Playlist>;
   getPlaylistVideos: (playlistId: string) => Promise<VideoFile[]>;
 
-  // UI Controls
   setFullScreen: (enable: boolean) => Promise<void>;
+  minimizeWindow: () => Promise<void>;
+  toggleMaximizeWindow: () => Promise<void>;
+  closeWindow: () => Promise<void>;
+  getWindowState: () => Promise<WindowState>;
+  onWindowStateChange: (callback: (state: WindowState) => void) => () => void;
 
-  // Sorting & Metadata
   saveFolderOrder: (folderPath: string, videoPaths: string[]) => Promise<void>;
   getFolderOrder: (folderPath: string) => Promise<string[]>;
 
@@ -145,7 +154,6 @@ export interface IElectronAPI {
     height: number
   ) => Promise<void>;
 
-  // Tags
   createTag: (name: string) => Promise<Tag>;
   getTagsActive: () => Promise<Tag[]>;
   getTagsByFolder: (folderPath: string) => Promise<Tag[]>;
@@ -159,13 +167,12 @@ export interface IElectronAPI {
   assignTagToVideos: (videoIds: string[], tagId: string) => Promise<void>;
   unassignTagFromVideos: (videoIds: string[], tagId: string) => Promise<void>;
 
-  // Events
   onVideoUpdate: (callback: (events: VideoUpdateEvent[]) => void) => () => void;
 
-  // Drag & Drop
   startDrag: (files: string | string[]) => void;
   getFilePath: (file: File) => string;
 
-  // Connection
   getConnectionInfo: () => Promise<ConnectionInfo | null>;
+
+  openLogFolder: () => Promise<void>;
 }

@@ -2,7 +2,8 @@
 
 import { HttpBase } from '../../base/http-base';
 import { SystemApi } from '../../types';
-import { DirectoryEntry, ConnectionInfo } from '@/shared/types/electron';
+import { DirectoryEntry, ConnectionInfo, WindowState } from '@/shared/types/electron';
+import { logger } from '@/shared/lib/logger';
 
 export class HttpSystem extends HttpBase implements SystemApi {
   async selectFolder(): Promise<string | null> {
@@ -21,9 +22,7 @@ export class HttpSystem extends HttpBase implements SystemApi {
     return false;
   }
 
-  async relaunchApp(): Promise<void> {
-    // No-op
-  }
+  async relaunchApp(): Promise<void> {}
 
   async setFullScreen(enable: boolean): Promise<void> {
     if (typeof document === 'undefined') return;
@@ -39,17 +38,27 @@ export class HttpSystem extends HttpBase implements SystemApi {
         }
       }
     } catch (e) {
-      console.warn('Fullscreen toggle failed:', e);
+      logger.warn('Fullscreen toggle failed:', e);
     }
   }
 
-  async revealInExplorer(_videoId: string): Promise<void> {
-    // No-op
+  async minimizeWindow(): Promise<void> {}
+
+  async toggleMaximizeWindow(): Promise<void> {}
+
+  async closeWindow(): Promise<void> {}
+
+  async getWindowState(): Promise<WindowState> {
+    return { isMaximized: false, isFullScreen: false };
   }
 
-  async openPath(_filePath: string): Promise<void> {
-    // No-op
+  onWindowStateChange(_callback: (state: WindowState) => void): () => void {
+    return () => {};
   }
+
+  async revealInExplorer(_videoId: string): Promise<void> {}
+
+  async openPath(_filePath: string): Promise<void> {}
 
   async getSubdirectories(dirPath: string): Promise<DirectoryEntry[]> {
     try {
@@ -57,7 +66,7 @@ export class HttpSystem extends HttpBase implements SystemApi {
         params: { path: dirPath },
       });
     } catch (error) {
-      console.error('Failed to fetch subdirectories:', error);
+      logger.error('Failed to fetch subdirectories:', error);
       return [];
     }
   }
@@ -68,7 +77,7 @@ export class HttpSystem extends HttpBase implements SystemApi {
         params: { path: dirPath },
       });
     } catch (error) {
-      console.error('Failed to fetch directory tree:', error);
+      logger.error('Failed to fetch directory tree:', error);
       return [];
     }
   }
@@ -81,11 +90,13 @@ export class HttpSystem extends HttpBase implements SystemApi {
     }
   }
 
-  startDrag(_files: string | string[]): void {
-    // No-op
-  }
+  startDrag(_files: string | string[]): void {}
 
   getFilePath(_file: File): string {
     return '';
+  }
+
+  async openLogFolder(): Promise<void> {
+    logger.warn('Opening log folder is not supported on mobile client.');
   }
 }

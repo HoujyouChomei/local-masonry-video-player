@@ -75,7 +75,6 @@ export class VideoMetadataRepository {
       .all(limit) as VideoRow[];
   }
 
-  // ▼▼▼ 追加: 処理中のままスタックしているレコードをリセット ▼▼▼
   resetStuckProcessingStatus(): number {
     const result = this.db
       .prepare(
@@ -91,8 +90,6 @@ export class VideoMetadataRepository {
   }
 
   resetIncompleteMetadataStatus(): number {
-    // 状態は完了(completed)しているが、FPS または Codec が未設定のレコードを抽出
-    // これらを 'pending' に戻すことで、MetadataHarvester に再処理させる
     const result = this.db
       .prepare(
         `

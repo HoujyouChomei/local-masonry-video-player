@@ -16,17 +16,14 @@ export const handlePlaylists = () => {
     service.updateName(id, name)
   );
 
-  // ▼▼▼ 変更: videoIdを受け取る ▼▼▼
   ipcMain.handle('add-video-to-playlist', (_e, pid: string, videoId: string) =>
     service.addVideo(pid, videoId)
   );
 
-  // ▼▼▼ 変更: videoIdを受け取る ▼▼▼
   ipcMain.handle('remove-video-from-playlist', (_e, pid: string, videoId: string) =>
     service.removeVideo(pid, videoId)
   );
 
-  // ▼▼▼ 変更: videoIdsを受け取る ▼▼▼
   ipcMain.handle('reorder-playlist', (_e, pid: string, videoIds: string[]) =>
     service.reorder(pid, videoIds)
   );

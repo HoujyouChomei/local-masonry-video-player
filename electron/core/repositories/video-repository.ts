@@ -2,6 +2,7 @@
 
 import { getDB } from '../../lib/db';
 import path from 'path';
+import { logger } from '../../lib/logger';
 
 export interface VideoRow {
   id: string;
@@ -73,7 +74,7 @@ export class VideoRepository {
   findManyByPaths(paths: string[]): VideoRow[] {
     if (paths.length === 0) return [];
 
-    // SQLiteの変数上限（通常999）を回避するため、安全なサイズでチャンク分割して実行する
+    // Avoid SQLite's variable limit (usually 999) by chunking requests
     const CHUNK_SIZE = 900;
     const results: VideoRow[] = [];
 
@@ -113,7 +114,7 @@ export class VideoRepository {
   }
 
   create(video: VideoCreateInput): void {
-    console.log(`[Repo] Creating video: ${video.path} (ID: ${video.id})`);
+    logger.debug(`[Repo] Creating video: ${video.path} (ID: ${video.id})`);
     const name = video.name || path.basename(video.path);
 
     this.db

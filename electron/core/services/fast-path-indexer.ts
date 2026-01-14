@@ -4,6 +4,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { NATIVE_EXTENSIONS, EXTENDED_EXTENSIONS } from '../../lib/extensions';
 import { FFmpegService } from './ffmpeg-service';
+import { logger } from '../../lib/logger';
 
 export class FastPathIndexer {
   private index = new Map<string, string[]>();
@@ -11,9 +12,9 @@ export class FastPathIndexer {
 
   public async build(rootFolders: string[]): Promise<void> {
     this.index.clear();
-    console.time('[FastPathIndexer] Build Index');
+    const startTime = performance.now();
+    logger.debug('[FastPathIndexer] Build Index started');
 
-    // ▼▼▼ 修正: ドット記法でアクセス ▼▼▼
     const hasFFmpeg = await this.ffmpegService.validatePath(
       this.ffmpegService.ffmpegPath,
       'ffmpeg'
@@ -22,8 +23,10 @@ export class FastPathIndexer {
 
     await Promise.all(rootFolders.map((folder) => this.scanRecursively(folder, targetExtensions)));
 
-    console.timeEnd('[FastPathIndexer] Build Index');
-    console.log(`[FastPathIndexer] Indexed ${this.index.size} unique filenames.`);
+    const duration = (performance.now() - startTime).toFixed(2);
+    logger.debug(
+      `[FastPathIndexer] Build Index completed in ${duration}ms. Indexed ${this.index.size} unique filenames.`
+    );
   }
 
   public getCandidates(filename: string): string[] {

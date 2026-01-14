@@ -35,16 +35,6 @@ export class FavoriteService {
   async toggleFavorite(videoId: string): Promise<string[]> {
     this.videoRepo.toggleFavoriteById(videoId);
 
-    // Note: お気に入りのトグルはクライアント側で楽観的更新を行うため、
-    // ここでブロードキャストすると二重更新になる可能性があるが、
-    // 複数端末間の同期を考えるとブロードキャストした方が良い。
-    // クライアント側で自分の操作による更新かどうかの判断は難しいが、
-    // React QueryのinvalidateQueriesで整合性を保つため送信する。
-
-    // ただし、updateイベントのpathが必須だが、トグル対象のpathがここからは分からない。
-    // videoIdからpathを引くコストをかけるか、空文字で全体更新を促すか。
-    // Favorite変更はVideoオブジェクト自体の更新なので、特定のpathを指定したい。
-
     const row = this.videoRepo.findById(videoId);
     if (row) {
       const event = { type: 'update' as const, path: row.path };

@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import path from 'path';
 import fs from 'fs';
 import { store } from '../../lib/store';
+import { logger } from '../../lib/logger';
 
 const execFileAsync = promisify(execFile);
 
@@ -12,12 +13,11 @@ export interface VideoMetadataResult {
   duration?: number;
   width?: number;
   height?: number;
-  tags?: Record<string, string>; // AI生成パラメータ用
-  fps?: number; // v5 added
-  codec?: string; // v5 added
+  tags?: Record<string, string>;
+  fps?: number;
+  codec?: string;
 }
 
-// 型定義
 interface FFprobeStream {
   codec_type: string;
   codec_name?: string;
@@ -44,7 +44,7 @@ export class FFmpegService {
     const expectedName = type;
 
     if (!fileName.includes(expectedName)) {
-      console.warn(
+      logger.warn(
         `[FFmpegService] Security check failed: ${fileName} does not look like ${expectedName}.`
       );
       return false;
@@ -60,12 +60,12 @@ export class FFmpegService {
         return true;
       }
 
-      console.warn(
+      logger.warn(
         `[FFmpegService] Binary executed but output mismatch. Expected "${expectedKeyword}".`
       );
       return false;
     } catch (error) {
-      console.warn(`[FFmpegService] Validation failed for: ${binaryPath}`, error);
+      logger.warn(`[FFmpegService] Validation failed for: ${binaryPath}`, error);
       return false;
     }
   }
@@ -95,7 +95,7 @@ export class FFmpegService {
       await execFileAsync(binary, args, { timeout: 10000 });
       return true;
     } catch (error) {
-      console.error(`[FFmpegService] Failed to generate thumbnail: ${videoPath}`, error);
+      logger.error(`[FFmpegService] Failed to generate thumbnail: ${videoPath}`, error);
       return false;
     }
   }
@@ -133,8 +133,6 @@ export class FFmpegService {
         if (videoStream.width) result.width = videoStream.width;
         if (videoStream.height) result.height = videoStream.height;
 
-        // ▼▼▼ FPS Calculation ▼▼▼
-        // r_frame_rate または avg_frame_rate を使用 (例: "30000/1001", "24/1")
         const rateStr = videoStream.avg_frame_rate || videoStream.r_frame_rate;
         if (rateStr) {
           const parts = rateStr.split('/');
@@ -147,7 +145,6 @@ export class FFmpegService {
           }
         }
 
-        // ▼▼▼ Codec Name ▼▼▼
         if (videoStream.codec_name) {
           result.codec = videoStream.codec_name;
         }
@@ -155,7 +152,7 @@ export class FFmpegService {
 
       return result;
     } catch (error) {
-      console.error(`[FFmpegService] Failed to extract metadata: ${videoPath}`, error);
+      logger.error(`[FFmpegService] Failed to extract metadata: ${videoPath}`, error);
       return null;
     }
   }
@@ -163,7 +160,6 @@ export class FFmpegService {
   public getTranscodeArgs(inputPath: string, startTime = 0): string[] {
     const args: string[] = [];
 
-    // 1. 入力解析オプション (Input Options)
     args.push('-analyzeduration', '100M');
     args.push('-probesize', '100M');
 
@@ -173,7 +169,6 @@ export class FFmpegService {
 
     args.push('-i', inputPath);
 
-    // 2. 映像エンコード設定 (Video Options)
     args.push(
       '-c:v',
       'libx264',
@@ -191,13 +186,10 @@ export class FFmpegService {
       'yuv420p'
     );
 
-    // 3. フィルタ設定 (Filters)
     args.push('-vf', 'setpts=PTS-STARTPTS');
 
-    // 4. 音声エンコード設定 (Audio Options)
     args.push('-c:a', 'aac', '-ac', '2', '-ar', '44100');
 
-    // 5. 出力設定 (Output Options)
     args.push('-f', 'mp4', '-movflags', 'frag_keyframe+empty_moov+default_base_moof', 'pipe:1');
 
     return args;
@@ -221,7 +213,7 @@ export class FFmpegService {
       counter++;
     }
 
-    console.log(`[FFmpegService] Normalizing video: ${inputPath} -> ${outputPath}`);
+    logger.debug(`[FFmpegService] Normalizing video: ${inputPath} -> ${outputPath}`);
 
     const args = [
       '-y',
@@ -252,10 +244,10 @@ export class FFmpegService {
 
     try {
       await execFileAsync(binary, args, { maxBuffer: 1024 * 1024 * 10 });
-      console.log(`[FFmpegService] Normalization complete: ${outputPath}`);
+      logger.debug(`[FFmpegService] Normalization complete: ${outputPath}`);
       return outputPath;
     } catch (error) {
-      console.error(`[FFmpegService] Normalization failed for: ${inputPath}`, error);
+      logger.error(`[FFmpegService] Normalization failed for: ${inputPath}`, error);
       if (fs.existsSync(outputPath)) {
         try {
           fs.unlinkSync(outputPath);

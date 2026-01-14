@@ -14,7 +14,6 @@ export const handleFavorites = () => {
     return service.getFavoriteVideos();
   });
 
-  // ▼▼▼ 変更: 引数を videoId に変更 ▼▼▼
   ipcMain.handle('toggle-favorite', async (_event, videoId: string) => {
     return service.toggleFavorite(videoId);
   });

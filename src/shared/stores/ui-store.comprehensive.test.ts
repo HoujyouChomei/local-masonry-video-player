@@ -5,7 +5,6 @@ import { useUIStore } from './ui-store';
 import { useSelectionStore } from './selection-store';
 import { VideoFile } from '@/shared/types/video';
 
-// Mock helpers for range selection testing
 const createMockVideos = (count: number): VideoFile[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: `v-${i}`,
@@ -30,7 +29,6 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
 
   describe('1. View Context & Navigation (UI Store)', () => {
     it('should set view mode and reset unrelated context', () => {
-      // Setup messy state across stores
       useUIStore.setState({
         selectedPlaylistId: 'pl-1',
         selectedTagIds: ['tag-1'],
@@ -40,7 +38,6 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
         selectedVideoIds: ['v-1'],
       });
 
-      // Action: Switch to Folder View
       useUIStore.getState().setViewMode('folder');
 
       const uiState = useUIStore.getState();
@@ -49,7 +46,6 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       expect(uiState.viewMode).toBe('folder');
       expect(uiState.selectedPlaylistId).toBeNull();
 
-      // Selection should be cleared by UI Store action logic
       expect(selectionState.isSelectionMode).toBe(false);
       expect(selectionState.selectedVideoIds).toEqual([]);
     });
@@ -64,29 +60,24 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       expect(uiState.selectedPlaylistId).toBe('pl-123');
       expect(uiState.selectedTagIds).toEqual([]);
 
-      // Selection should be cleared
       expect(selectionState.selectedVideoIds).toEqual([]);
     });
 
     it('should toggle tag selection and switch modes', () => {
-      // 1. Select first tag
       useUIStore.getState().toggleSelectTag('tag-a');
       let uiState = useUIStore.getState();
       expect(uiState.viewMode).toBe('tag-results');
       expect(uiState.selectedTagIds).toEqual(['tag-a']);
 
-      // 2. Select second tag (Multi-tag)
       useUIStore.getState().toggleSelectTag('tag-b');
       uiState = useUIStore.getState();
       expect(uiState.selectedTagIds).toContain('tag-a');
       expect(uiState.selectedTagIds).toContain('tag-b');
 
-      // 3. Unselect tag-a
       useUIStore.getState().toggleSelectTag('tag-a');
       uiState = useUIStore.getState();
       expect(uiState.selectedTagIds).toEqual(['tag-b']);
 
-      // 4. Unselect tag-b (All cleared -> return to folder)
       useUIStore.getState().toggleSelectTag('tag-b');
       uiState = useUIStore.getState();
       expect(uiState.selectedTagIds).toEqual([]);
@@ -114,20 +105,17 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
     it('should toggle individual items', () => {
       const { toggleSelection } = useSelectionStore.getState();
 
-      // Select v-1
       toggleSelection('v-1');
       expect(useSelectionStore.getState().selectedVideoIds).toEqual(['v-1']);
       expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-1');
 
-      // Select v-2
       toggleSelection('v-2');
       expect(useSelectionStore.getState().selectedVideoIds).toEqual(['v-1', 'v-2']);
       expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-2');
 
-      // Unselect v-1
       toggleSelection('v-1');
       expect(useSelectionStore.getState().selectedVideoIds).toEqual(['v-2']);
-      expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-1'); // Last touched updates
+      expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-1');
     });
 
     it('should handle Select All', () => {
@@ -146,37 +134,32 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
 
       const state = useSelectionStore.getState();
       expect(state.selectedVideoIds).toEqual([]);
-      expect(state.isSelectionMode).toBe(true); // Mode stays active
+      expect(state.isSelectionMode).toBe(true);
     });
 
     describe('Range Selection (Shift+Click)', () => {
-      const mockVideos = createMockVideos(10); // v-0 to v-9
+      const mockVideos = createMockVideos(10);
 
       it('should select range from lastSelected to target', () => {
         const { toggleSelection, selectRange } = useSelectionStore.getState();
 
-        // 1. Click v-2 (Start)
         toggleSelection('v-2');
 
-        // 2. Shift+Click v-5 (End)
         selectRange('v-5', mockVideos);
 
         const state = useSelectionStore.getState();
-        // Expect v-2, v-3, v-4, v-5
         expect(state.selectedVideoIds).toHaveLength(4);
         expect(state.selectedVideoIds).toEqual(
           expect.arrayContaining(['v-2', 'v-3', 'v-4', 'v-5'])
         );
-        expect(state.lastSelectedVideoId).toBe('v-5'); // Anchor moves to end
+        expect(state.lastSelectedVideoId).toBe('v-5');
       });
 
       it('should select range backwards', () => {
         const { toggleSelection, selectRange } = useSelectionStore.getState();
 
-        // 1. Click v-5 (Start)
         toggleSelection('v-5');
 
-        // 2. Shift+Click v-2 (End)
         selectRange('v-2', mockVideos);
 
         const state = useSelectionStore.getState();
@@ -188,17 +171,13 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       it('should merge range with existing selection', () => {
         const { toggleSelection, selectRange } = useSelectionStore.getState();
 
-        // 1. Pre-select v-0
         toggleSelection('v-0');
 
-        // 2. Click v-3 (Start of range)
         toggleSelection('v-3');
 
-        // 3. Shift+Click v-5 (End of range)
         selectRange('v-5', mockVideos);
 
         const state = useSelectionStore.getState();
-        // Expect v-0 (kept) AND v-3, v-4, v-5 (range)
         expect(state.selectedVideoIds).toEqual(
           expect.arrayContaining(['v-0', 'v-3', 'v-4', 'v-5'])
         );
@@ -207,7 +186,6 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       it('should default to single select if no lastSelected exists', () => {
         const { selectRange } = useSelectionStore.getState();
 
-        // Direct Shift+Click without prior selection
         selectRange('v-5', mockVideos);
 
         const state = useSelectionStore.getState();

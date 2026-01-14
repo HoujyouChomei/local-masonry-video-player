@@ -7,11 +7,11 @@ import {
   removeVideoFromPlaylistApi,
 } from '@/shared/api/electron';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 export const useBatchPlaylist = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   const { mutate: addToPlaylist, isPending: isAdding } = useMutation({
     mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
@@ -20,7 +20,6 @@ export const useBatchPlaylist = () => {
       }
     },
     onSuccess: (_, variables) => {
-      // 変更: 集約されたロジックを使用
       onPlaylistUpdated(variables.playlistId);
 
       clearSelection();
@@ -39,7 +38,6 @@ export const useBatchPlaylist = () => {
       return newPlaylist;
     },
     onSuccess: (newPlaylist) => {
-      // 変更: 集約されたロジックを使用
       onPlaylistUpdated(newPlaylist.id);
 
       clearSelection();
@@ -56,7 +54,7 @@ export const useBatchPlaylist = () => {
 
 export const useBatchRemoveFromPlaylist = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { onPlaylistUpdated } = useVideoCache(); // 追加
+  const { onPlaylistUpdated } = useVideoCache();
 
   const { mutate: removeFromPlaylist, isPending } = useMutation({
     mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
@@ -64,7 +62,6 @@ export const useBatchRemoveFromPlaylist = () => {
       await Promise.all(promises);
     },
     onSuccess: (_, variables) => {
-      // 変更: 集約されたロジックを使用
       onPlaylistUpdated(variables.playlistId);
 
       clearSelection();

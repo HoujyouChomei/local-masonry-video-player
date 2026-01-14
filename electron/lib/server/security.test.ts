@@ -5,7 +5,6 @@ import { isPathAllowed, checkRequestAuth } from './security';
 import path from 'path';
 import { IncomingMessage } from 'http';
 
-// --- Store Mock ---
 const storeMocks = vi.hoisted(() => ({
   get: vi.fn(),
 }));
@@ -22,7 +21,6 @@ describe('Security Utils', () => {
   });
 
   describe('isPathAllowed', () => {
-    // テスト環境に応じたパスセパレータを使用
     const LIBRARY_ROOT = path.normalize('/library/videos');
     const CURRENT_ROOT = path.normalize('/current/folder');
 
@@ -54,9 +52,7 @@ describe('Security Utils', () => {
     });
 
     it('should block directory traversal attacks', () => {
-      // ライブラリフォルダから ../ で抜けるパス
       const attackPath = path.join(LIBRARY_ROOT, '..', '..', 'system', 'file');
-      // 内部で path.normalize されると /system/file になるので、prefix マッチしなくなるはず
       expect(isPathAllowed(attackPath)).toBe(false);
     });
 
@@ -68,7 +64,6 @@ describe('Security Utils', () => {
   describe('checkRequestAuth', () => {
     const VALID_TOKEN = 'secret-token';
 
-    // 簡易的な IncomingMessage モック作成関数
     const createReq = (
       remoteAddress: string,
       headers: Record<string, string> = {},
@@ -103,7 +98,7 @@ describe('Security Utils', () => {
 
     it('should deny if mobile connection is disabled in settings', () => {
       storeMocks.get.mockImplementation((key: string) => {
-        if (key === 'enableMobileConnection') return false; // Disabled
+        if (key === 'enableMobileConnection') return false;
         return null;
       });
 
@@ -116,7 +111,7 @@ describe('Security Utils', () => {
 
     it('should allow if skipTokenCheck is true (and mobile enabled)', () => {
       const req = createReq('192.168.1.10');
-      const result = checkRequestAuth(req, true); // skip check
+      const result = checkRequestAuth(req, true);
       expect(result).toEqual({ allowed: true });
     });
 
@@ -135,7 +130,7 @@ describe('Security Utils', () => {
     });
 
     it('should deny missing token', () => {
-      const req = createReq('192.168.1.10', {}); // No token
+      const req = createReq('192.168.1.10', {});
       const result = checkRequestAuth(req);
       expect(result.allowed).toBe(false);
       expect(result.status).toBe(401);

@@ -1,7 +1,7 @@
 // src/widgets/video-grid/model/use-video-source.ts
 
 import { useEffect } from 'react';
-import { useQuery, keepPreviousData } from '@tanstack/react-query'; // useQueryClient 削除
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSearchStore } from '@/features/search-videos/model/store';
 import {
@@ -12,13 +12,13 @@ import {
   searchVideosApi,
 } from '@/shared/api/electron';
 import { SearchOptions } from '@/shared/types/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 export const useVideoSource = (folderPath: string) => {
   const { viewMode, selectedPlaylistId, selectedTagIds } = useUIStore();
   const { searchScope, debouncedQuery } = useSearchStore();
 
-  const { syncMetadata } = useVideoCache(); // 追加
+  const { syncMetadata } = useVideoCache();
 
   const isGlobalMode = viewMode === 'all-favorites';
   const isPlaylistMode = viewMode === 'playlist';
@@ -85,8 +85,6 @@ export const useVideoSource = (folderPath: string) => {
 
   useEffect(() => {
     if (queryInfo.isSuccess && !queryInfo.isFetching) {
-      // 変更: 動画リスト取得完了時に、関連データ（お気に入りIDリスト等）も同期する
-      // 直接キーを指定せず、useVideoCacheのメソッドを使用
       syncMetadata();
     }
   }, [queryInfo.isSuccess, queryInfo.isFetching, syncMetadata]);

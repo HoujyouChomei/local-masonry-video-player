@@ -1,7 +1,7 @@
 // src/features/settings-panel/ui/sections/about-section.tsx
 
 import { useState, useEffect } from 'react';
-import { Info, FileText, ExternalLink } from 'lucide-react';
+import { Info, FileText, ExternalLink, FolderSearch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -11,6 +11,9 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { logger } from '@/shared/lib/logger';
+import { openLogFolderApi } from '@/shared/api/electron';
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface LicenseData {
   licenses: string;
@@ -28,19 +31,18 @@ export const AboutSection = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [licenses, setLicenses] = useState<LicensesMap | null>(null);
   const [loading, setLoading] = useState(false);
+  const isMobile = useIsMobile();
 
-  // ダイアログが開いたときにJSONをフェッチする
   useEffect(() => {
     if (isOpen && !licenses) {
       const loadLicenses = async () => {
         setLoading(true);
         try {
-          // 相対パスで参照
           const res = await fetch('./licenses.json');
           const data = await res.json();
           setLicenses(data);
         } catch (err) {
-          console.error('Failed to load licenses:', err);
+          logger.error('Failed to load licenses:', err);
         } finally {
           setLoading(false);
         }
@@ -56,6 +58,10 @@ export const AboutSection = () => {
     }
   };
 
+  const handleOpenLogs = () => {
+    openLogFolderApi();
+  };
+
   return (
     <>
       <div className="border-border/40 mt-2 border-t pt-4">
@@ -64,19 +70,33 @@ export const AboutSection = () => {
         </h3>
 
         <div className="text-muted-foreground mb-3 text-[10px] leading-relaxed">
-          <p>Local Masonry Video Player v0.2.3</p>
+          <p>Local Masonry Video Player v0.2.4</p>
           <p>Powered by Electron, Vite & Open Source Software.</p>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 w-full justify-start text-xs"
-          onClick={() => setIsOpen(true)}
-        >
-          <FileText className="mr-2 h-3 w-3" />
-          Third-Party Licenses
-        </Button>
+        <div className="flex flex-col gap-2">
+          {!isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 w-full justify-start text-xs"
+              onClick={handleOpenLogs}
+            >
+              <FolderSearch className="mr-2 h-3 w-3" />
+              Open Logs Folder
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 w-full justify-start text-xs"
+            onClick={() => setIsOpen(true)}
+          >
+            <FileText className="mr-2 h-3 w-3" />
+            Third-Party Licenses
+          </Button>
+        </div>
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>

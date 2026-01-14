@@ -4,33 +4,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleFileOps } from './file-ops';
 
-// --- 1. Hoisted Mocks ---
 const mocks = vi.hoisted(() => ({
-  // VideoService
   deleteVideo: vi.fn(),
   renameVideo: vi.fn(),
   updateMetadata: vi.fn(),
-  revealInExplorer: vi.fn(), // 追加
-  
-  // DownloadService
+  revealInExplorer: vi.fn(),
+
   download: vi.fn(),
-  
-  // VideoLibraryService (New)
+
   moveVideos: vi.fn(),
   normalizeVideo: vi.fn(),
-  
-  // VideoRepository
+
   findByPath: vi.fn(),
-  
-  // VideoMapper
+
   toEntity: vi.fn(),
-  
-  // Electron shell
+
   showItemInFolder: vi.fn(),
   openPath: vi.fn(),
 }));
 
-// --- 2. Electron Mock ---
 const ipcHandlers = new Map<string, (...args: any[]) => Promise<any>>();
 
 vi.mock('electron', () => ({
@@ -45,13 +37,12 @@ vi.mock('electron', () => ({
   },
 }));
 
-// --- 3. Service Mocks ---
 vi.mock('../core/services/video-service', () => ({
   VideoService: class {
     deleteVideo = mocks.deleteVideo;
     renameVideo = mocks.renameVideo;
     updateMetadata = mocks.updateMetadata;
-    revealInExplorer = mocks.revealInExplorer; // 追加
+    revealInExplorer = mocks.revealInExplorer;
   },
 }));
 
@@ -61,7 +52,6 @@ vi.mock('../core/services/download-service', () => ({
   },
 }));
 
-// ▼▼▼ VideoLibraryService Mock ▼▼▼
 vi.mock('../core/services/video-library-service', () => ({
   VideoLibraryService: class {
     moveVideos = mocks.moveVideos;
@@ -142,7 +132,6 @@ describe('handlers/file-ops', () => {
 
   it('should handle reveal-in-explorer', async () => {
     await invoke('reveal-in-explorer', 'video-id');
-    // ハンドラは Service に委譲する
     expect(mocks.revealInExplorer).toHaveBeenCalledWith('video-id');
   });
 

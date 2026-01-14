@@ -8,7 +8,7 @@ interface UseFilteredVideosProps {
   videos: VideoFile[] | undefined;
   sortOption: SortOption;
   showFavoritesOnly: boolean;
-  favorites: string[]; // IDのリスト
+  favorites: string[];
   isGlobalMode: boolean;
   isPlaylistMode: boolean;
   isTagMode: boolean;
@@ -32,19 +32,14 @@ export const useFilteredVideos = ({
 
     let result = videos;
 
-    // 1. お気に入りフィルタ
-    // GlobalMode/PlaylistMode以外で適用
     if (!isGlobalMode && !isPlaylistMode && showFavoritesOnly) {
-      // ▼▼▼ 修正: v.path ではなく v.id で照合する ▼▼▼
       result = result.filter((v) => favorites.includes(v.id));
     }
 
-    // 2. ソート
     if (isPlaylistMode && sortOption === 'custom') {
       return result;
     }
 
-    // 検索モード、タグモード、Globalモード時はカスタムソート(D&D)を無効化
     const activeCustomOrder = !isGlobalMode && !isTagMode && !isSearching ? customOrder : undefined;
 
     return sortVideos(result, sortOption, activeCustomOrder);

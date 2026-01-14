@@ -8,7 +8,6 @@ export const handleSystemRequest = async (req: IncomingMessage, res: ServerRespo
   const method = req.method;
   const pathname = url.pathname;
 
-  // GET /api/connection
   if (pathname === '/api/connection' && method === 'GET') {
     return sendJson(res, {
       ip: getLocalIpAddress(),
@@ -16,5 +15,5 @@ export const handleSystemRequest = async (req: IncomingMessage, res: ServerRespo
     });
   }
 
-  return false; // Not handled
+  return false;
 };

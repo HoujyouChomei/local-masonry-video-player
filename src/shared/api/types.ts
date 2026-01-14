@@ -9,6 +9,8 @@ import {
   VideoUpdateEvent,
   SearchOptions,
   ConnectionInfo,
+  MoveResponse,
+  WindowState,
 } from '../types/electron';
 
 export interface VideosApi {
@@ -19,7 +21,7 @@ export interface VideosApi {
   updateMetadata(videoId: string, duration: number, width: number, height: number): Promise<void>;
   delete(id: string): Promise<boolean>;
   rename(id: string, newFileName: string): Promise<VideoFile | null>;
-  move(videoPaths: string[], targetFolderPath: string): Promise<number>;
+  move(videoPaths: string[], targetFolderPath: string): Promise<MoveResponse>;
   download(url: string, targetFolderPath: string): Promise<VideoFile | null>;
   normalize(path: string): Promise<VideoFile | null>;
 }
@@ -49,9 +51,9 @@ export interface TagsApi {
 }
 
 export interface FavoritesApi {
-  getAll(): Promise<string[]>; // ID list
+  getAll(): Promise<string[]>;
   getVideos(): Promise<VideoFile[]>;
-  toggle(videoId: string): Promise<string[]>; // Updated ID list
+  toggle(videoId: string): Promise<string[]>;
 }
 
 export interface SettingsApi {
@@ -67,6 +69,11 @@ export interface SystemApi {
   validateFFprobe(path: string): Promise<boolean>;
   relaunchApp(): Promise<void>;
   setFullScreen(enable: boolean): Promise<void>;
+  minimizeWindow(): Promise<void>;
+  toggleMaximizeWindow(): Promise<void>;
+  closeWindow(): Promise<void>;
+  getWindowState(): Promise<WindowState>;
+  onWindowStateChange(callback: (state: WindowState) => void): () => void;
   revealInExplorer(videoId: string): Promise<void>;
   openPath(filePath: string): Promise<void>;
   getSubdirectories(dirPath: string): Promise<DirectoryEntry[]>;
@@ -74,6 +81,7 @@ export interface SystemApi {
   getConnectionInfo(): Promise<ConnectionInfo | null>;
   startDrag(files: string | string[]): void;
   getFilePath(file: File): string;
+  openLogFolder(): Promise<void>;
 }
 
 export interface SortingApi {

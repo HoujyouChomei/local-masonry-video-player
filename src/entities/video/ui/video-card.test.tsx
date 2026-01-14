@@ -5,32 +5,26 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VideoCard } from './video-card';
 import { VideoFile } from '@/shared/types/video';
-// ▼▼▼ 追加: useVideoDrag をインポート (モック対象) ▼▼▼
 import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 
-// --- Mocks Setup ---
-
-// 0. Global Mocks (matchMedia)
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // deprecated
-    removeListener: vi.fn(), // deprecated
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
 });
 
-// 1. Hoisted State & Functions
 const mocks = vi.hoisted(() => ({
   setDraggedFilePath: vi.fn(),
   setDraggedVideoId: vi.fn(),
   startDrag: vi.fn(),
-  // Mutable State Containers
   selectionState: {
     selectedVideoIds: [] as string[],
     isSelectionMode: false,
@@ -63,11 +57,9 @@ const mocks = vi.hoisted(() => ({
   },
 }));
 
-// Connect hoisted fn to the one inside state object
 mocks.dragStoreState.setDraggedFilePath = mocks.setDraggedFilePath;
 mocks.dragStoreState.setDraggedVideoId = mocks.setDraggedVideoId;
 
-// 2. Mock window.electron
 Object.defineProperty(window, 'electron', {
   value: {
     startDrag: mocks.startDrag,
@@ -75,7 +67,6 @@ Object.defineProperty(window, 'electron', {
   writable: true,
 });
 
-// 3. Mock Stores with Strict Types
 type StoreSelector<T, U> = (state: T) => U;
 
 vi.mock('@/shared/stores/drag-store', () => {
@@ -106,7 +97,6 @@ vi.mock('@/shared/stores/ui-store', () => {
   return { useUIStore };
 });
 
-// 4. Other Mocks
 const mockQueryCache = {
   findAll: vi.fn().mockReturnValue([]),
 };
@@ -166,17 +156,10 @@ vi.mock('@/shared/lib/use-is-mobile', () => ({
   useIsMobile: () => false,
 }));
 
-// ▼▼▼ 追加: useVideoDrag の実体をインポートせず、テスト内で挙動を定義するためには
-// ここでモック化するのではなく、実際のロジック（hooks）を使ってテストしたいところですが、
-// useVideoDrag自体が別のファイルにあるため、ここでは「Integration Test」的に
-// useVideoDrag を実際に呼び出すラッパーを作るのが正解です。
-// ただし、useVideoDrag 内で startDragApi を呼んでいるため、そこをモックする必要があります。
-
 vi.mock('@/shared/api/electron', () => ({
   startDragApi: mocks.startDrag,
 }));
 
-// --- Test Data ---
 const mockVideo: VideoFile = {
   id: 'v1',
   name: 'Test Video.mp4',
@@ -190,8 +173,6 @@ const mockVideo: VideoFile = {
   height: 1080,
 };
 
-// ▼▼▼ 追加: テスト用ラッパーコンポーネント ▼▼▼
-// VideoCard は純粋なコンポーネントになったため、ドラッグ機能を注入してテストする
 const TestVideoCardWrapper = (props: React.ComponentProps<typeof VideoCard>) => {
   const { handleDragStart, handleDragEnd } = useVideoDrag({
     videoPath: props.video.path,
@@ -256,7 +237,6 @@ describe('VideoCard', () => {
   });
 
   describe('3. Drag and Drop Logic (Critical)', () => {
-    // ▼▼▼ 修正: ラッパーを使用してレンダリング ▼▼▼
     it('initiates single file drag when not in selection mode', () => {
       const { container } = render(<TestVideoCardWrapper video={mockVideo} isModalOpen={false} />);
 
@@ -311,7 +291,7 @@ describe('VideoCard', () => {
 
       const { container } = render(
         <TestVideoCardWrapper
-          video={mockVideo} // v1 is NOT selected
+          video={mockVideo}
           isModalOpen={false}
           isSelectionMode={true}
           isSelected={false}

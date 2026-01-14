@@ -1,6 +1,6 @@
 // src/widgets/header/ui/header.tsx
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import {
   PanelLeft,
   Eye,
@@ -25,6 +25,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { setFullScreenApi } from '@/shared/api/electron';
+import { getApiClient } from '@/shared/api/client-factory';
+import { WindowControls } from './window-controls';
 
 export const Header = () => {
   const isSidebarOpen = useSettingsStore((s) => s.isSidebarOpen);
@@ -39,19 +41,17 @@ export const Header = () => {
   const setHeaderVisible = useUIStore((s) => s.setHeaderVisible);
   const setMobileMenuOpen = useUIStore((s) => s.setMobileMenuOpen);
   const isMobileMenuOpen = useUIStore((s) => s.isMobileMenuOpen);
+  const windowState = useUIStore((s) => s.windowState);
 
   const isSelectionMode = useSelectionStore((s) => s.isSelectionMode);
   const exitSelectionMode = useSelectionStore((s) => s.exitSelectionMode);
 
   const isMobile = useIsMobile();
 
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
   const isVisibleRef = useRef(isHeaderVisible);
 
   const isSettingsPanelOpenRef = useRef(false);
 
-  // 設定パネルからの通知を受け取るコールバック
   const handleSettingsStateChange = useCallback((isOpen: boolean) => {
     isSettingsPanelOpenRef.current = isOpen;
 
@@ -105,23 +105,14 @@ export const Header = () => {
       }
     };
 
-    // フルスクリーン状態の同期（F11キーなどで変更された場合用）
-    const handleResize = () => {
-      // 簡易的な判定: ウィンドウの内部高さと画面の高さが一致していればフルスクリーンとみなす
-      const isFull = window.innerHeight === window.screen.height;
-      setIsFullscreen(isFull);
-    };
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('scroll', handleScroll, { passive: true });
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('resize', handleResize);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('resize', handleResize);
     };
   }, [setHeaderVisible, isSelectionMode, exitSelectionMode]);
 
@@ -138,19 +129,28 @@ export const Header = () => {
   };
 
   const handleToggleFullscreen = async () => {
-    const nextState = !isFullscreen;
-    setIsFullscreen(nextState);
+    const nextState = !windowState.isFullScreen;
     await setFullScreenApi(nextState);
+  };
+
+  const handleHeaderDoubleClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isMobile) {
+      getApiClient().system.toggleMaximizeWindow();
+    }
   };
 
   return (
     <header
       className={cn(
-        // ▼▼▼ 変更: backdrop-blur を削除し、bg-gray-950 (不透明) に固定 ▼▼▼
-        'border-border/40 sticky top-0 z-50 flex h-16 border-b bg-gray-950/80 transition-transform duration-300',
+        'border-border/40 app-region-drag sticky top-0 z-50 flex h-16 border-b bg-gray-950/80 transition-transform duration-300',
         !isHeaderVisible && !isSelectionMode && '-translate-y-full',
-        isSelectionMode ? 'border-indigo-900/50 px-0' : 'items-center justify-between px-2 md:px-6'
+        isSelectionMode
+          ? 'border-indigo-900/50 px-0'
+          : isMobile
+            ? 'items-center justify-between pl-2'
+            : 'items-center justify-between pl-6'
       )}
+      onDoubleClick={handleHeaderDoubleClick}
     >
       {isSelectionMode ? (
         <SelectionHeader />
@@ -162,6 +162,7 @@ export const Header = () => {
               size="icon"
               onClick={handleToggleMenu}
               className={cn(
+                'app-region-no-drag',
                 (isMobile ? isMobileMenuOpen : isSidebarOpen) && 'bg-accent text-accent-foreground'
               )}
               title={isMobile ? 'Menu' : 'Toggle Sidebar (Ctrl+B)'}
@@ -171,66 +172,93 @@ export const Header = () => {
           </div>
 
           <div className="flex flex-1 items-center justify-center px-2 md:px-8">
-            <SearchBar className="max-w-md" />
+            <SearchBar className="app-region-no-drag max-w-md" />
           </div>
 
-          <div className="flex items-center gap-1 md:gap-4">
-            {/* ▼▼▼ 全画面ボタンをここに移動 ▼▼▼ */}
+          <div className="flex h-full items-center gap-1 md:gap-4">
+            <div className="flex items-center gap-1 md:gap-4">
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleToggleFullscreen}
+                  className="app-region-no-drag"
+                  title={
+                    windowState.isFullScreen ? 'Exit Fullscreen (F11)' : 'Enter Fullscreen (F11)'
+                  }
+                >
+                  {windowState.isFullScreen ? (
+                    <Minimize className="h-5 w-5" />
+                  ) : (
+                    <Maximize className="h-5 w-5" />
+                  )}
+                </Button>
+              )}
+
+              {!isGlobalMode && (
+                <div className="app-region-no-drag flex items-center">
+                  <FavoritesToggle />
+                </div>
+              )}
+
+              <div className="app-region-no-drag flex items-center">
+                <SortMenu />
+              </div>
+
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleLayoutMode}
+                  className="app-region-no-drag"
+                  title={
+                    layoutMode === 'masonry'
+                      ? 'Current: Masonry (Switch to List)'
+                      : 'Current: List (Switch to Masonry)'
+                  }
+                >
+                  {layoutMode === 'masonry' ? (
+                    <LayoutDashboard className="h-5 w-5" />
+                  ) : (
+                    <List className="h-5 w-5" />
+                  )}
+                </Button>
+              )}
+
+              {!isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={togglePlayOnHoverOnly}
+                  className={cn(
+                    'app-region-no-drag',
+                    playOnHoverOnly && 'text-primary bg-primary/10'
+                  )}
+                  title={playOnHoverOnly ? 'Mode: Play on Hover' : 'Mode: Play in View'}
+                >
+                  {playOnHoverOnly ? (
+                    <MousePointer2 className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              )}
+
+              <Separator orientation="vertical" className="h-6" />
+
+              <ColumnCounter className="app-region-no-drag" />
+
+              <div className="app-region-no-drag flex items-center">
+                <SettingsPanel onStateChange={handleSettingsStateChange} />
+              </div>
+            </div>
+
             {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleToggleFullscreen}
-                title={isFullscreen ? 'Exit Fullscreen (F11)' : 'Enter Fullscreen (F11)'}
-              >
-                {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
-              </Button>
+              <>
+                <Separator orientation="vertical" className="h-6 opacity-30" />
+                <WindowControls />
+              </>
             )}
-
-            {!isGlobalMode && <FavoritesToggle />}
-
-            <SortMenu />
-
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleLayoutMode}
-                title={
-                  layoutMode === 'masonry'
-                    ? 'Current: Masonry (Switch to List)'
-                    : 'Current: List (Switch to Masonry)'
-                }
-              >
-                {layoutMode === 'masonry' ? (
-                  <LayoutDashboard className="h-5 w-5" />
-                ) : (
-                  <List className="h-5 w-5" />
-                )}
-              </Button>
-            )}
-
-            {!isMobile && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={togglePlayOnHoverOnly}
-                className={cn(playOnHoverOnly && 'text-primary bg-primary/10')}
-                title={playOnHoverOnly ? 'Mode: Play on Hover' : 'Mode: Play in View'}
-              >
-                {playOnHoverOnly ? (
-                  <MousePointer2 className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-
-            <Separator orientation="vertical" className="h-6" />
-
-            <ColumnCounter />
-
-            <SettingsPanel onStateChange={handleSettingsStateChange} />
           </div>
         </>
       )}

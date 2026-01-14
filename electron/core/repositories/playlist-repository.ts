@@ -11,8 +11,6 @@ interface PlaylistRow {
   updated_at: number;
 }
 
-// 削除: interface PlaylistItemRow { ... }
-
 export class PlaylistRepository {
   private get db() {
     return getDB();
@@ -20,9 +18,6 @@ export class PlaylistRepository {
 
   private videoRepo = new VideoRepository();
 
-  /**
-   * IDからプレイリストを取得（動画パス配列付き）
-   */
   getById(id: string): Playlist | null {
     const playlist = this.db.prepare('SELECT * FROM playlists WHERE id = ?').get(id) as
       | PlaylistRow
@@ -40,9 +35,6 @@ export class PlaylistRepository {
     };
   }
 
-  /**
-   * 全プレイリストを取得
-   */
   getAll(): Playlist[] {
     const playlists = this.db
       .prepare('SELECT * FROM playlists ORDER BY created_at ASC')
@@ -57,11 +49,7 @@ export class PlaylistRepository {
     }));
   }
 
-  /**
-   * プレイリストに含まれる動画パスをランク順に取得
-   */
   private getVideoPaths(playlistId: string): string[] {
-    // status = 'available' の条件を追加
     const rows = this.db
       .prepare(
         `
@@ -76,9 +64,6 @@ export class PlaylistRepository {
     return rows.map((r) => r.path);
   }
 
-  /**
-   * 名前重複チェック用
-   */
   existsByName(name: string): boolean {
     const row = this.db.prepare('SELECT 1 FROM playlists WHERE name = ?').get(name);
     return !!row;
@@ -96,7 +81,6 @@ export class PlaylistRepository {
   }
 
   delete(id: string): void {
-    // ON DELETE CASCADE により items も消える
     this.db.prepare('DELETE FROM playlists WHERE id = ?').run(id);
   }
 
@@ -118,14 +102,9 @@ export class PlaylistRepository {
     this.db.prepare('UPDATE playlists SET updated_at = ? WHERE id = ?').run(now, id);
   }
 
-  /**
-   * 動画をプレイリストに追加
-   * ※ videoId は VideoRepository 等で解決済みであることを前提とする
-   */
   addVideo(playlistId: string, videoId: string): void {
     const now = Date.now();
 
-    // 重複チェック
     const exists = this.db
       .prepare(
         `
@@ -136,7 +115,6 @@ export class PlaylistRepository {
 
     if (exists) return;
 
-    // 現在の最大ランクを取得
     const maxRankRow = this.db
       .prepare(
         `
@@ -172,9 +150,6 @@ export class PlaylistRepository {
     this.touch(playlistId);
   }
 
-  /**
-   * 動画の並び替え
-   */
   reorderVideos(playlistId: string, videoIdsInOrder: string[]): void {
     const tx = this.db.transaction(() => {
       const updateStmt = this.db.prepare(`

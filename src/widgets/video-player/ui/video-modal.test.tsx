@@ -9,9 +9,6 @@ import * as useVideoModalPlayerModule from '../model/use-video-modal-player';
 import * as videoPlayerStoreModule from '@/features/video-player/model/store';
 import { VideoFile } from '@/shared/types/video';
 
-// --- Mocks ---
-
-// 1. Mock Hooks & Stores
 const mockCloseVideo = vi.fn();
 const mockToggleFullscreen = vi.fn();
 const mockToggleInfoPanel = vi.fn();
@@ -19,7 +16,6 @@ const mockPlayNext = vi.fn();
 const mockPlayPrev = vi.fn();
 const mockToggleAutoPlayNext = vi.fn();
 
-// useVideoModalPlayer のデフォルト戻り値
 const defaultHookValues = {
   selectedVideo: {
     id: 'v1',
@@ -60,14 +56,13 @@ const defaultHookValues = {
   handleTouchEnd: vi.fn(),
 };
 
-// モジュール全体のモック
 vi.mock('../model/use-video-modal-player', () => ({
   useVideoModalPlayer: vi.fn(() => defaultHookValues),
 }));
 
 vi.mock('@/features/video-player/model/store', () => ({
   useVideoPlayerStore: vi.fn(() => ({
-    playlist: [], // デフォルトは空
+    playlist: [],
   })),
 }));
 
@@ -82,7 +77,6 @@ vi.mock('@/shared/lib/use-is-mobile', () => ({
   useIsMobile: () => false,
 }));
 
-// Components Mocks (複雑な子コンポーネントを軽量化)
 vi.mock('./video-metadata-panel', () => ({
   VideoMetadataPanel: () => <div data-testid="metadata-panel">Metadata Panel</div>,
 }));
@@ -91,7 +85,6 @@ vi.mock('@/features/video-tagging/ui/video-tag-manager', () => ({
   VideoTagManager: () => <div data-testid="tag-manager">Tag Manager</div>,
 }));
 
-// --- Test Utilities ---
 const createWrapper = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -105,12 +98,9 @@ const createWrapper = () => {
   );
 };
 
-// --- Test Suite ---
-
 describe('VideoModal Integration Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // フックのモックをリセット
     (useVideoModalPlayerModule.useVideoModalPlayer as ReturnType<typeof vi.fn>).mockReturnValue(
       defaultHookValues
     );
@@ -133,24 +123,17 @@ describe('VideoModal Integration Test', () => {
   it('renders correctly when open with a video', () => {
     render(<VideoModal />, { wrapper: createWrapper() });
 
-    // Video Title
     expect(screen.getByText('Test Video.mp4')).toBeTruthy();
-    // Resolution Badge
     expect(screen.getByText('1920x1080')).toBeTruthy();
-    // Video Element
     const videoEl = document.querySelector('video');
     expect(videoEl).toBeTruthy();
-    // ▼▼▼ 修正: toHaveAttribute -> getAttribute + toBe ▼▼▼
     expect(videoEl?.getAttribute('src')).toBe('file:///path/to/Test Video.mp4');
   });
 
   it('calls closeVideo when clicking the close button', () => {
     render(<VideoModal />, { wrapper: createWrapper() });
 
-    // Assuming implementation:
-    // Top right: [Fullscreen Toggle] [Close]
     const closeButtons = document.querySelectorAll('button');
-    // Top right area has 2 buttons. The X (Close) is logically the last interaction element there
     const closeButton = closeButtons[1];
 
     fireEvent.click(closeButton);
@@ -160,7 +143,7 @@ describe('VideoModal Integration Test', () => {
   it('calls toggleFullscreen when clicking the maximize button', () => {
     render(<VideoModal />, { wrapper: createWrapper() });
 
-    const fullscreenButton = document.querySelectorAll('button')[0]; // Top right first button
+    const fullscreenButton = document.querySelectorAll('button')[0];
     fireEvent.click(fullscreenButton);
     expect(mockToggleFullscreen).toHaveBeenCalled();
   });
@@ -183,11 +166,9 @@ describe('VideoModal Integration Test', () => {
   });
 
   it('toggles info panel visibility', () => {
-    // 1. Initially closed
     const { rerender } = render(<VideoModal />, { wrapper: createWrapper() });
     expect(screen.queryByTestId('metadata-panel')).toBeNull();
 
-    // 2. Mock state change to Open
     (useVideoModalPlayerModule.useVideoModalPlayer as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookValues,
       isInfoPanelOpen: true,
@@ -201,20 +182,17 @@ describe('VideoModal Integration Test', () => {
     (useVideoModalPlayerModule.useVideoModalPlayer as ReturnType<typeof vi.fn>).mockReturnValue({
       ...defaultHookValues,
       isFullscreen: true,
-      isInfoPanelOpen: true, // Should be ignored in UI
+      isInfoPanelOpen: true,
     });
 
     render(<VideoModal />, { wrapper: createWrapper() });
 
-    // Footer Title should NOT be visible
     expect(screen.queryByText('Test Video.mp4')).toBeNull();
 
-    // Metadata panel should also be hidden in fullscreen
     expect(screen.queryByTestId('metadata-panel')).toBeNull();
   });
 
   it('preloads next video if playlist has next item', () => {
-    // Setup Playlist
     (
       videoPlayerStoreModule.useVideoPlayerStore as unknown as ReturnType<typeof vi.fn>
     ).mockReturnValue({
@@ -226,14 +204,11 @@ describe('VideoModal Integration Test', () => {
 
     const { container } = render(<VideoModal />, { wrapper: createWrapper() });
 
-    // Should contain 2 video tags: Main player + Hidden preloader
     const videos = container.querySelectorAll('video');
     expect(videos.length).toBe(2);
 
     const hiddenVideo = videos[1];
-    // ▼▼▼ 修正: toHaveClass -> classList.contains ▼▼▼
     expect(hiddenVideo.classList.contains('hidden')).toBe(true);
-    // ▼▼▼ 修正: toHaveAttribute -> getAttribute + toBe ▼▼▼
     expect(hiddenVideo.getAttribute('src')).toBe('file:///v2.mp4');
   });
 });

@@ -42,7 +42,6 @@ export const SortMenu = () => {
       <DropdownMenuContent
         align="end"
         className="w-56"
-        // ▼▼▼ 修正: 閉じた時にボタンへフォーカスを戻さない（スクロール操作を優先） ▼▼▼
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <DropdownMenuLabel>Sort Order</DropdownMenuLabel>

@@ -10,7 +10,6 @@ interface VideoCardOverlayProps {
   duration?: number;
 }
 
-// ▼▼▼ 修正: React.memo でラップし、不要な再レンダリングを防ぐ ▼▼▼
 export const VideoCardOverlay = React.memo(
   ({ video, actionsSlot, duration = 0 }: VideoCardOverlayProps) => {
     return (

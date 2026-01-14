@@ -3,7 +3,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VideoMetadataRepository } from './video-metadata-repository';
 
-// --- DB Mock Setup ---
 const mockRun = vi.fn();
 const mockGet = vi.fn();
 const mockAll = vi.fn();
@@ -31,15 +30,7 @@ describe('VideoMetadataRepository', () => {
     repo.updateMetadata('/video.mp4', 120, 1920, 1080, 60, 'h264');
 
     expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE videos'));
-    expect(mockRun).toHaveBeenCalledWith(
-      120,
-      1920,
-      1080,
-      1920 / 1080, // aspect_ratio
-      60, // fps
-      'h264', // codec
-      '/video.mp4'
-    );
+    expect(mockRun).toHaveBeenCalledWith(120, 1920, 1080, 1920 / 1080, 60, 'h264', '/video.mp4');
   });
 
   it('updateGenerationParams should update generation_params and set status to completed', () => {

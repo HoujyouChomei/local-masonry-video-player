@@ -18,7 +18,8 @@ import { FFmpegService } from './ffmpeg-service';
 import { NATIVE_EXTENSIONS, EXTENDED_EXTENSIONS } from '../../lib/extensions';
 
 const CHUNK_SIZE = 500;
-const MAX_SCAN_DEPTH = 20; // 再帰スキャンの深さ制限
+const MAX_SCAN_DEPTH = 20;
+const BATCH_LIMIT = 50;
 
 export class LibraryScanner {
   private videoRepo = new VideoRepository();
@@ -28,7 +29,6 @@ export class LibraryScanner {
   private thumbnailService = ThumbnailService.getInstance();
   private ffmpegService = new FFmpegService();
 
-  // 通常スキャン (変更なし: 直下のみ、サムネイル生成あり)
   async scan(folderPath: string): Promise<VideoFile[]> {
     try {
       const hasFFmpeg = await this.ffmpegService.validatePath(
@@ -46,7 +46,6 @@ export class LibraryScanner {
         })
         .map((dirent) => path.join(folderPath, dirent.name));
 
-      // フォルダ内にあるはずのないファイルをMissingにする
       const existingFileSet = new Set(videoFiles.map((p) => path.normalize(p)));
       const dbFiles = this.videoRepo.findPathsByDirectory(folderPath);
 
@@ -67,21 +66,25 @@ export class LibraryScanner {
       this.thumbnailService.addToQueue(videoFiles, false);
 
       const statsMap = new Map<string, FileStat>();
-      await Promise.all(
-        videoFiles.map(async (filePath) => {
-          try {
-            const stat = await fs.stat(filePath);
-            statsMap.set(filePath, {
-              size: stat.size,
-              mtime: Math.floor(stat.mtimeMs),
-              birthtime: stat.birthtimeMs,
-              ino: Number(stat.ino),
-            });
-          } catch {
-            // ignore
-          }
-        })
-      );
+
+      for (let i = 0; i < videoFiles.length; i += BATCH_LIMIT) {
+        const batch = videoFiles.slice(i, i + BATCH_LIMIT);
+        await Promise.all(
+          batch.map(async (filePath) => {
+            try {
+              const stat = await fs.stat(filePath);
+              statsMap.set(filePath, {
+                size: stat.size,
+                mtime: Math.floor(stat.mtimeMs),
+                birthtime: stat.birthtimeMs,
+                ino: Number(stat.ino),
+              });
+            } catch {
+              // ignore
+            }
+          })
+        );
+      }
 
       const validPaths = videoFiles.filter((p) => statsMap.has(p));
       const changedPaths: string[] = [];
@@ -170,27 +173,23 @@ export class LibraryScanner {
     }
   }
 
-  // 再帰的スキャンヘルパー
   private async scanDirRecursively(
     dirPath: string,
     extensions: Set<string>,
     depth: number,
     results: string[]
   ): Promise<void> {
-    // 深さ制限を超えたら停止
     if (depth > MAX_SCAN_DEPTH) return;
 
     try {
       const dirents = await fs.readdir(dirPath, { withFileTypes: true });
 
       for (const dirent of dirents) {
-        // シンボリックリンクは循環参照のリスクがあるため無視
         if (dirent.isSymbolicLink()) continue;
 
         const fullPath = path.join(dirPath, dirent.name);
 
         if (dirent.isDirectory()) {
-          // 隠しフォルダ (.gitなど) はスキップ
           if (dirent.name.startsWith('.')) continue;
 
           await this.scanDirRecursively(fullPath, extensions, depth + 1, results);
@@ -202,13 +201,10 @@ export class LibraryScanner {
         }
       }
     } catch {
-      // ▼▼▼ 修正: catch (error) -> catch に変更し、未使用変数を削除 ▼▼▼
-      // アクセス権限エラーなどは無視して続行
-      // console.warn(`[Scanner] Skipped: ${dirPath}`, error);
+      // ignore
     }
   }
 
-  // 軽量再帰スキャン (ID登録のみ)
   async scanQuietly(folderPath: string): Promise<void> {
     try {
       const hasFFmpeg = await this.ffmpegService.validatePath(
@@ -224,7 +220,6 @@ export class LibraryScanner {
 
       if (videoFiles.length === 0) return;
 
-      // DB未登録のファイルを特定
       for (let i = 0; i < videoFiles.length; i += CHUNK_SIZE) {
         const chunkPaths = videoFiles.slice(i, i + CHUNK_SIZE);
         const existingRows = this.videoRepo.findManyByPaths(chunkPaths);
@@ -234,53 +229,55 @@ export class LibraryScanner {
 
         if (newPaths.length === 0) continue;
 
-        // 未登録ファイルのみ Stat を取得して登録
         const toInsert: VideoCreateInput[] = [];
 
-        await Promise.all(
-          newPaths.map(async (filePath) => {
-            try {
-              const stat = await fs.stat(filePath);
-              const fileName = path.basename(filePath);
+        for (let j = 0; j < newPaths.length; j += BATCH_LIMIT) {
+          const batch = newPaths.slice(j, j + BATCH_LIMIT);
 
-              // 簡易Rebindチェック (Hash計算なし)
-              const candidate = await this.rebinder.findCandidate(
-                filePath,
-                {
-                  size: stat.size,
-                  mtime: Math.floor(stat.mtimeMs),
-                  birthtime: stat.birthtimeMs,
-                  ino: Number(stat.ino),
-                },
-                false
-              );
+          await Promise.all(
+            batch.map(async (filePath) => {
+              try {
+                const stat = await fs.stat(filePath);
+                const fileName = path.basename(filePath);
 
-              if (candidate) {
-                this.rebinder.execute(
-                  candidate.id,
+                const candidate = await this.rebinder.findCandidate(
                   filePath,
-                  stat.size,
-                  Math.floor(stat.mtimeMs),
-                  Number(stat.ino),
-                  candidate.file_hash,
-                  'Quiet Rebind'
+                  {
+                    size: stat.size,
+                    mtime: Math.floor(stat.mtimeMs),
+                    birthtime: stat.birthtimeMs,
+                    ino: Number(stat.ino),
+                  },
+                  false
                 );
-              } else {
-                toInsert.push({
-                  id: crypto.randomUUID(),
-                  path: filePath,
-                  name: fileName,
-                  size: stat.size,
-                  mtime: Math.floor(stat.mtimeMs),
-                  created_at: Date.now(),
-                  ino: Number(stat.ino),
-                });
+
+                if (candidate) {
+                  this.rebinder.execute(
+                    candidate.id,
+                    filePath,
+                    stat.size,
+                    Math.floor(stat.mtimeMs),
+                    Number(stat.ino),
+                    candidate.file_hash,
+                    'Quiet Rebind'
+                  );
+                } else {
+                  toInsert.push({
+                    id: crypto.randomUUID(),
+                    path: filePath,
+                    name: fileName,
+                    size: stat.size,
+                    mtime: Math.floor(stat.mtimeMs),
+                    created_at: Date.now(),
+                    ino: Number(stat.ino),
+                  });
+                }
+              } catch {
+                // ignore
               }
-            } catch {
-              // ignore
-            }
-          })
-        );
+            })
+          );
+        }
 
         if (toInsert.length > 0) {
           console.log(`[LibraryScanner] Registered ${toInsert.length} new files.`);

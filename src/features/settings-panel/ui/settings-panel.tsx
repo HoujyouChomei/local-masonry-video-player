@@ -6,15 +6,13 @@ import { useSettingsStore } from '@/shared/stores/settings-store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { validateFFmpegPathApi, validateFFprobePathApi } from '@/shared/api/electron';
-import { useIsMobile } from '@/shared/lib/use-is-mobile'; // Added
-
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { GridStyleSection } from './sections/grid-style-section';
 import { ExternalToolsSection } from './sections/external-tools-section';
 import { PerformanceSection } from './sections/performance-section';
 import { SystemSection } from './sections/system-section';
 import { ExperimentalSection } from './sections/experimental-section';
 import { AboutSection } from './sections/about-section';
-// MobileConnectionSection import removed (moved inside ExperimentalSection)
 
 interface SettingsPanelProps {
   onStateChange?: (isOpen: boolean) => void;
@@ -25,7 +23,7 @@ export const SettingsPanel = ({ onStateChange }: SettingsPanelProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { ffmpegPath, ffprobePath } = useSettingsStore();
-  const isMobile = useIsMobile(); // Added
+  const isMobile = useIsMobile();
 
   const [isFFmpegValid, setIsFFmpegValid] = useState<boolean | null>(null);
   const [isFFprobeValid, setIsFFprobeValid] = useState<boolean | null>(null);
@@ -42,7 +40,6 @@ export const SettingsPanel = ({ onStateChange }: SettingsPanelProps) => {
     };
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      // モバイルではパス検証は不要（実行できないため）
       if (!isMobile) {
         if (ffmpegPath) validateFFmpegPathApi(ffmpegPath).then(setIsFFmpegValid);
         if (ffprobePath) validateFFprobePathApi(ffprobePath).then(setIsFFprobeValid);
@@ -74,13 +71,10 @@ export const SettingsPanel = ({ onStateChange }: SettingsPanelProps) => {
           </div>
 
           <div className="max-h-[70vh] space-y-6 overflow-y-auto overscroll-contain p-4">
-            {/* 1. Grid Style (Both) */}
             <GridStyleSection />
 
-            {/* 2. Performance (PC Only) */}
             {!isMobile && <PerformanceSection />}
 
-            {/* 3. External Tools (PC Only) */}
             {!isMobile && (
               <ExternalToolsSection
                 isFFmpegValid={isFFmpegValid}
@@ -90,13 +84,10 @@ export const SettingsPanel = ({ onStateChange }: SettingsPanelProps) => {
               />
             )}
 
-            {/* 4. System (Both) */}
             <SystemSection isMobile={isMobile} />
 
-            {/* 5. Experimental / Mobile Connection (PC Only) */}
             {!isMobile && <ExperimentalSection isFFmpegValid={isFFmpegValid} />}
 
-            {/* 6. About (Both) */}
             <AboutSection />
           </div>
         </div>

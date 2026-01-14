@@ -4,8 +4,6 @@ import { StateCreator } from 'zustand';
 import { AppSettings, GridStyle } from '@/shared/types/electron';
 import { SortOption } from '@/shared/types/video';
 
-// --- Slice Interfaces ---
-
 export interface CoreSlice {
   folderPath: string;
   libraryFolders: string[];
@@ -27,7 +25,6 @@ export interface UISlice {
   sortOption: SortOption;
   isSidebarOpen: boolean;
 
-  // Performance / Rendering
   rootMargin: number;
   debounceTime: number;
   chunkSize: number;
@@ -78,9 +75,6 @@ export interface SystemSlice {
   resetAuthToken: () => Promise<void>;
 }
 
-// --- Combined Store Type ---
-// 全てのスライスを合わせた型。従来の SettingsState と互換性を持たせる
 export type SettingsStore = CoreSlice & UISlice & PlaybackSlice & SystemSlice & AppSettings;
 
-// --- Slice Creator Type ---
 export type SettingsSliceCreator<T> = StateCreator<SettingsStore, [], [], T>;

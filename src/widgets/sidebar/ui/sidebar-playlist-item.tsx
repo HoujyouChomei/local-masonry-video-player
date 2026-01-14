@@ -9,7 +9,7 @@ import { Playlist } from '@/shared/types/playlist';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useRenamePlaylist, useDeletePlaylist } from '@/entities/playlist/model/use-playlists';
 import { useSidebarDrop } from '@/widgets/sidebar/model/use-sidebar-drop';
-import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface PlaylistNameInputProps {
   initialValue: string;
@@ -74,9 +74,8 @@ export const SidebarPlaylistItem = ({
   const { mutate: renamePlaylist } = useRenamePlaylist();
   const { mutate: deletePlaylist, isPending: isDeleting } = useDeletePlaylist();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const isMobile = useIsMobile(); // 追加
+  const isMobile = useIsMobile();
 
-  // DnD Hook
   const { isOver, dropProps } = useSidebarDrop({
     type: 'playlist',
     targetId: playlist.id,
@@ -115,7 +114,6 @@ export const SidebarPlaylistItem = ({
         <span className="shrink-0 text-xs opacity-50">({playlist.videoPaths.length})</span>
       </div>
 
-      {/* ▼▼▼ 修正: モバイル時は opacity-100 を強制 (ホバーなしで表示) ▼▼▼ */}
       <div
         className={cn(
           'flex shrink-0 items-center transition-opacity',

@@ -6,7 +6,6 @@ import { sendJson, sendError } from '../utils';
 
 const playlistService = new PlaylistService();
 
-// ヘルパー: リクエストボディをJSONとして読み込む
 const readBody = async <T>(req: IncomingMessage): Promise<T> => {
   const buffers = [];
   for await (const chunk of req) {
@@ -24,7 +23,6 @@ export const handlePlaylistsRequest = async (
   const method = req.method;
   const pathname = url.pathname;
 
-  // GET /api/playlists
   if (pathname === '/api/playlists' && method === 'GET') {
     try {
       const playlists = playlistService.getAll();
@@ -35,7 +33,6 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  // POST /api/playlists (Create)
   if (pathname === '/api/playlists' && method === 'POST') {
     try {
       const { name } = await readBody<{ name: string }>(req);
@@ -48,7 +45,6 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  // DELETE /api/playlists (Delete)
   if (pathname === '/api/playlists' && method === 'DELETE') {
     const id = url.searchParams.get('id');
     if (!id) return sendError(res, 'ID is required', 400);
@@ -61,7 +57,6 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  // PUT /api/playlists (Update Name)
   if (pathname === '/api/playlists' && method === 'PUT') {
     try {
       const { id, name } = await readBody<{ id: string; name: string }>(req);
@@ -74,7 +69,6 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  // POST /api/playlists/add (Add Video)
   if (pathname === '/api/playlists/add' && method === 'POST') {
     try {
       const { playlistId, videoId } = await readBody<{ playlistId: string; videoId: string }>(req);
@@ -87,7 +81,6 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  // POST /api/playlists/remove (Remove Video)
   if (pathname === '/api/playlists/remove' && method === 'POST') {
     try {
       const { playlistId, videoId } = await readBody<{ playlistId: string; videoId: string }>(req);
@@ -100,7 +93,6 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  // POST /api/playlists/reorder (Reorder)
   if (pathname === '/api/playlists/reorder' && method === 'POST') {
     try {
       const { playlistId, videoIds } = await readBody<{ playlistId: string; videoIds: string[] }>(
@@ -115,5 +107,5 @@ export const handlePlaylistsRequest = async (
     }
   }
 
-  return false; // Not handled
+  return false;
 };

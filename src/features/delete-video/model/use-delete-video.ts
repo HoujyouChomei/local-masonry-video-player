@@ -2,10 +2,10 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { deleteVideoApi } from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 export const useDeleteVideo = () => {
-  const { onVideoDeleted } = useVideoCache(); // 追加
+  const { onVideoDeleted } = useVideoCache();
 
   const { mutate: deleteVideo, isPending } = useMutation({
     mutationFn: (id: string) => deleteVideoApi(id),
@@ -15,7 +15,6 @@ export const useDeleteVideo = () => {
         return;
       }
 
-      // 変更: 集約されたロジックを使用
       onVideoDeleted(deletedId);
     },
   });

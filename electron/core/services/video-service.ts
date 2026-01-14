@@ -11,6 +11,7 @@ import { VideoFile } from '../../../src/shared/types/video';
 import { LibraryScanner } from './library-scanner';
 import { FileIntegrityService } from './file-integrity-service';
 import { VideoMapper } from './video-mapper';
+import { logger } from '../../lib/logger';
 
 export class VideoService {
   private videoRepo = new VideoRepository();
@@ -19,8 +20,6 @@ export class VideoService {
   private scanner = new LibraryScanner();
   private integrityService = new FileIntegrityService();
   private mapper = new VideoMapper();
-
-  // ... (scanFolder, getVideo, ensureVideoExists は変更なし) ...
 
   async scanFolder(folderPath: string): Promise<VideoFile[]> {
     return this.scanner.scan(folderPath);
@@ -50,7 +49,7 @@ export class VideoService {
       });
       return id;
     } catch (e) {
-      console.warn(`ensureVideoExists failed for: ${videoPath}`, e);
+      logger.warn(`ensureVideoExists failed for: ${videoPath}`, e);
       const id = crypto.randomUUID();
       const name = path.basename(videoPath);
 
@@ -67,9 +66,7 @@ export class VideoService {
     }
   }
 
-  // ▼▼▼ 修正: 引数を (id, newFileName) に変更 ▼▼▼
   async renameVideo(id: string, newFileName: string): Promise<VideoFile | null> {
-    // 1. バリデーション
     if (!newFileName || newFileName.trim() === '') {
       throw new Error('Filename cannot be empty');
     }
@@ -80,10 +77,9 @@ export class VideoService {
       throw new Error('Filename contains invalid characters');
     }
 
-    // 2. IDから動画情報を取得
     const videoRow = this.videoRepo.findById(id);
     if (!videoRow) {
-      console.warn(`Rename skipped: video not found in DB (ID: ${id})`);
+      logger.warn(`Rename skipped: video not found in DB (ID: ${id})`);
       return null;
     }
 
@@ -101,23 +97,20 @@ export class VideoService {
       const stat = await fs.stat(newPath);
       const mtime = Math.floor(stat.mtimeMs);
 
-      // パス更新はRepoで行う
       this.integrityRepo.updatePath(videoRow.id, newPath, mtime);
 
       const updatedRow = this.videoRepo.findById(videoRow.id);
       return updatedRow ? this.mapper.toEntity(updatedRow) : null;
     } catch (error) {
-      console.error(`Failed to rename video: ${oldPath} -> ${newPath}`, error);
+      logger.error(`Failed to rename video: ${oldPath} -> ${newPath}`, error);
       throw error;
     }
   }
 
-  // ▼▼▼ 修正: 引数を (id) に変更 ▼▼▼
   async deleteVideo(id: string): Promise<boolean> {
-    // 1. IDからパスを取得
     const videoRow = this.videoRepo.findById(id);
     if (!videoRow) {
-      console.warn(`Delete skipped: video not found (ID: ${id})`);
+      logger.warn(`Delete skipped: video not found (ID: ${id})`);
       return false;
     }
 
@@ -127,48 +120,43 @@ export class VideoService {
       try {
         await shell.trashItem(filePath);
       } catch (e) {
-        console.warn('File already deleted or access denied.', e);
+        logger.warn('File already deleted or access denied.', e);
       }
 
-      // IDベースでMissingにする
       await this.integrityService.markAsMissingById(id);
       return true;
     } catch (error) {
-      console.error(`Failed to delete video: ${filePath}`, error);
+      logger.error(`Failed to delete video: ${filePath}`, error);
       return false;
     }
   }
 
   async handleFileMissing(filePath: string): Promise<'recovered' | 'missing'> {
-    console.log(`[VideoService] Handle Missing: ${filePath}`);
+    logger.debug(`[VideoService] Handle Missing: ${filePath}`);
     await this.integrityService.markAsMissing(filePath);
     const recovered = await this.integrityService.verifyAndRecover([filePath]);
 
     if (recovered) {
-      console.log(`[VideoService] File recovered (moved): ${filePath}`);
+      logger.debug(`[VideoService] File recovered (moved): ${filePath}`);
       return 'recovered';
     } else {
-      console.log(`[VideoService] File verified missing: ${filePath}`);
+      logger.debug(`[VideoService] File verified missing: ${filePath}`);
       return 'missing';
     }
   }
 
-  // ▼▼▼ 修正: IDを受け取りパスを解決して更新する ▼▼▼
   async updateMetadata(id: string, duration: number, width: number, height: number): Promise<void> {
     const videoRow = this.videoRepo.findById(id);
     if (!videoRow) {
-      // console.warn(`[VideoService] Metadata update skipped. Video ID not found: ${id}`);
       return;
     }
-    // Repoはパスベースのまま利用 (将来的にRepoもIDベースにしても良いが、現状はこれでOK)
     this.metaRepo.updateMetadata(videoRow.path, duration, width, height);
   }
 
-  // ▼▼▼ 追加: IDベースでのReveal ▼▼▼
   async revealInExplorer(id: string): Promise<void> {
     const videoRow = this.videoRepo.findById(id);
     if (!videoRow) {
-      console.warn(`Reveal skipped: video not found (ID: ${id})`);
+      logger.warn(`Reveal skipped: video not found (ID: ${id})`);
       return;
     }
     shell.showItemInFolder(videoRow.path);
@@ -178,7 +166,7 @@ export class VideoService {
     const retentionDays = 30;
     const deletedCount = this.integrityRepo.deleteExpiredMissingVideos(retentionDays);
     if (deletedCount > 0) {
-      console.log(`[VideoService] Garbage Collection complete. Removed ${deletedCount} records.`);
+      logger.debug(`[VideoService] Garbage Collection complete. Removed ${deletedCount} records.`);
     }
   }
 }

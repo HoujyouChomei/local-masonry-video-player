@@ -12,11 +12,7 @@ export interface TestContext {
   hasFFmpeg: boolean;
 }
 
-/**
- * テスト用の環境をセットアップしてアプリを起動する
- */
 export async function launchAppWithFakeData(): Promise<TestContext> {
-  // 1. 一時ディレクトリの作成 (OSのTemp領域)
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lvm-e2e-'));
   const userDataDir = path.join(tempDir, 'userData');
   const videoDir = path.join(tempDir, 'videos');
@@ -24,7 +20,6 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
   fs.mkdirSync(userDataDir);
   fs.mkdirSync(videoDir);
 
-  // 2. FFmpegバイナリの検出 (プロジェクトルート/bin)
   const projectRoot = path.resolve(__dirname, '..');
   const binDir = path.join(projectRoot, 'bin');
   const isWin = process.platform === 'win32';
@@ -44,17 +39,12 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
     console.log('[Test] FFmpeg not found. Running in native-only mode.');
   }
 
-  // 3. ダミー動画ファイルの作成
-  // FFmpegがない場合のフォールバック用バイナリ (不完全なMP4)
   const minimalMp4 = Buffer.from('00000018667479706d703432000000006d70343269736f6d', 'hex');
 
   if (hasFFmpeg) {
-    // FFmpegがある場合は、正規の動画ファイルを生成する
-    // これによりブラウザでのデコードエラーを防ぎ、httpへのフォールバックを回避する
     const generateVideo = (fileName: string) => {
       const outputPath = path.join(videoDir, fileName);
       try {
-        // 1秒間の黒画面動画を生成 (解像度小さめ、高速生成)
         execSync(
           `"${ffmpegPath}" -y -f lavfi -i color=c=black:s=320x180:d=1 -c:v libx264 -tune zerolatency -preset ultrafast -t 1 "${outputPath}"`,
           { stdio: 'ignore' }
@@ -68,24 +58,18 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
       }
     };
 
-    // ネイティブ形式
     generateVideo('test-video-1.mp4');
     generateVideo('test-video-2.mp4');
     generateVideo('test-video-3.mp4');
 
-    // 非ネイティブ形式
     generateVideo('test-video-4.mkv');
     generateVideo('test-video-5.avi');
   } else {
-    // FFmpegがない場合 (CI等) はバイナリ書き込みで凌ぐ
-    // 注: この場合 play native video テストは失敗する可能性があるが、
-    // hasFFmpegチェック済み環境であればここは通らない
     ['test-video-1.mp4', 'test-video-2.mp4', 'test-video-3.mp4'].forEach((fileName) => {
       fs.writeFileSync(path.join(videoDir, fileName), minimalMp4);
     });
   }
 
-  // 4. 設定ファイル (config.json) の注入
   const config = {
     libraryFolders: [videoDir],
     folderPath: videoDir,
@@ -93,33 +77,38 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
     layoutMode: 'masonry',
     gridStyle: 'modern',
     enableMobileConnection: false,
-    // FFmpegパスの注入
     ffmpegPath: hasFFmpeg ? ffmpegPath : '',
     ffprobePath: hasFFprobe ? ffprobePath : '',
-    // テストのためにNormalize機能を有効化 (FFmpegがある場合のみ)
     enableExperimentalNormalize: hasFFmpeg,
   };
 
   fs.writeFileSync(path.join(userDataDir, 'config.json'), JSON.stringify(config));
 
-  // 5. アプリの起動
   const app = await electron.launch({
     args: ['.', `--user-data-dir=${userDataDir}`],
     env: { ...process.env, NODE_ENV: 'test' },
   });
 
+  const monitorLog = (stream: NodeJS.ReadableStream) => {
+    stream.on('data', (chunk) => {
+      const text = chunk.toString();
+      if (text.includes('[error]') || text.includes('CRITICAL')) {
+        console.error(`\n🚨 [MAIN PROCESS ERROR DETECTED]:\n${text}\n`);
+      }
+    });
+  };
+
+  if (app.process().stdout) monitorLog(app.process().stdout!);
+  if (app.process().stderr) monitorLog(app.process().stderr!);
+
   return { app, userDataDir, videoDir, hasFFmpeg };
 }
 
-/**
- * テスト終了後のクリーンアップ
- */
 export async function cleanupTestContext(ctx: TestContext) {
   if (ctx.app) {
     await ctx.app.close();
   }
 
-  // 一時ディレクトリの削除
   try {
     const parentDir = path.dirname(ctx.userDataDir);
     fs.rmSync(parentDir, { recursive: true, force: true });

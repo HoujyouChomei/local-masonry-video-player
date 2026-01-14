@@ -5,9 +5,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VideoGridContainer } from './video-grid-container';
 import { VideoFile } from '@/shared/types/video';
 
-// --- Mocks Setup ---
-
-// 0. Global Mocks
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
@@ -22,7 +19,6 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Hoist mock functions
 const {
   mockOpenVideo,
   mockReorderPlaylist,
@@ -41,8 +37,6 @@ const {
   mockSelectRange: vi.fn(),
 }));
 
-// 1. Mock Child Component (VideoGridLayout)
-// Update mock to use interactions prop
 vi.mock('./video-grid-layout', () => ({
   VideoGridLayout: vi.fn(({ videos, onFetchMore, onReorder, interactions }) => (
     <div data-testid="layout-mock">
@@ -65,7 +59,6 @@ vi.mock('./video-grid-layout', () => ({
   )),
 }));
 
-// 2. Mock Global Stores (Same as before)
 vi.mock('@/shared/stores/settings-store', () => ({
   useSettingsStore: (selector?: (state: unknown) => unknown) => {
     const state = {
@@ -133,7 +126,6 @@ vi.mock('@/shared/stores/selection-store', () => ({
   },
 }));
 
-// 3. Mock Custom Hooks (Same as before)
 vi.mock('../lib/use-filtered-videos', () => ({
   useFilteredVideos: ({ videos }: { videos: VideoFile[] }) => videos || [],
 }));
@@ -170,7 +162,6 @@ vi.mock('@/shared/lib/use-is-mobile', () => ({
   useIsMobile: () => false,
 }));
 
-// 4. Mock API Mutations (Same as before)
 vi.mock('@/entities/playlist/model/use-playlists', () => ({
   useReorderPlaylist: () => ({ mutate: mockReorderPlaylist }),
 }));

@@ -8,7 +8,7 @@ import { useVideoPlayback } from '../model/use-video-playback';
 import { VideoCardOverlay } from './video-card-overlay';
 import { Button } from '@/components/ui/button';
 import { Play, Pause } from 'lucide-react';
-import { useIsMobile } from '@/shared/lib/use-is-mobile'; // Added
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface VideoMediaProps {
   video: VideoFile;
@@ -58,21 +58,16 @@ export const VideoMedia = React.memo(
       setAspectRatio,
     });
 
-    const isMobile = useIsMobile(); // Added
+    const isMobile = useIsMobile();
 
     const thumbnailUrl = video.thumbnailSrc;
     const shouldRenderImage = true;
 
-    // ▼▼▼ 追加: WebM判定 (拡張子チェック) ▼▼▼
     const isWebM = video.path.toLowerCase().endsWith('.webm');
 
     const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
       const img = e.currentTarget;
 
-      // ▼▼▼ 追加: WebMロード成功時の表示制御 ▼▼▼
-      // WebMは初期状態で style={{ opacity: 0 }} となっているため、
-      // ロードに成功したこのタイミングでインラインスタイルを削除し、
-      // CSSクラス (opacity-100) を有効にする。
       if (isWebM) {
         img.style.opacity = '';
       }
@@ -119,8 +114,6 @@ export const VideoMedia = React.memo(
             loading="lazy"
             decoding="async"
             onLoad={handleImageLoad}
-            // ▼▼▼ 追加: WebMの場合のみ初期値を透明にする（ロード失敗時はそのまま透明＝黒背景） ▼▼▼
-            // MP4等は undefined なのでブラウザ標準挙動（ロード失敗時に壊れたアイコンが出る）
             style={isWebM ? { opacity: 0 } : undefined}
             className={cn(
               'pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity',
@@ -133,7 +126,6 @@ export const VideoMedia = React.memo(
           <div className="absolute inset-0 h-full w-full bg-white/5 transition-opacity" />
         )}
 
-        {/* ▼▼▼ 修正: モバイル時(!isMobile)はオーバーレイを表示しない ▼▼▼ */}
         {!isSelectionMode && !isMobile && (
           <VideoCardOverlay
             video={video}

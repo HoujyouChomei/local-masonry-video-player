@@ -15,7 +15,6 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
   const method = req.method;
   const pathname = url.pathname;
 
-  // GET /api/videos
   if (pathname === '/api/videos' && method === 'GET') {
     const query = url.searchParams.get('q') || '';
     const tagIds = url.searchParams.getAll('tags');
@@ -23,7 +22,6 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
     const isFavorite = url.searchParams.get('favorite') === 'true';
     const folderPath = url.searchParams.get('folder') || undefined;
 
-    // フォルダ閲覧時はJITスキャンを実行 (スマホ即時反映用)
     if (folderPath && !query && tagIds.length === 0 && !playlistId && !isFavorite) {
       await libraryService.scanQuietly(folderPath);
     }
@@ -43,7 +41,6 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
     }
   }
 
-  // GET /api/videos/details
   if (pathname === '/api/videos/details' && method === 'GET') {
     const filePath = url.searchParams.get('path');
     if (!filePath) return sendError(res, 'Path required', 400);
@@ -57,5 +54,5 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
     }
   }
 
-  return false; // Not handled
+  return false;
 };

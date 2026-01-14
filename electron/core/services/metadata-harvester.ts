@@ -4,6 +4,7 @@ import { VideoRepository, VideoRow } from '../repositories/video-repository';
 import { VideoMetadataRepository } from '../repositories/video-metadata-repository';
 import { FFmpegService } from './ffmpeg-service';
 import { NotificationService } from './notification-service';
+import { logger } from '../../lib/logger';
 
 export class MetadataHarvester {
   private static instance: MetadataHarvester;
@@ -16,16 +17,13 @@ export class MetadataHarvester {
   private isRunning = false;
   private isProcessing = false;
 
-  // 優先キュー (ユーザーがクリックした動画用)
   private onDemandQueue: string[] = [];
 
-  // バッチキュー (バックグラウンド処理用)
   private batchQueue: VideoRow[] = [];
 
-  // 設定
-  private readonly BATCH_SIZE = 50; // 一度にDBから取得する件数
-  private readonly PROCESS_INTERVAL = 200; // 処理間の休憩 (CPU負荷軽減)
-  private readonly IDLE_INTERVAL = 10000; // 何もない時の待機時間
+  private readonly BATCH_SIZE = 50;
+  private readonly PROCESS_INTERVAL = 200;
+  private readonly IDLE_INTERVAL = 10000;
 
   private constructor() {
     this.startLoop();
@@ -38,15 +36,10 @@ export class MetadataHarvester {
     return MetadataHarvester.instance;
   }
 
-  /**
-   * 特定の動画を最優先で処理する (On-Demand)
-   */
   public requestHarvest(videoId: string) {
-    // 重複排除して先頭に追加
     this.onDemandQueue = this.onDemandQueue.filter((id) => id !== videoId);
     this.onDemandQueue.unshift(videoId);
 
-    // アイドル中なら即座にループを回す
     if (!this.isProcessing) {
       this.tick();
     }
@@ -60,41 +53,35 @@ export class MetadataHarvester {
     if (this.isRunning) return;
     this.isRunning = true;
 
-    // ▼▼▼ 追加: 中断された処理のリセット (Processing -> Pending) ▼▼▼
     try {
       const stuckCount = this.metaRepo.resetStuckProcessingStatus();
       if (stuckCount > 0) {
-        console.log(
+        logger.debug(
           `[MetadataHarvester] Reset ${stuckCount} stuck 'processing' videos to 'pending'.`
         );
       }
     } catch (e) {
-      console.error('[MetadataHarvester] Failed to reset stuck processing status:', e);
+      logger.error('[MetadataHarvester] Failed to reset stuck processing status:', e);
     }
 
-    // 不完全なデータの再スキャンを予約
     try {
       const resetCount = this.metaRepo.resetIncompleteMetadataStatus();
       if (resetCount > 0) {
-        console.log(
+        logger.debug(
           `[MetadataHarvester] Scheduled ${resetCount} incomplete videos for re-scanning (FPS/Codec update).`
         );
       }
     } catch (e) {
-      console.error('[MetadataHarvester] Failed to reset incomplete metadata:', e);
+      logger.error('[MetadataHarvester] Failed to reset incomplete metadata:', e);
     }
 
-    console.log('[MetadataHarvester] Service started (Batch Mode).');
+    logger.debug('[MetadataHarvester] Service started (Batch Mode).');
     this.tick();
   }
 
-  /**
-   * メインループ (再帰呼び出し)
-   */
   private async tick() {
     if (!this.isRunning) return;
 
-    // FFprobeが無効なら、長い待機に入って再チェック
     if (!this.ffmpegService.ffprobePath) {
       setTimeout(() => this.tick(), this.IDLE_INTERVAL);
       return;
@@ -103,11 +90,9 @@ export class MetadataHarvester {
     this.isProcessing = true;
 
     try {
-      // 1. ターゲットの決定
       let target: VideoRow | undefined;
       let isHighPriority = false;
 
-      // Priority 1: オンデマンドキュー
       if (this.onDemandQueue.length > 0) {
         const id = this.onDemandQueue.shift()!;
         target = this.videoRepo.findById(id);
@@ -119,19 +104,16 @@ export class MetadataHarvester {
         isHighPriority = true;
       }
 
-      // Priority 2: バッチキュー (オンデマンドがない場合)
       if (!target) {
-        // バッチキューが空なら補充
         if (this.batchQueue.length === 0) {
           this.batchQueue = this.metaRepo.getPendingVideos(this.BATCH_SIZE);
           if (this.batchQueue.length > 0) {
-            console.log(
+            logger.debug(
               `[MetadataHarvester] Refilled batch queue: ${this.batchQueue.length} items.`
             );
           }
         }
 
-        // 補充しても空なら、処理するものが何もない -> アイドル待機
         if (this.batchQueue.length === 0) {
           this.isProcessing = false;
           setTimeout(() => this.tick(), this.IDLE_INTERVAL);
@@ -146,26 +128,21 @@ export class MetadataHarvester {
         return;
       }
 
-      // 2. 処理実行
       await this.processVideo(target);
 
-      // 3. 次のループへ
       const nextDelay = isHighPriority ? 0 : this.PROCESS_INTERVAL;
       setTimeout(() => this.tick(), nextDelay);
     } catch (error) {
-      console.error('[MetadataHarvester] Loop error:', error);
+      logger.error('[MetadataHarvester] Loop error:', error);
       setTimeout(() => this.tick(), this.IDLE_INTERVAL);
     }
   }
 
-  /**
-   * 個別の動画処理ロジック
-   */
   private async processVideo(target: VideoRow) {
     const current = this.videoRepo.findById(target.id);
     if (!current || current.status !== 'available') return;
 
-    console.log(`[MetadataHarvester] Harvesting: ${target.name}`);
+    logger.debug(`[MetadataHarvester] Harvesting: ${target.name}`);
     this.metaRepo.updateMetadataStatus(target.id, 'processing');
 
     const metadata = await this.ffmpegService.extractMetadata(target.path);

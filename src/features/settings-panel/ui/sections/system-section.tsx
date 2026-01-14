@@ -31,7 +31,6 @@ export const SystemSection = ({ isMobile = false }: SystemSectionProps) => {
       </h3>
 
       <div className="space-y-3">
-        {/* Hardware Acceleration: PC Only */}
         {!isMobile && (
           <div className="flex items-center justify-between">
             <div className="space-y-0.5 pr-2">
@@ -45,7 +44,6 @@ export const SystemSection = ({ isMobile = false }: SystemSectionProps) => {
           </div>
         )}
 
-        {/* Open in Fullscreen: Both */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5 pr-2">
             <div className="flex items-center gap-2 text-sm font-medium">
@@ -59,7 +57,6 @@ export const SystemSection = ({ isMobile = false }: SystemSectionProps) => {
           <SettingsSwitch checked={openInFullscreen} onCheckedChange={toggleOpenInFullscreen} />
         </div>
 
-        {/* Restart Warning: PC Only (Hardware Accel related) */}
         {!isMobile && (
           <div className="rounded-md bg-orange-500/10 p-3">
             <div className="flex items-start gap-2">

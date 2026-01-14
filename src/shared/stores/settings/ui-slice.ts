@@ -5,7 +5,6 @@ import { saveSetting } from '@/shared/api/electron';
 import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
 
 export const createUISlice: SettingsSliceCreator<UISlice> = (set, get) => ({
-  // State
   columnCount: DEFAULT_SETTINGS.columnCount,
   mobileColumnCount: DEFAULT_SETTINGS.mobileColumnCount,
   layoutMode: DEFAULT_SETTINGS.layoutMode,
@@ -19,7 +18,6 @@ export const createUISlice: SettingsSliceCreator<UISlice> = (set, get) => ({
   enableLargeVideoRestriction: DEFAULT_SETTINGS.enableLargeVideoRestriction,
   largeVideoThreshold: DEFAULT_SETTINGS.largeVideoThreshold,
 
-  // Actions
   setColumnCount: async (count) => {
     set({ columnCount: count });
     await saveSetting('columnCount', count);

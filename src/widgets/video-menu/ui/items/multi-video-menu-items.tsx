@@ -19,7 +19,7 @@ import {
 import { usePlaylists } from '@/entities/playlist/model/use-playlists';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { VideoFile } from '@/shared/types/video';
-import { useIsMobile } from '@/shared/lib/use-is-mobile'; // 追加
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface MultiVideoMenuItemsProps {
   onOpenTagDialog: () => void;
@@ -41,9 +41,8 @@ export const MultiVideoMenuItems = ({
   const { viewMode, selectedPlaylistId } = useUIStore();
 
   const isPlaylistMode = viewMode === 'playlist' && !!selectedPlaylistId;
-  const isMobile = useIsMobile(); // 追加
+  const isMobile = useIsMobile();
 
-  // キャッシュからパスを解決 (移動用)
   const resolveSelectedPaths = useCallback((): string[] => {
     const allQueries = queryClient.getQueryCache().findAll();
     const paths = new Map<string, string>();
@@ -96,7 +95,6 @@ export const MultiVideoMenuItems = ({
 
       <ContextMenuSeparator />
 
-      {/* ▼▼▼ 修正: モバイル時は Move を非表示 ▼▼▼ */}
       {!isMobile && (
         <ContextMenuItem onSelect={executeMove}>
           <FolderInput className="mr-2 h-4 w-4" />
@@ -148,7 +146,6 @@ export const MultiVideoMenuItems = ({
         Add Tags...
       </ContextMenuItem>
 
-      {/* ▼▼▼ 修正: モバイル時は Delete を非表示 ▼▼▼ */}
       {!isMobile && (
         <>
           <ContextMenuSeparator />

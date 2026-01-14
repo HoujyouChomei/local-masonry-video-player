@@ -23,9 +23,8 @@ import { SortableVideoListItem } from '../sortable-video-list-item';
 import { GridHeader } from '../components/grid-header';
 import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { VideoGridItemInteractions } from '../video-grid-item';
-import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag'; // 追加
+import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 
-// ▼▼▼ Wrapper Component for Native DnD ▼▼▼
 interface DraggableVideoListItemProps {
   video: VideoFile;
   index: number;
@@ -69,7 +68,6 @@ const DraggableVideoListItem = React.memo(
   }
 );
 DraggableVideoListItem.displayName = 'DraggableVideoListItem';
-// ▲▲▲ Wrapper End ▲▲▲
 
 interface ListViewProps {
   videos: VideoFile[];
@@ -147,7 +145,6 @@ export const ListView = React.memo(
         ) : (
           <div className="flex flex-col gap-1">
             {videos.map((video, index) => (
-              // 変更: ラッパーコンポーネントを使用
               <DraggableVideoListItem
                 key={video.id}
                 video={video}

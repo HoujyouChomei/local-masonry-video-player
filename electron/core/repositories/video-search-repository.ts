@@ -3,12 +3,13 @@
 import path from 'path';
 import { getDB } from '../../lib/db';
 import { VideoRow, LITE_COLUMNS } from './video-repository';
+import { logger } from '../../lib/logger';
 
 export interface SearchOptions {
   folderPath?: string;
   playlistId?: string;
   isFavorite?: boolean;
-  allowedRoots?: string[]; // ▼▼▼ 追加: 検索対象をこれらのフォルダ配下に限定する ▼▼▼
+  allowedRoots?: string[];
 }
 
 export class VideoSearchRepository {
@@ -17,18 +18,15 @@ export class VideoSearchRepository {
   }
 
   /**
-   * 動画検索を実行する (Modified: FTS5 Only for Performance)
-   * @param query 検索クエリ文字列
-   * @param tagIds タグIDのリスト (AND条件)
-   * @param options 検索スコープオプション
+   * @param query
+   * @param tagIds
+   * @param options
    */
   public search(query: string, tagIds: string[], options: SearchOptions = {}): VideoRow[] {
-    // 1. クエリのパース (特殊構文の抽出)
     let rawQuery = query;
     const params: (string | number)[] = [];
     const sqlConditions: string[] = [];
 
-    // FPS Syntax: fps:60, fps:24 など
     const fpsMatch = rawQuery.match(/fps:(\d+)/i);
     if (fpsMatch) {
       const targetFps = parseInt(fpsMatch[1], 10);
@@ -38,7 +36,6 @@ export class VideoSearchRepository {
       rawQuery = rawQuery.replace(fpsMatch[0], '');
     }
 
-    // Codec Syntax: codec:h264, codec:hevc など
     const codecMatch = rawQuery.match(/codec:(\w+)/i);
     if (codecMatch) {
       const targetCodec = codecMatch[1];
@@ -47,7 +44,6 @@ export class VideoSearchRepository {
       rawQuery = rawQuery.replace(codecMatch[0], '');
     }
 
-    // 通常キーワードのパース
     const terms = rawQuery.toLowerCase().split(/\s+/).filter(Boolean);
     const includes: string[] = [];
     const excludes: string[] = [];
@@ -75,7 +71,6 @@ export class VideoSearchRepository {
       return [];
     }
 
-    // 2. ベースクエリ構築
     let sql = `SELECT ${LITE_COLUMNS} FROM videos v`;
 
     if (hasTags) {
@@ -91,9 +86,7 @@ export class VideoSearchRepository {
       sql += ` AND ${sqlConditions.join(' AND ')}`;
     }
 
-    // 3. スコープ条件
     if (options.folderPath) {
-      // 特定フォルダ内検索
       const folderPrefix = options.folderPath.endsWith(path.sep)
         ? options.folderPath
         : options.folderPath + path.sep;
@@ -111,16 +104,10 @@ export class VideoSearchRepository {
       options.allowedRoots &&
       options.allowedRoots.length > 0
     ) {
-      // ▼▼▼ 追加: グローバル検索時のライブラリフォルダ制限 ▼▼▼
-      // playlistId や isFavorite が指定されている場合は、場所に関わらず表示する（または要件に応じてここも含める）
-      // ここでは「グローバル検索」のコンテキストなので、プレイリストやお気に入り指定がない場合のみ制限を適用します。
-
       const rootConditions = options.allowedRoots.map(() => `v.path LIKE ?`).join(' OR ');
       sql += ` AND (${rootConditions})`;
 
-      // 各ルートパスに対して前方一致条件を追加
       options.allowedRoots.forEach((root) => {
-        // パスの区切り文字を考慮して、フォルダ配下であることを保証
         const prefix = root.endsWith(path.sep) ? root : root + path.sep;
         params.push(`${prefix}%`);
       });
@@ -134,22 +121,19 @@ export class VideoSearchRepository {
       sql += ` AND v.is_favorite = 1`;
     }
 
-    // 4. タグ条件
     if (hasTags) {
       const placeholders = tagIds.map(() => '?').join(',');
       sql += ` AND vt.tag_id IN (${placeholders})`;
       params.push(...tagIds);
     }
 
-    // 5. キーワード検索 (FTS5 Prefix Search)
     if (includes.length > 0) {
-      const ftsQueryString = includes.map((t) => `"${t.replace(/"/g, '')}"*`).join(' AND ');
+      const ftsQueryString = includes.map((t) => `"${t.replace(/"/g, '""')}"*`).join(' AND ');
 
       sql += ` AND v.rowid IN (SELECT rowid FROM videos_fts WHERE videos_fts MATCH ?)`;
       params.push(ftsQueryString);
     }
 
-    // 6. 除外キーワード
     excludes.forEach((term) => {
       sql += ` AND (
         v.path NOT LIKE ? AND 
@@ -161,19 +145,17 @@ export class VideoSearchRepository {
       params.push(`%${term}%`);
     });
 
-    // 7. タグ絞り込みの AND条件 (HAVING)
     if (hasTags) {
       sql += ` GROUP BY v.id HAVING COUNT(DISTINCT vt.tag_id) = ?`;
       params.push(tagIds.length);
     }
 
-    // 8. ソートと制限
     sql += ` ORDER BY v.mtime DESC LIMIT 2000`;
 
     try {
       return this.db.prepare(sql).all(...params) as VideoRow[];
     } catch (error) {
-      console.error('[VideoSearchRepository] Search failed:', error);
+      logger.error('[VideoSearchRepository] Search failed:', error);
       return [];
     }
   }

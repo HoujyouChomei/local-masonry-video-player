@@ -2,7 +2,7 @@
 
 import { ElectronBase } from '../../base/electron-base';
 import { SystemApi } from '../../types';
-import { DirectoryEntry, ConnectionInfo } from '@/shared/types/electron';
+import { DirectoryEntry, ConnectionInfo, WindowState } from '@/shared/types/electron';
 
 export class ElectronSystem extends ElectronBase implements SystemApi {
   selectFolder(): Promise<string | null> {
@@ -27,6 +27,27 @@ export class ElectronSystem extends ElectronBase implements SystemApi {
 
   setFullScreen(enable: boolean): Promise<void> {
     return this.invoke((e) => e.setFullScreen(enable), undefined);
+  }
+
+  minimizeWindow(): Promise<void> {
+    return this.invoke((e) => e.minimizeWindow(), undefined);
+  }
+
+  toggleMaximizeWindow(): Promise<void> {
+    return this.invoke((e) => e.toggleMaximizeWindow(), undefined);
+  }
+
+  closeWindow(): Promise<void> {
+    return this.invoke((e) => e.closeWindow(), undefined);
+  }
+
+  getWindowState(): Promise<WindowState> {
+    return this.invoke((e) => e.getWindowState(), { isMaximized: false, isFullScreen: false });
+  }
+
+  onWindowStateChange(callback: (state: WindowState) => void): () => void {
+    if (!window.electron) return () => {};
+    return window.electron.onWindowStateChange(callback);
   }
 
   revealInExplorer(videoId: string): Promise<void> {
@@ -56,5 +77,9 @@ export class ElectronSystem extends ElectronBase implements SystemApi {
   getFilePath(file: File): string {
     if (!window.electron) return '';
     return window.electron.getFilePath(file);
+  }
+
+  openLogFolder(): Promise<void> {
+    return this.invoke((e) => e.openLogFolder(), undefined);
   }
 }

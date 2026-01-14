@@ -13,16 +13,13 @@ export const useGridPagination = (
   const chunkSize = useSettingsStore((s) => s.chunkSize);
   const [displayCount, setDisplayCount] = useState(chunkSize);
 
-  // Concurrent Features: ヘッダーの変更を優先し、レイアウト計算を遅延させる
   const deferredColumnCount = useDeferredValue(columnCount);
   const deferredGridStyle = useDeferredValue(gridStyle);
 
-  // 現在の値と遅延値が異なる間はトランジション中とみなす
   const isLayoutTransitioning =
     columnCount !== deferredColumnCount || gridStyle !== deferredGridStyle;
 
   const visibleVideos = useMemo(() => {
-    // トランジション中は描画数を絞ってレスポンスを維持
     if (isLayoutTransitioning) {
       return allSortedVideos.slice(0, 20);
     }

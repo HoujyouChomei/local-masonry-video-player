@@ -7,13 +7,10 @@ import crypto from 'crypto';
 import { THUMBNAIL } from '../../../src/shared/constants/assets';
 
 export class UIService {
-  // 動画プレイヤーによるフルスクリーン制御の状態管理
-  private previousFullScreenState: boolean | null = null;
+  // 複数のインスタンスで状態を共有するために static に変更
+  private static fullScreenLocks = new Map<number, number>();
+  private static initialWindowStates = new Map<number, boolean>();
 
-  /**
-   * フォルダ選択ダイアログを表示し、選択されたパスを返す。
-   * ルートディレクトリが選択された場合は警告を表示し、nullを返す。
-   */
   async selectFolder(parentWindow: BrowserWindow): Promise<string | null> {
     const { canceled, filePaths } = await dialog.showOpenDialog(parentWindow, {
       properties: ['openDirectory'],
@@ -40,59 +37,52 @@ export class UIService {
     return selectedPath;
   }
 
-  /**
-   * ウィンドウのフルスクリーン状態を制御する
-   */
   setFullscreen(window: BrowserWindow, enable: boolean): void {
-    const isCurrentlyFullScreen = window.isFullScreen();
+    const windowId = window.id;
+    let count = UIService.fullScreenLocks.get(windowId) || 0;
 
     if (enable) {
-      // フルスクリーン化のリクエスト
-      if (this.previousFullScreenState === null) {
-        // 現在の状態を保存（解除時に戻すため）
-        this.previousFullScreenState = isCurrentlyFullScreen;
+      // ロック開始時 (0 -> 1) に現在の状態を保存
+      if (count === 0) {
+        UIService.initialWindowStates.set(windowId, window.isFullScreen());
       }
+      count++;
+    } else {
+      count = Math.max(0, count - 1);
+    }
 
-      if (!isCurrentlyFullScreen) {
+    UIService.fullScreenLocks.set(windowId, count);
+
+    if (count > 0) {
+      // ロック中は常にフルスクリーンを強制
+      if (!window.isFullScreen()) {
         window.setFullScreen(true);
       }
     } else {
-      // フルスクリーン解除のリクエスト
-      if (this.previousFullScreenState !== null) {
-        // 保存された状態があれば、そこに戻す
-        // (例: もともとフルスクリーンだったならフルスクリーンのまま、通常なら通常に戻す)
-        if (isCurrentlyFullScreen !== this.previousFullScreenState) {
-          window.setFullScreen(this.previousFullScreenState);
-        }
-        // 状態をリセット
-        this.previousFullScreenState = null;
-      } else {
-        // 保存された状態がない場合 (F11キー等でユーザーが手動変更した場合など)
-        // 解除リクエストなので、現在フルスクリーンなら解除する
-        if (isCurrentlyFullScreen) {
-          window.setFullScreen(false);
-        }
+      // ロック解除時 (1 -> 0)、保存しておいた初期状態に戻す
+      const wasFullScreen = UIService.initialWindowStates.get(windowId) ?? false;
+
+      // 現在の状態と復元すべき状態が異なる場合のみ変更
+      if (window.isFullScreen() !== wasFullScreen) {
+        window.setFullScreen(wasFullScreen);
       }
+
+      // 状態をクリア
+      UIService.initialWindowStates.delete(windowId);
     }
   }
 
-  /**
-   * ネイティブのドラッグ＆ドロップを開始する
-   */
   startDrag(sender: Electron.WebContents, files: string | string[]): void {
     const fileList = Array.isArray(files) ? files : [files];
 
     if (fileList.length === 0) return;
 
-    // 代表ファイル（アイコン生成用および必須プロパティ用）はリストの最初を使用
     const primaryFile = fileList[0];
 
     const thumbDir = path.join(app.getPath('userData'), THUMBNAIL.DIR_NAME);
     const hash = crypto.createHash('md5').update(primaryFile).digest('hex');
     const thumbPath = path.join(thumbDir, `${hash}${THUMBNAIL.EXTENSION}`);
 
-    // ElectronのstartDragはiconが必須。
-    // サムネイルがない場合は空のNativeImageを渡してクラッシュを防ぐ。
     let icon: string | Electron.NativeImage;
 
     if (fs.existsSync(thumbPath)) {

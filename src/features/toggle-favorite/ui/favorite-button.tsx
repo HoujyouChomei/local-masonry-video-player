@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
 interface FavoriteButtonProps {
-  videoId: string; // Changed from filePath to videoId
+  videoId: string;
   className?: string;
   size?: 'sm' | 'default' | 'lg';
 }

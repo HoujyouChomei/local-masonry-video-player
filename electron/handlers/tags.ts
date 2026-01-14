@@ -38,7 +38,6 @@ export const handleTags = () => {
     return service.getVideosByTag(tagIds);
   });
 
-  // 一括処理用IPC
   ipcMain.handle('assign-tag-to-videos', (_event, videoIds: string[], tagId: string) => {
     service.assignTagToVideos(videoIds, tagId);
     return true;

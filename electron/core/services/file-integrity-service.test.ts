@@ -5,15 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
 import { FileIntegrityService } from './file-integrity-service';
 
-// --- Mocks ---
-
-// VideoRepository Mock (Basic Read)
 const videoRepoMocks = vi.hoisted(() => ({
   findManyByPaths: vi.fn(),
   findByPath: vi.fn(),
   findById: vi.fn(),
-  create: vi.fn(), // processNewFileで新規作成時に使用
-  deleteById: vi.fn(), // processNewFileで重複IDを削除する際に使用
+  create: vi.fn(),
+  deleteById: vi.fn(),
 }));
 
 vi.mock('../repositories/video-repository', () => ({
@@ -26,7 +23,6 @@ vi.mock('../repositories/video-repository', () => ({
   },
 }));
 
-// VideoIntegrityRepository Mock (Writes/Specific Reads)
 const integrityRepoMocks = vi.hoisted(() => ({
   resetMetadata: vi.fn(),
   restore: vi.fn(),
@@ -148,7 +144,7 @@ describe('FileIntegrityService', () => {
         status: 'available',
       };
       videoRepoMocks.findByPath.mockReturnValue(existingRow);
-      videoRepoMocks.findById.mockReturnValue(existingRow); // mapper用
+      videoRepoMocks.findById.mockReturnValue(existingRow);
 
       await service.processNewFile(dummyPath);
 
@@ -162,7 +158,7 @@ describe('FileIntegrityService', () => {
 
       const matchRow = { id: 'moved-id', file_hash: 'hash' };
       rebinderMocks.findCandidate.mockResolvedValue(matchRow);
-      videoRepoMocks.findById.mockReturnValue(matchRow); // mapper用
+      videoRepoMocks.findById.mockReturnValue(matchRow);
 
       await service.processNewFile(dummyPath);
 
@@ -186,7 +182,7 @@ describe('FileIntegrityService', () => {
 
       const availableRow = { id: 'id-available', status: 'available', file_hash: 'mock-hash-val' };
       rebinderMocks.findCandidate.mockResolvedValue(availableRow);
-      videoRepoMocks.findById.mockReturnValue(availableRow); // mapper用
+      videoRepoMocks.findById.mockReturnValue(availableRow);
 
       await service.processNewFile(dummyPath);
 
@@ -206,7 +202,7 @@ describe('FileIntegrityService', () => {
 
       const hashMatchRow = { id: 'id-hash-match', file_hash: 'target-hash' };
       rebinderMocks.findCandidate.mockResolvedValue(hashMatchRow);
-      videoRepoMocks.findById.mockReturnValue(hashMatchRow); // mapper用
+      videoRepoMocks.findById.mockReturnValue(hashMatchRow);
 
       await service.processNewFile(dummyPath);
 
@@ -224,9 +220,8 @@ describe('FileIntegrityService', () => {
     it('should create NEW record if no matches found', async () => {
       videoRepoMocks.findByPath.mockReturnValue(undefined);
       rebinderMocks.findCandidate.mockResolvedValue(undefined);
-      videoRepoMocks.create.mockReturnValue({ id: 'new-id' }); // createはvoidだが、findByIdが呼ばれるので返すようにする
+      videoRepoMocks.create.mockReturnValue({ id: 'new-id' });
       videoRepoMocks.findById.mockReturnValue({
-        // mapper用
         id: 'new-id',
         path: dummyPath,
         name: 'test.mp4',
@@ -254,13 +249,11 @@ describe('FileIntegrityService', () => {
     });
 
     it('should remove duplicated row if path match exists but ID differs from rebind target', async () => {
-      // ▼▼▼ 修正: Inode不一致のAvailableレコードにして、pathMatchRowの早期リターンを回避する ▼▼▼
-      // これにより「パスは一致するが中身が違う」と判定され、後続のRebinderが呼ばれる
       const pathRow = {
         id: 'old-id',
         path: dummyPath,
         status: 'available',
-        ino: 11111, // MockStatの 88888 と不一致
+        ino: 11111,
       };
       videoRepoMocks.findByPath.mockReturnValue(pathRow);
 
@@ -290,7 +283,7 @@ describe('FileIntegrityService', () => {
 
   describe('verifyAndRecover (On-Demand Verification)', () => {
     it('should do nothing if all files exist', async () => {
-      vi.mocked(fs.access).mockResolvedValue(undefined); // exists
+      vi.mocked(fs.access).mockResolvedValue(undefined);
       videoRepoMocks.findManyByPaths.mockReturnValue([]);
 
       const result = await service.verifyAndRecover([dummyPath]);
@@ -300,7 +293,7 @@ describe('FileIntegrityService', () => {
     });
 
     it('should self-heal if file exists but marked as missing', async () => {
-      vi.mocked(fs.access).mockResolvedValue(undefined); // exists
+      vi.mocked(fs.access).mockResolvedValue(undefined);
       vi.mocked(fs.stat).mockResolvedValue({ size: 100, mtimeMs: 100, ino: 123 } as any);
 
       const ghostRow = { id: '1', path: dummyPath, status: 'missing', size: 100 };
@@ -315,7 +308,7 @@ describe('FileIntegrityService', () => {
     });
 
     it('should build index and recover if file is missing (Rebind)', async () => {
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT')); // missing
+      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
       const missingRow = {
         id: '1',
@@ -362,7 +355,6 @@ describe('FileIntegrityService', () => {
     it('should mark as missing if file was "available" but scan failed (without Rebind)', async () => {
       vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
-      // 既にスキャン済み(last_scan_attempt_atあり)だが、statusがavailableのまま（例えば外部削除）
       const availableRow = {
         id: '1',
         path: dummyPath,
@@ -373,7 +365,6 @@ describe('FileIntegrityService', () => {
 
       const result = await service.verifyAndRecover([dummyPath]);
 
-      // findManyByPathsの結果をフィルタリングして markAsMissing を呼ぶロジックの確認
       expect(integrityRepoMocks.markAsMissing).toHaveBeenCalledWith(['1']);
       expect(result).toBe(true);
     });

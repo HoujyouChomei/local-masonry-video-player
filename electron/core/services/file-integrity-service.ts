@@ -12,18 +12,16 @@ import { FastPathIndexer } from './fast-path-indexer';
 import { store } from '../../lib/store';
 import { VideoRebinder, FileStat } from './video-rebinder';
 import { ThumbnailService } from './thumbnail-service';
+import { logger } from '../../lib/logger';
 
 export class FileIntegrityService {
-  private videoRepo = new VideoRepository(); // 参照用
-  private integrityRepo = new VideoIntegrityRepository(); // メイン
+  private videoRepo = new VideoRepository();
+  private integrityRepo = new VideoIntegrityRepository();
   private mapper = new VideoMapper();
   private pathIndexer = new FastPathIndexer();
   private rebinder = new VideoRebinder();
-  private thumbnailService = ThumbnailService.getInstance(); // Singleton
+  private thumbnailService = ThumbnailService.getInstance();
 
-  /**
-   * 単一ファイルの取得・登録・移動検知 (Watcher等から呼ばれる)
-   */
   async processNewFile(filePath: string): Promise<VideoFile | null> {
     try {
       const fsStat = await fs.stat(filePath);
@@ -34,7 +32,7 @@ export class FileIntegrityService {
         ino: Number(fsStat.ino),
       };
 
-      console.log(`\n[Integrity] Processing NEW file: ${filePath}`);
+      logger.debug(`[Integrity] Processing NEW file: ${filePath}`);
 
       const pathMatchRow = this.videoRepo.findByPath(filePath);
 
@@ -57,7 +55,7 @@ export class FileIntegrityService {
           return this.mapper.toEntity(pathMatchRow);
         }
         if (pathMatchRow.status === 'missing') {
-          console.log(`[Integrity] Reviving missing file at original path: ${filePath}`);
+          logger.debug(`[Integrity] Reviving missing file at original path: ${filePath}`);
           this.integrityRepo.resetMetadata(pathMatchRow.id, stat.size, stat.mtime, stat.ino);
 
           this.thumbnailService.deleteThumbnail(filePath);
@@ -120,14 +118,11 @@ export class FileIntegrityService {
         return row ? this.mapper.toEntity(row) : null;
       }
     } catch (error) {
-      console.error(`[Integrity] Failed to process new file: ${filePath}`, error);
+      logger.error(`[Integrity] Failed to process new file: ${filePath}`, error);
       return null;
     }
   }
 
-  /**
-   * 指定パス群の存在確認と、欠損時の自動修復 (On-Demand)
-   */
   async verifyAndRecover(videoPaths: string[]): Promise<boolean> {
     if (videoPaths.length === 0) return false;
 
@@ -147,7 +142,6 @@ export class FileIntegrityService {
 
     let hasChanges = false;
 
-    // 1. 存在するファイルの自己修復 (Missingからの復帰)
     if (existingPaths.length > 0) {
       const existingRows = this.videoRepo.findManyByPaths(existingPaths);
       const ghosts = existingRows.filter(
@@ -155,7 +149,7 @@ export class FileIntegrityService {
       );
 
       if (ghosts.length > 0) {
-        console.log(`[Integrity] Self-healing ${ghosts.length} files found at original paths.`);
+        logger.debug(`[Integrity] Self-healing ${ghosts.length} files found at original paths.`);
         for (const row of ghosts) {
           try {
             const stat = await fs.stat(row.path);
@@ -179,9 +173,8 @@ export class FileIntegrityService {
 
     if (missingPaths.length === 0) return hasChanges;
 
-    console.log(`[Integrity] Verification detected ${missingPaths.length} missing files.`);
+    logger.debug(`[Integrity] Verification detected ${missingPaths.length} missing files.`);
 
-    // 2. 欠損ファイルの追跡 (Rebind)
     const missingRows = this.videoRepo.findManyByPaths(missingPaths);
     if (missingRows.length === 0) return hasChanges;
 
@@ -264,7 +257,6 @@ export class FileIntegrityService {
     this.integrityRepo.markAsMissingByPath(filePath);
   }
 
-  // ▼▼▼ 追加: IDベースでMissingにするメソッド ▼▼▼
   async markAsMissingById(id: string): Promise<void> {
     this.integrityRepo.markAsMissing([id]);
   }

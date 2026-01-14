@@ -1,12 +1,12 @@
 // src/features/filter-favorites/ui/global-favorites-button.tsx
 
 import { Star } from 'lucide-react';
-import { useUIStore } from '@/shared/stores/ui-store'; // 変更
+import { useUIStore } from '@/shared/stores/ui-store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export const GlobalFavoritesButton = () => {
-  const { viewMode, setViewMode } = useUIStore(); // 変更
+  const { viewMode, setViewMode } = useUIStore();
   const isGlobalMode = viewMode === 'all-favorites';
 
   const handleClick = () => {

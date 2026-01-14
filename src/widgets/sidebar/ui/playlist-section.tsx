@@ -1,13 +1,12 @@
 // src/widgets/sidebar/ui/playlist-section.tsx
 
 import { Plus, ListMusic } from 'lucide-react';
-import { useUIStore } from '@/shared/stores/ui-store'; // 追加
+import { useUIStore } from '@/shared/stores/ui-store';
 import { Button } from '@/components/ui/button';
 import { usePlaylists, useCreatePlaylist } from '@/entities/playlist/model/use-playlists';
 import { SidebarPlaylistItem } from './sidebar-playlist-item';
 
 export const PlaylistSection = () => {
-  // UI State
   const { viewMode, selectedPlaylistId, selectPlaylist, editingPlaylistId, setEditingPlaylistId } =
     useUIStore();
 

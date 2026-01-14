@@ -26,12 +26,11 @@ export const usePlayerGestures = ({ onSwipeLeft, onSwipeRight }: UsePlayerGestur
       const diffX = e.changedTouches[0].clientX - touchStartRef.current.x;
       const diffY = e.changedTouches[0].clientY - touchStartRef.current.y;
 
-      // X方向の移動量が大きく、かつY方向よりも支配的である場合のみスワイプとみなす
       if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
         if (diffX > 0) {
-          onSwipeRight(); // Prev
+          onSwipeRight();
         } else {
-          onSwipeLeft(); // Next
+          onSwipeLeft();
         }
       }
 

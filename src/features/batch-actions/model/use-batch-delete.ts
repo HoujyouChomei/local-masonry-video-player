@@ -3,11 +3,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { deleteVideoApi } from '@/shared/api/electron';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { logger } from '@/shared/lib/logger';
 
 export const useBatchDelete = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { invalidateAllVideoLists } = useVideoCache(); // 追加
+  const { invalidateAllVideoLists } = useVideoCache();
 
   const { mutate: batchDelete, isPending } = useMutation({
     mutationFn: async (videoIds: string[]) => {
@@ -15,11 +16,13 @@ export const useBatchDelete = () => {
       await Promise.all(promises);
     },
     onSuccess: () => {
-      // 変更: 集約されたロジックを使用
       invalidateAllVideoLists();
 
       clearSelection();
       exitSelectionMode();
+    },
+    onError: (error) => {
+      logger.error('Failed to delete video batch', error);
     },
   });
 

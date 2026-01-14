@@ -5,7 +5,7 @@ import { useSettingsStore } from '@/shared/stores/settings-store';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { selectFileApi } from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 interface ExternalToolsSectionProps {
   isFFmpegValid: boolean | null;
@@ -21,10 +21,9 @@ export const ExternalToolsSection = ({
   setIsFFprobeValid,
 }: ExternalToolsSectionProps) => {
   const { ffmpegPath, setFFmpegPath, ffprobePath, setFFprobePath } = useSettingsStore();
-  const { invalidateAllVideoLists } = useVideoCache(); // 追加
+  const { invalidateAllVideoLists } = useVideoCache();
 
   const refreshVideoList = () => {
-    // 変更: 集約されたメソッドを使用
     invalidateAllVideoLists();
   };
 
@@ -64,7 +63,6 @@ export const ExternalToolsSection = ({
         <FileCog size={12} /> EXTERNAL TOOLS
       </h3>
 
-      {/* FFmpeg Path */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span>FFmpeg Binary</span>
@@ -112,7 +110,6 @@ export const ExternalToolsSection = ({
         </div>
       </div>
 
-      {/* FFprobe Path */}
       <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span>FFprobe Binary</span>

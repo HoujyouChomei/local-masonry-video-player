@@ -4,12 +4,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleSearch } from './search';
 
-// 1. Hoisted Mocks
 const mocks = vi.hoisted(() => ({
   searchVideos: vi.fn(),
 }));
 
-// 2. Electron Mock
 const ipcHandlers = new Map<string, (...args: any[]) => Promise<any>>();
 
 vi.mock('electron', () => ({
@@ -20,7 +18,6 @@ vi.mock('electron', () => ({
   },
 }));
 
-// 3. Service Mock
 vi.mock('../core/services/video-library-service', () => {
   return {
     VideoLibraryService: class {
@@ -33,7 +30,6 @@ describe('handlers/search', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     ipcHandlers.clear();
-    // ハンドラーを登録
     handleSearch();
   });
 

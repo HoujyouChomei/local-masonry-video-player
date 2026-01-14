@@ -3,6 +3,7 @@
 import { HttpBase } from '../../base/http-base';
 import { EventsApi } from '../../types';
 import { VideoUpdateEvent } from '@/shared/types/electron';
+import { logger } from '@/shared/lib/logger';
 
 export class HttpEvents extends HttpBase implements EventsApi {
   onVideoUpdate(callback: (events: VideoUpdateEvent[]) => void): () => void {
@@ -18,12 +19,12 @@ export class HttpEvents extends HttpBase implements EventsApi {
         const events = Array.isArray(parsed) ? parsed : [parsed];
         callback(events as VideoUpdateEvent[]);
       } catch (err) {
-        console.error('Failed to parse SSE event:', err);
+        logger.error('Failed to parse SSE event:', err);
       }
     };
 
     evtSource.onerror = (err) => {
-      console.error('SSE Error:', err);
+      logger.error('SSE Error:', err);
     };
 
     return () => {

@@ -10,15 +10,12 @@ import { useFilteredVideos } from '../lib/use-filtered-videos';
 import { fetchFolderOrderApi } from '@/shared/api/electron';
 
 export const useVideoGridState = (folderPath: string) => {
-  // Global Selectors
   const sortOption = useSettingsStore((s) => s.sortOption);
   const showFavoritesOnly = useUIStore((s) => s.showFavoritesOnly);
   const { favorites } = useFavorites();
 
-  // リアルタイム更新の購読
   useVideoUpdates(folderPath);
 
-  // データソース取得
   const {
     data: rawVideos,
     isLoading,
@@ -27,10 +24,9 @@ export const useVideoGridState = (folderPath: string) => {
     isGlobalMode,
     isPlaylistMode,
     isTagMode,
-    isSearching, // 追加
+    isSearching,
   } = useVideoSource(folderPath);
 
-  // カスタムソート順の取得
   const { data: folderCustomOrder } = useQuery({
     queryKey: ['folder-order', folderPath],
     queryFn: () => fetchFolderOrderApi(folderPath),
@@ -43,7 +39,6 @@ export const useVideoGridState = (folderPath: string) => {
       !!folderPath,
   });
 
-  // フィルタリングとソートの適用
   const allSortedVideos = useFilteredVideos({
     videos: rawVideos,
     sortOption,
@@ -52,7 +47,7 @@ export const useVideoGridState = (folderPath: string) => {
     isGlobalMode,
     isPlaylistMode,
     isTagMode,
-    isSearching, // 追加
+    isSearching,
     customOrder: folderCustomOrder,
   });
 

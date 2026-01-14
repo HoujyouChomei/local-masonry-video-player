@@ -1,6 +1,6 @@
 // electron/core/repositories/tag-repository.ts
 
-import path from 'path'; // 追加
+import path from 'path';
 import { getDB } from '../../lib/db';
 import crypto from 'crypto';
 
@@ -87,14 +87,8 @@ export class TagRepository {
   }
 
   getTagsByFolderPath(folderPath: string): TagRow[] {
-    // ▼▼▼ 修正: 再帰検索を防止し、直下のファイルのみを集計対象にする ▼▼▼
+    const folderPrefix = folderPath.endsWith(path.sep) ? folderPath : folderPath + path.sep;
 
-    // 1. パスの末尾にセパレータを保証
-    const folderPrefix = folderPath.endsWith(path.sep)
-      ? folderPath
-      : folderPath + path.sep;
-
-    // 2. SQLiteのSUBSTR用オフセット (1-based)
     const offset = folderPrefix.length + 1;
 
     return this.db
@@ -106,7 +100,7 @@ export class TagRepository {
       JOIN videos v ON vt.video_id = v.id
       WHERE v.status = 'available' 
         AND v.path LIKE ?
-        AND INSTR(SUBSTR(v.path, ?), ?) = 0 -- 直下判定
+        AND INSTR(SUBSTR(v.path, ?), ?) = 0 -- Check for direct children only
       GROUP BY t.id
       ORDER BY t.name ASC
     `
@@ -138,7 +132,6 @@ export class TagRepository {
       .run(videoId, tagId);
   }
 
-  // ▼▼▼ 一括処理用メソッド ▼▼▼
   assignTagToVideos(videoIds: string[], tagId: string): void {
     const now = Date.now();
     const insertStmt = this.db.prepare(`

@@ -1,12 +1,12 @@
 // src/features/filter-favorites/ui/favorites-toggle.tsx
 
 import { Heart } from 'lucide-react';
-import { useUIStore } from '@/shared/stores/ui-store'; // 変更
+import { useUIStore } from '@/shared/stores/ui-store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export const FavoritesToggle = () => {
-  const { showFavoritesOnly, toggleShowFavoritesOnly } = useUIStore(); // 変更
+  const { showFavoritesOnly, toggleShowFavoritesOnly } = useUIStore();
 
   return (
     <Button

@@ -7,6 +7,7 @@ import { useBatchMove } from '@/features/batch-actions/model/use-batch-move';
 import { downloadVideoApi, getFilePathApi } from '@/shared/api/electron';
 import { toast } from 'sonner';
 import { VIDEO_EXTENSIONS_ALL } from '@/shared/constants/file-types';
+import { logger } from '@/shared/lib/logger';
 
 const VIDEO_EXTENSIONS = new Set(VIDEO_EXTENSIONS_ALL);
 
@@ -15,7 +16,6 @@ const isVideoFile = (fileName: string): boolean => {
   return VIDEO_EXTENSIONS.has(ext);
 };
 
-// URLが動画ファイルかどうかの簡易チェック
 const isVideoUrl = (url: string): boolean => {
   try {
     const pathname = new URL(url).pathname;
@@ -39,7 +39,6 @@ export const useExternalDrop = () => {
     (e: React.DragEvent) => {
       if (!isEnabled) return;
 
-      // Files だけでなく URL の場合も反応させる
       if (
         e.dataTransfer.types.includes('Files') ||
         e.dataTransfer.types.includes('text/uri-list')
@@ -76,7 +75,7 @@ export const useExternalDrop = () => {
       if (e.dataTransfer.types.includes('Files')) {
         e.dataTransfer.dropEffect = 'move';
       } else if (e.dataTransfer.types.includes('text/uri-list')) {
-        e.dataTransfer.dropEffect = 'copy'; // URLの場合はコピー扱い
+        e.dataTransfer.dropEffect = 'copy';
       }
     },
     [isEnabled]
@@ -90,7 +89,6 @@ export const useExternalDrop = () => {
       e.stopPropagation();
       setIsDraggingOver(false);
 
-      // 1. ファイルドロップの処理
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) {
         const videoPaths: string[] = [];
@@ -104,23 +102,18 @@ export const useExternalDrop = () => {
 
         if (videoPaths.length > 0) {
           try {
-            const count = await performMove({
+            await performMove({
               filePaths: videoPaths,
               targetFolder: folderPath,
             });
-
-            if (count > 0) {
-              toast.success(`Moved ${count} videos to current folder`);
-            }
           } catch (error) {
-            console.error('External drop failed:', error);
+            logger.error('External drop failed:', error);
             toast.error('Failed to move files');
           }
         }
         return;
       }
 
-      // 2. URLドロップの処理 (ファイルがない場合)
       const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
 
       if (url && isVideoUrl(url)) {
@@ -135,11 +128,11 @@ export const useExternalDrop = () => {
             toast.error('Download failed', { id: toastId });
           }
         } catch (error) {
-          console.error('Download error:', error);
+          logger.error('Download error:', error);
           toast.error('Download failed', { id: toastId });
         }
       } else if (url) {
-        console.log('Dropped URL is not a video file:', url);
+        logger.debug('Dropped URL is not a video file:', url);
       }
     },
     [isEnabled, folderPath, performMove]

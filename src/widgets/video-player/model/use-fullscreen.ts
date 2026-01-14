@@ -5,7 +5,6 @@ import { setFullScreenApi } from '@/shared/api/electron';
 
 export const useFullscreen = (isOpen: boolean) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
-  // リスナー内で最新の状態を参照するためのRef
   const isFullscreenRef = useRef(false);
 
   const toggleFullscreen = useCallback(() => {
@@ -17,7 +16,6 @@ export const useFullscreen = (isOpen: boolean) => {
     });
   }, []);
 
-  // モーダルが閉じたときにフルスクリーンを解除する
   useEffect(() => {
     if (!isOpen && isFullscreen) {
       setFullScreenApi(false);
@@ -28,7 +26,6 @@ export const useFullscreen = (isOpen: boolean) => {
     }
   }, [isOpen, isFullscreen]);
 
-  // アンマウント時のクリーンアップ
   useEffect(() => {
     return () => {
       if (isFullscreenRef.current) {
@@ -37,7 +34,6 @@ export const useFullscreen = (isOpen: boolean) => {
     };
   }, []);
 
-  // Sync with Browser Fullscreen API
   useEffect(() => {
     const handleFullscreenChange = () => {
       const isDocFullscreen = !!document.fullscreenElement;

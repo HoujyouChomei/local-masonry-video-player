@@ -1,19 +1,15 @@
 // src/features/settings-panel/ui/sections/performance-section.tsx
 
-import { Zap, Check, Weight } from 'lucide-react'; // Weightを追加
+import { Zap, Check, Weight } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-// import { Slider } from '@/components/ui/slider'; // Hidden for development
 import { cn } from '@/lib/utils';
-import { SettingsSwitch } from '../components/settings-switch'; // Switchコンポーネント
-import { Input } from '@/components/ui/input'; // Inputコンポーネント
+import { SettingsSwitch } from '../components/settings-switch';
+import { Input } from '@/components/ui/input';
 
 export const PerformanceSection = () => {
   const {
     rootMargin,
     setRenderDistance,
-    // debounceTime, setDebounceTime, // Hidden for development
-    // chunkSize, setChunkSize,       // Hidden for development
-    // ▼▼▼ 追加 ▼▼▼
     enableLargeVideoRestriction,
     toggleLargeVideoRestriction,
     largeVideoThreshold,
@@ -65,7 +61,6 @@ export const PerformanceSection = () => {
         </div>
       </div>
 
-      {/* ▼▼▼ 追加: 大容量ファイル制限設定 ▼▼▼ */}
       <div className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div className="space-y-0.5 pr-2">
@@ -83,7 +78,6 @@ export const PerformanceSection = () => {
           />
         </div>
 
-        {/* ONの時だけ閾値設定を表示 */}
         {enableLargeVideoRestriction && (
           <div className="animate-in fade-in slide-in-from-top-1 flex items-center gap-2 pl-1">
             <span className="text-muted-foreground text-xs whitespace-nowrap">Threshold:</span>

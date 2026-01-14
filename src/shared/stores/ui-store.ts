@@ -2,6 +2,7 @@
 
 import { create } from 'zustand';
 import { useSelectionStore } from './selection-store';
+import { WindowState } from '@/shared/types/electron';
 
 interface UIState {
   showFavoritesOnly: boolean;
@@ -18,7 +19,8 @@ interface UIState {
 
   isMobileMenuOpen: boolean;
 
-  // --- Actions ---
+  windowState: WindowState;
+
   toggleShowFavoritesOnly: () => void;
   setViewMode: (mode: 'folder' | 'all-favorites' | 'playlist' | 'tag-results') => void;
   selectPlaylist: (id: string) => void;
@@ -34,6 +36,7 @@ interface UIState {
   setScrollDirection: (direction: 'down' | 'up' | 'none') => void;
 
   setMobileMenuOpen: (isOpen: boolean) => void;
+  setWindowState: (state: WindowState) => void;
 
   resetView: () => void;
 }
@@ -53,32 +56,33 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   isMobileMenuOpen: false,
 
+  windowState: {
+    isMaximized: false,
+    isFullScreen: false,
+  },
+
   toggleShowFavoritesOnly: () => {
     set((state) => ({ showFavoritesOnly: !state.showFavoritesOnly }));
   },
 
   setViewMode: (mode) => {
-    // 選択状態をリセット
     useSelectionStore.getState().reset();
 
     set({
       viewMode: mode,
       selectedPlaylistId: mode === 'playlist' ? undefined : null,
       selectedTagIds: mode === 'tag-results' ? get().selectedTagIds : [],
-      // ビュー切り替え時にモバイルメニューを閉じる
       isMobileMenuOpen: false,
     });
   },
 
   selectPlaylist: (id) => {
-    // 選択状態をリセット
     useSelectionStore.getState().reset();
 
     set({
       viewMode: 'playlist',
       selectedPlaylistId: id,
       selectedTagIds: [],
-      // プレイリスト選択時にモバイルメニューを閉じる
       isMobileMenuOpen: false,
     });
   },
@@ -93,7 +97,6 @@ export const useUIStore = create<UIState>((set, get) => ({
       next = [...current, id];
     }
 
-    // タグ選択の変更時は選択状態をリセット
     useSelectionStore.getState().reset();
 
     if (next.length > 0) {
@@ -101,7 +104,6 @@ export const useUIStore = create<UIState>((set, get) => ({
         viewMode: 'tag-results',
         selectedTagIds: next,
         selectedPlaylistId: null,
-        // タグ選択時にモバイルメニューを閉じる
         isMobileMenuOpen: false,
       });
     } else {
@@ -143,6 +145,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ isMobileMenuOpen: isOpen });
   },
 
+  setWindowState: (state) => {
+    set({ windowState: state });
+  },
+
   resetView: () => {
     useSelectionStore.getState().reset();
 
@@ -151,8 +157,6 @@ export const useUIStore = create<UIState>((set, get) => ({
       selectedPlaylistId: null,
       selectedTagIds: [],
       showFavoritesOnly: false,
-      // ▼▼▼ 修正: フォルダ選択時（resetView呼び出し時）にメニューを閉じないように変更 ▼▼▼
-      // isMobileMenuOpen: false,
     });
   },
 }));

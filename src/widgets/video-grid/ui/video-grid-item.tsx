@@ -8,13 +8,12 @@ import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { VideoFile } from '@/shared/types/video';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { GridStyle } from '@/shared/types/electron';
-import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag'; // 追加
+import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
 
-// インタラクション系Propsをまとめる型定義
 export interface VideoGridItemInteractions {
   onVideoClick: (video: VideoFile, e: React.MouseEvent) => void;
   onRenameOpen: (video: VideoFile) => void;
-  onDragStart: () => void; // これは interactions 用のコールバック（ロングプレスキャンセル等）
+  onDragStart: () => void;
   onPointerDown: (video: VideoFile, e: React.PointerEvent) => void;
   onPointerMove: (e: React.PointerEvent) => void;
   onPointerUp: (e: React.PointerEvent) => void;
@@ -35,17 +34,15 @@ export const VideoGridItem = React.memo(
 
     const showActions = !isSelectionMode;
 
-    // Feature hook: Drag and Drop
     const { handleDragStart, handleDragEnd } = useVideoDrag({
       videoPath: video.path,
       videoId: video.id,
     });
 
-    // 結合ハンドラ
     const onDragStartCombined = useCallback(
       (e: React.DragEvent) => {
-        interactions.onDragStart(); // 既存のインタラクション処理 (ロングプレスキャンセルなど)
-        handleDragStart(e); // DnD開始
+        interactions.onDragStart();
+        handleDragStart(e);
       },
       [interactions, handleDragStart]
     );

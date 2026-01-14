@@ -6,14 +6,12 @@ import { useUIStore } from '@/shared/stores/ui-store';
 import { selectFolder } from '@/shared/api/electron';
 import { FolderTreeItem } from './folder-tree-item';
 import { Button } from '@/components/ui/button';
-// ▼▼▼ 追加 ▼▼▼
 import { useDirectoryTree } from '@/features/prefetch-directories/model/use-directory-tree';
 
 export const LibrarySection = () => {
   const { libraryFolders, addLibraryFolder, removeLibraryFolder, setFolderPath } =
     useSettingsStore();
   const { resetView } = useUIStore();
-  // ▼▼▼ 追加 ▼▼▼
   const { prefetchTree } = useDirectoryTree();
 
   const handleAddFolder = async () => {
@@ -22,7 +20,6 @@ export const LibrarySection = () => {
       await addLibraryFolder(path);
       await setFolderPath(path);
       resetView();
-      // ▼▼▼ 追加: 登録直後にプリフェッチ実行 ▼▼▼
       prefetchTree(path);
     }
   };

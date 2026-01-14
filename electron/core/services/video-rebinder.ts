@@ -1,8 +1,9 @@
 // electron/core/services/video-rebinder.ts
 
-import { VideoRow } from '../repositories/video-repository'; // Type definition only
+import { VideoRow } from '../repositories/video-repository';
 import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
 import { calculateFileHash } from '../../lib/file-hash';
+import { logger } from '../../lib/logger';
 
 export interface FileStat {
   size: number;
@@ -14,19 +15,14 @@ export interface FileStat {
 export class VideoRebinder {
   private integrityRepo = new VideoIntegrityRepository();
 
-  /**
-   * Rebind（再結合）の候補を探す
-   */
   async findCandidate(
     filePath: string,
     stat: FileStat,
     allowHashCalc: boolean
   ): Promise<VideoRow | undefined> {
-    // 1. Inodeによる検索
     const inodeMatches = this.integrityRepo.findByInode(stat.ino);
 
     if (inodeMatches.length > 0) {
-      // 複数候補がある場合の優先順位付け
       inodeMatches.sort((a, b) => {
         if (a.status === 'available' && b.status !== 'available') return -1;
         if (a.status !== 'available' && b.status === 'available') return 1;
@@ -35,27 +31,25 @@ export class VideoRebinder {
 
       const candidate = inodeMatches[0];
 
-      // サイズチェック (Inode再利用対策)
       if (candidate.size === stat.size) {
-        console.log(
+        logger.debug(
           `[Rebinder] Match found by INODE: ${candidate.path} (ID: ${candidate.id}, Status: ${candidate.status})`
         );
         return candidate;
       }
     }
 
-    // 2. Hashによる検索
     if (allowHashCalc) {
       const candidates = this.integrityRepo.findMissingCandidatesBySize(stat.size);
 
       if (candidates.length > 0) {
-        console.log(`[Rebinder] No Inode match. Calculating hash...`);
+        logger.debug(`[Rebinder] No Inode match. Calculating hash...`);
         const newHash = await calculateFileHash(filePath);
 
         if (newHash) {
           const hashMatch = candidates.find((c) => c.file_hash === newHash);
           if (hashMatch) {
-            console.log(`[Rebinder] Match found by HASH: ${hashMatch.path} (ID: ${hashMatch.id})`);
+            logger.debug(`[Rebinder] Match found by HASH: ${hashMatch.path} (ID: ${hashMatch.id})`);
             return hashMatch;
           }
         }
@@ -65,9 +59,6 @@ export class VideoRebinder {
     return undefined;
   }
 
-  /**
-   * Rebind実行
-   */
   execute(
     id: string,
     newPath: string,
@@ -77,7 +68,7 @@ export class VideoRebinder {
     existingHash: string | null | undefined,
     logContext: string
   ): void {
-    console.log(`[Rebinder] ${logContext}: ID=${id} -> ${newPath}`);
+    logger.debug(`[Rebinder] ${logContext}: ID=${id} -> ${newPath}`);
     this.integrityRepo.restore(id, newPath, size, mtime, ino);
 
     if (!existingHash) {

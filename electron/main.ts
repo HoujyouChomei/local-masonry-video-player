@@ -1,53 +1,41 @@
 // electron/main.ts
 
+/* eslint-disable @typescript-eslint/no-require-imports */
 import { app, BrowserWindow, ipcMain } from 'electron';
+import path from 'path';
+
+if (!process.env.NODE_ENV && app.isPackaged) {
+  const portableUserDataPath = path.join(path.dirname(app.getPath('exe')), 'userData');
+  app.setPath('userData', portableUserDataPath);
+}
+
+import { initializeLogger, logger } from './lib/logger';
+const { store } = require('./lib/store');
+
+import type { BackgroundVerificationService } from './core/services/background-verification-service';
+
 if (app.isPackaged) {
   console.log = () => {};
   console.debug = () => {};
   console.info = () => {};
 }
 
-import path from 'path';
-if (!process.env.NODE_ENV && app.isPackaged) {
-  const portableUserDataPath = path.join(path.dirname(app.getPath('exe')), 'userData');
-  app.setPath('userData', portableUserDataPath);
-}
-
-import windowStateKeeper from 'electron-window-state';
-import { getVideos } from './handlers/getVideos';
-import { handleSettings } from './handlers/settings';
-import { handleDialog } from './handlers/dialog';
-import { handleFavorites } from './handlers/favorites';
-import { handleDirectories } from './handlers/directories';
-import { handleFileOps } from './handlers/file-ops';
-import { handlePlaylists } from './handlers/playlists';
-import { handleSorting } from './handlers/sorting';
-import { handleWindowControls } from './handlers/window';
-import { handleDragDrop } from './handlers/drag-drop';
-import { handleFFmpeg } from './handlers/ffmpeg';
-import { handleTags } from './handlers/tags';
-import { handleSearch } from './handlers/search';
-import { handleMetadata } from './handlers/metadata';
-import { startLocalServer } from './lib/local-server';
-import { store } from './lib/store';
-import { initDB, getDB } from './lib/db';
-import { BackgroundVerificationService } from './core/services/background-verification-service';
-import { VideoService } from './core/services/video-service';
-import { MetadataHarvester } from './core/services/metadata-harvester';
-import { VideoLibraryService } from './core/services/video-library-service';
+initializeLogger();
 
 const settings = store.store;
-
 if (!settings.enableHardwareDecoding) {
   app.commandLine.appendSwitch('disable-accelerated-video-decode');
   app.commandLine.appendSwitch('disable-accelerated-video-encode');
 }
 
-let mainWindow: BrowserWindow | null;
-const backgroundVerifier = new BackgroundVerificationService();
-const libraryService = new VideoLibraryService();
+let mainWindow: BrowserWindow | null = null;
+let backgroundVerifier: BackgroundVerificationService | null = null;
+
+const { handleWindowControls, registerWindowEvents } = require('./handlers/window');
 
 const createWindow = () => {
+  const windowStateKeeper = require('electron-window-state');
+
   const mainWindowState = windowStateKeeper({
     defaultWidth: 1280,
     defaultHeight: 800,
@@ -60,6 +48,8 @@ const createWindow = () => {
     height: mainWindowState.height,
     backgroundColor: '#030712',
     show: false,
+    autoHideMenuBar: true,
+    titleBarStyle: 'hidden',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -69,11 +59,9 @@ const createWindow = () => {
     },
   });
 
-  mainWindow.setMenuBarVisibility(false);
-
   mainWindowState.manage(mainWindow);
+  registerWindowEvents(mainWindow);
 
-  // ▼▼▼ 変更: テストモード時は開発サーバーを使わずにビルドファイルを読み込む ▼▼▼
   const isDev =
     process.env.NODE_ENV === 'development' || (!app.isPackaged && process.env.NODE_ENV !== 'test');
 
@@ -81,9 +69,9 @@ const createWindow = () => {
     mainWindow.loadURL('http://localhost:5173');
   } else {
     const indexPath = path.join(app.getAppPath(), 'dist/index.html');
-    console.log('Loading index from:', indexPath);
+    logger.debug('[Main] Loading index from:', indexPath);
     mainWindow.loadFile(indexPath).catch((e) => {
-      console.error('Failed to load index.html:', e);
+      logger.error('[Main] Failed to load index.html:', e);
     });
   }
 
@@ -92,89 +80,109 @@ const createWindow = () => {
   });
 
   mainWindow.on('focus', () => {
-    backgroundVerifier.runVerification();
+    if (backgroundVerifier) {
+      backgroundVerifier.runVerification();
+    }
   });
 };
 
 app.whenReady().then(async () => {
-  console.log('[Main] App Ready. Initializing DB...');
-
-  // ▼▼▼ 追加: 起動時に必ずモバイル接続をOFF(ローカルホストのみ)にする ▼▼▼
-  store.set('enableMobileConnection', false);
+  logger.info('[Main] App Ready. Starting initialization...');
 
   try {
+    const { initDB, getDB } = require('./lib/db');
     initDB();
     const db = getDB();
     const tableCount = db
       .prepare("SELECT count(*) as count FROM sqlite_master WHERE type='table'")
       .get() as { count: number };
-    console.log(`[Main] DB Initialized. Table count: ${tableCount.count}`);
+    logger.debug(`[Main] DB Initialized. Table count: ${tableCount.count}`);
   } catch (e) {
-    console.error('[Main] CRITICAL: Database initialization failed:', e);
+    logger.error('[Main] CRITICAL: Database initialization failed:', e);
     app.quit();
     return;
   }
 
-  try {
-    // ▼▼▼ 修正: 引数なし(デフォルト: 127.0.0.1)で起動 ▼▼▼
-    await startLocalServer();
-  } catch (e) {
-    console.error('Failed to start local video server:', e);
-  }
+  store.set('enableMobileConnection', false);
 
-  backgroundVerifier.start();
-  MetadataHarvester.getInstance();
-
-  // ▼▼▼ 変更: GCを起動直後ではなく、1分後に遅延実行する ▼▼▼
-  setTimeout(() => {
-    console.log('[Main] Running delayed Garbage Collection...');
-    try {
-      const videoService = new VideoService();
-      videoService.runGarbageCollection();
-    } catch (e) {
-      console.error('Failed to run garbage collection:', e);
-    }
-  }, 1000 * 60);
-
-  // 起動時の静的スキャン（遅延実行）
-  // ▼▼▼ 変更: GCとタイミングを分散させるため 5秒 -> 10秒に変更 ▼▼▼
-  setTimeout(async () => {
-    const folders = store.get('libraryFolders') as string[];
-    if (folders && folders.length > 0) {
-      console.log(`[Main] Starting background quiet scan for ${folders.length} folders...`);
-      for (const folder of folders) {
-        await libraryService.scanQuietly(folder);
-      }
-      console.log('[Main] Background quiet scan completed.');
-    }
-  }, 10000);
+  require('./handlers/settings').handleSettings();
+  require('./handlers/dialog').handleDialog();
+  require('./handlers/favorites').handleFavorites();
+  require('./handlers/directories').handleDirectories();
+  require('./handlers/file-ops').handleFileOps();
+  require('./handlers/playlists').handlePlaylists();
+  require('./handlers/sorting').handleSorting();
+  handleWindowControls();
+  require('./handlers/drag-drop').handleDragDrop();
+  require('./handlers/ffmpeg').handleFFmpeg();
+  require('./handlers/tags').handleTags();
+  require('./handlers/search').handleSearch();
+  require('./handlers/metadata').handleMetadata();
 
   ipcMain.handle('get-videos', async (_event, folderPath: string) => {
+    const { getVideos } = require('./handlers/getVideos');
     return await getVideos(folderPath);
   });
-  handleSettings();
-  handleDialog();
-  handleFavorites();
-  handleDirectories();
-  handleFileOps();
-  handlePlaylists();
-  handleSorting();
-  handleWindowControls();
-  handleDragDrop();
-  handleFFmpeg();
-  handleTags();
-  handleSearch();
-  handleMetadata();
 
   createWindow();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
+
+  try {
+    const { startLocalServer } = require('./lib/local-server');
+    await startLocalServer();
+  } catch (e) {
+    logger.error('[Main] Failed to start local video server:', e);
+  }
+
+  const {
+    BackgroundVerificationService: BVS,
+  } = require('./core/services/background-verification-service');
+  backgroundVerifier = new BVS();
+  backgroundVerifier?.start();
+
+  const { MetadataHarvester: MH } = require('./core/services/metadata-harvester');
+  MH.getInstance();
+
+  setTimeout(() => {
+    logger.debug('[Main] Running delayed Garbage Collection...');
+    try {
+      const { VideoService } = require('./core/services/video-service');
+      const videoService = new VideoService();
+      videoService.runGarbageCollection();
+    } catch (e) {
+      logger.error('[Main] Failed to run garbage collection:', e);
+    }
+  }, 1000 * 60);
+
+  setTimeout(async () => {
+    const folders = store.get('libraryFolders') as string[];
+    if (folders && folders.length > 0) {
+      const { VideoLibraryService } = require('./core/services/video-library-service');
+      const libraryService = new VideoLibraryService();
+
+      logger.debug(`[Main] Starting background quiet scan for ${folders.length} folders...`);
+      for (const folder of folders) {
+        await libraryService.scanQuietly(folder);
+      }
+      logger.debug('[Main] Background quiet scan completed.');
+    }
+  }, 10000);
 });
 
 app.on('window-all-closed', () => {
-  backgroundVerifier.stop();
-  MetadataHarvester.getInstance().stop();
+  if (backgroundVerifier) {
+    backgroundVerifier.stop();
+  }
+
+  try {
+    const { MetadataHarvester: MH } = require('./core/services/metadata-harvester');
+    MH.getInstance().stop();
+  } catch {
+    // ignore
+  }
+
   if (process.platform !== 'darwin') app.quit();
 });

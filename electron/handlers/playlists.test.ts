@@ -4,7 +4,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handlePlaylists } from './playlists';
 
-// 1. Hoisted Mocks
 const playlistMocks = vi.hoisted(() => ({
   existsByName: vi.fn(),
   create: vi.fn(),
@@ -18,10 +17,9 @@ const playlistMocks = vi.hoisted(() => ({
 }));
 
 const videoRepoMocks = vi.hoisted(() => ({
-  findById: vi.fn(), // addVideoでの存在確認用
+  findById: vi.fn(),
 }));
 
-// 2. Electron
 const ipcHandlers = new Map<string, (...args: any[]) => any>();
 vi.mock('electron', () => ({
   ipcMain: {
@@ -34,7 +32,6 @@ vi.mock('electron', () => ({
   },
 }));
 
-// 3. Repository Mock
 vi.mock('../core/repositories/playlist-repository', () => {
   return {
     PlaylistRepository: class {
@@ -51,7 +48,6 @@ vi.mock('../core/repositories/playlist-repository', () => {
   };
 });
 
-// 4. Video Repository Mock (for ID check)
 vi.mock('../core/repositories/video-repository', () => {
   return {
     VideoRepository: class {
@@ -60,19 +56,16 @@ vi.mock('../core/repositories/video-repository', () => {
   };
 });
 
-// 5. Service Mock (VideoService is no longer used for addVideo path check)
 vi.mock('../core/services/video-service', () => {
   return {
     VideoService: class {},
   };
 });
 
-// 6. Local Server
 vi.mock('../lib/local-server', () => ({
   getServerPort: () => 3000,
 }));
 
-// 7. fs
 vi.mock('fs', () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
@@ -116,7 +109,6 @@ describe('Playlist Handlers (Repository Mock)', () => {
     const mockPlaylist = { id: 'pl-1', name: 'List', videoPaths: ['/v1.mp4'] };
     const videoId = 'vid-1';
 
-    // ID存在確認 (findById)
     videoRepoMocks.findById.mockReturnValue({ id: videoId, path: '/v1.mp4' });
     playlistMocks.getById.mockReturnValue(mockPlaylist);
 

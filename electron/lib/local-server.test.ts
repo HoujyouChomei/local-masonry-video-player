@@ -5,9 +5,6 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { Readable } from 'stream';
 import http from 'http';
 
-// --- Mocks Setup ---
-
-// 1. Electron & Native Image
 vi.mock('electron', () => ({
   app: {
     getPath: vi.fn(() => '/tmp/userdata'),
@@ -20,7 +17,6 @@ vi.mock('electron', () => ({
   },
 }));
 
-// 2. Electron Store (Config)
 vi.mock('./store', () => ({
   store: {
     get: vi.fn((key) => {
@@ -33,28 +29,24 @@ vi.mock('./store', () => ({
   },
 }));
 
-// 3. File System (Partial Mock)
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
 
   const mockFs = {
     ...actual,
     existsSync: vi.fn((p: string) => {
-      // "exists" という文字列を含むパスは存在するとみなす
       if (typeof p === 'string' && p.includes('exists')) return true;
       return false;
     }),
     statSync: vi.fn(() => ({
-      size: 100, // 100 bytes dummy
+      size: 100,
       isFile: () => true,
       mtimeMs: Date.now(),
     })),
-    // createReadStream は簡易的なReadableStreamを返すようにオーバーライド
     createReadStream: vi.fn(() => {
       const s = new Readable();
       s.push('mock-video-content');
       s.push(null);
-      // サーバー側のクリーンアップで destroy が呼ばれるためモック化
       (s as any).destroy = vi.fn();
       return s;
     }),
@@ -70,7 +62,6 @@ vi.mock('fs', async (importOriginal) => {
   };
 });
 
-// 4. Child Process (FFmpeg)
 vi.mock('child_process', () => {
   const mockSpawn = vi.fn().mockReturnValue({
     stdout: { pipe: vi.fn() },
@@ -97,7 +88,6 @@ vi.mock('child_process', () => {
   };
 });
 
-// サーバーインスタンスを保持してテスト後に閉じるための細工
 let serverInstance: http.Server | null = null;
 vi.mock('http', async (importOriginal) => {
   const actual = await importOriginal<typeof import('http')>();
@@ -111,27 +101,23 @@ vi.mock('http', async (importOriginal) => {
   };
 });
 
-// Import the module under test AFTER mocks
 import { startLocalServer, getServerPort } from './local-server';
 
 describe('Local Server Integration', () => {
   let baseUrl: string;
 
   beforeAll(async () => {
-    // サーバー起動
     await startLocalServer();
     const port = getServerPort();
     baseUrl = `http://127.0.0.1:${port}`;
   });
 
   afterAll(() => {
-    // テスト終了後にサーバーを閉じる (ポート解放)
     if (serverInstance) {
       serverInstance.close();
     }
   });
 
-  // テスト用ヘルパー
   const request = async (
     endpoint: string,
     params: Record<string, string> = {},
@@ -140,7 +126,6 @@ describe('Local Server Integration', () => {
     const url = new URL(baseUrl + endpoint);
     Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
 
-    // 認証トークンを付与 (本来は不要だが将来的なRemoteテスト互換のため)
     if (!url.searchParams.has('token') && !headers['Authorization']) {
       url.searchParams.append('token', 'test-token');
     }
@@ -165,11 +150,9 @@ describe('Local Server Integration', () => {
     });
 
     it('should allow localhost requests even without token (Local Access)', async () => {
-      // トークンなしのリクエスト
       const url = new URL(baseUrl + '/video');
       url.searchParams.append('path', '/allowed/lib/exists.mp4');
 
-      // Localhostからのアクセスは常に許可される仕様
       const res = await fetch(url.toString());
       expect(res.status).toBe(200);
     });

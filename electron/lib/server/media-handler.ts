@@ -17,7 +17,6 @@ import { THUMBNAIL } from '../../../src/shared/constants/assets';
 
 const ffmpegService = new FFmpegService();
 
-// ブラウザ/スマホでネイティブ再生・シーク可能な形式
 const DIRECT_STREAM_EXTENSIONS = new Set(VIDEO_EXTENSIONS_NATIVE);
 
 const getThumbnailDir = () => {
@@ -96,15 +95,11 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
   const ext = path.extname(filePath).toLowerCase();
   const canPlayDirectly = DIRECT_STREAM_EXTENSIONS.has(ext);
 
-  // 1. Transcoding
-  // FFmpegがあり、かつダイレクト再生できない形式(MKV, AVI等)の場合のみトランスコードする
   const ffmpegPath = ffmpegService.ffmpegPath;
   if (ffmpegPath && !canPlayDirectly) {
     try {
       const startTimeParam = url.searchParams.get('t');
       const startTime = startTimeParam ? parseFloat(startTimeParam) : 0;
-
-      // console.log(`[Media] Transcoding: ${path.basename(filePath)} @ ${startTime}s`);
 
       const args = ffmpegService.getTranscodeArgs(filePath, startTime);
       const ffmpegProcess = spawn(ffmpegPath, args);
@@ -116,27 +111,32 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
 
       ffmpegProcess.stdout.pipe(res);
 
-      ffmpegProcess.stderr.on('data', () => {}); // Drain buffer
+      ffmpegProcess.stderr.on('data', () => {});
 
       const cleanup = () => {
         if (ffmpegProcess && !ffmpegProcess.killed) {
           try {
-            ffmpegProcess.kill();
+            ffmpegProcess.kill('SIGKILL');
           } catch (e) {
             console.error('[Media] Failed to kill FFmpeg:', e);
           }
         }
       };
 
+      ffmpegProcess.on('error', (err) => {
+        console.error('[Media] FFmpeg process error:', err);
+        cleanup();
+      });
+
       req.on('close', cleanup);
       res.on('finish', cleanup);
+      res.on('error', cleanup);
       return;
     } catch (error) {
       console.error('[Media] Transcode failed:', error);
     }
   }
 
-  // 2. Direct Stream (Fallback or Native)
   try {
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
@@ -153,7 +153,6 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
       return;
     }
 
-    // ▼▼▼ 変更: 読み込みバッファサイズを512KBに増やす ▼▼▼
     const HIGH_WATER_MARK = 512 * 1024;
 
     if (range) {

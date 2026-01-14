@@ -13,8 +13,6 @@ export const useMobileInteractions = ({ videosRef }: UseMobileInteractionsProps)
   const { openVideo } = useVideoPlayerStore();
   const { isSelectionMode, toggleSelection } = useSelectionStore();
 
-  // モバイルではPointerイベントによるロングプレス判定を行わない
-  // (OSネイティブやContextMenuトリガーに任せるため)
   const noop = useCallback(() => {}, []);
 
   const handleVideoClick = useCallback(
@@ -24,10 +22,8 @@ export const useMobileInteractions = ({ videosRef }: UseMobileInteractionsProps)
       const currentVideos = videosRef.current || [];
 
       if (isSelectionMode) {
-        // 選択モード中はタップで選択トグル
         toggleSelection(video.id);
       } else {
-        // 通常時は再生
         openVideo(video, currentVideos);
       }
     },
@@ -40,5 +36,6 @@ export const useMobileInteractions = ({ videosRef }: UseMobileInteractionsProps)
     handlePointerMove: noop,
     handlePointerUp: noop,
     handlePointerLeave: noop,
+    handleDragStart: noop,
   };
 };

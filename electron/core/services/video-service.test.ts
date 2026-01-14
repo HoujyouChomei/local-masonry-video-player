@@ -5,9 +5,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
 import { VideoService } from './video-service';
 
-// --- Mocks Setup ---
-
-// VideoRepository Mock
 const repoMocks = vi.hoisted(() => ({
   findByPath: vi.fn(),
   findById: vi.fn(),
@@ -24,7 +21,6 @@ vi.mock('../repositories/video-repository', () => {
   };
 });
 
-// VideoIntegrityRepository Mock
 const integrityRepoMocks = vi.hoisted(() => ({
   updatePath: vi.fn(),
   deleteExpiredMissingVideos: vi.fn(),
@@ -39,7 +35,6 @@ vi.mock('../repositories/video-integrity-repository', () => {
   };
 });
 
-// VideoMetadataRepository Mock
 const metaRepoMocks = vi.hoisted(() => ({
   updateMetadata: vi.fn(),
 }));
@@ -90,13 +85,11 @@ vi.mock('fs/promises', () => ({
 }));
 import fs from 'fs/promises';
 
-// Shell Mock (hoisted)
 const shellMocks = vi.hoisted(() => ({
   trashItem: vi.fn(),
   showItemInFolder: vi.fn(),
 }));
 
-// ▼▼▼ 修正: app もモックに含める ▼▼▼
 vi.mock('electron', () => ({
   app: {
     getPath: vi.fn().mockReturnValue('/tmp/userData'),
@@ -143,7 +136,6 @@ describe('VideoService', () => {
       const newName = 'new';
       const newPath = path.join(dummyFolder, 'new.mp4');
 
-      // ID検索でパスを解決
       repoMocks.findById.mockReturnValue({ id, path: oldPath });
       vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 12345 } as any);
 
@@ -159,7 +151,6 @@ describe('VideoService', () => {
       const id = '1';
       const filePath = path.join(dummyFolder, 'del.mp4');
 
-      // ID検索でパスを解決
       repoMocks.findById.mockReturnValue({ id, path: filePath });
 
       await service.deleteVideo(id);
@@ -172,7 +163,7 @@ describe('VideoService', () => {
   describe('handleFileMissing', () => {
     it('should delegate to verifyAndRecover', async () => {
       const filePath = '/path/to/missing.mp4';
-      integrityMocks.verifyAndRecover.mockResolvedValue(true); // recovered
+      integrityMocks.verifyAndRecover.mockResolvedValue(true);
 
       const result = await service.handleFileMissing(filePath);
 

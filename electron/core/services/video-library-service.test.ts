@@ -5,17 +5,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VideoLibraryService } from './video-library-service';
 import path from 'path';
 
-// --- Mocks Setup ---
-
-// ▼▼▼ 追加: Electron Mock (VideoMapper用) ▼▼▼
 vi.mock('electron', () => ({
   app: {
     getPath: vi.fn().mockReturnValue('/tmp/userData'),
   },
 }));
 
-// 1. Database Layer Mocks (Repository)
-// 実際のDBを使わず、呼び出しだけを監視します
 const videoRepoMocks = vi.hoisted(() => ({
   findByPath: vi.fn(),
   findManyByPaths: vi.fn(),
@@ -52,19 +47,16 @@ vi.mock('../repositories/video-search-repository', () => ({
   },
 }));
 
-// 2. File System Mock (fs/promises)
-// 実際のファイル操作を行わず、成功/失敗をシミュレートします
 import fs from 'fs/promises';
 vi.mock('fs/promises', () => ({
   default: {
-    rename: vi.fn(), // 移動用
-    access: vi.fn(), // 存在確認用
-    stat: vi.fn(), // 情報取得用
-    readdir: vi.fn(), // スキャン用
+    rename: vi.fn(),
+    access: vi.fn(),
+    stat: vi.fn(),
+    readdir: vi.fn(),
   },
 }));
 
-// 3. Other Dependencies Mock
 vi.mock('../../lib/store', () => ({
   store: {
     get: vi.fn((key) => {
@@ -74,7 +66,6 @@ vi.mock('../../lib/store', () => ({
   },
 }));
 
-// FFmpegService (スキャン時に呼ばれるため)
 vi.mock('./ffmpeg-service', () => ({
   FFmpegService: class {
     validatePath = vi.fn().mockResolvedValue(true);
@@ -82,7 +73,6 @@ vi.mock('./ffmpeg-service', () => ({
   },
 }));
 
-// ThumbnailService (スキャン時に呼ばれるため)
 vi.mock('./thumbnail-service', () => ({
   ThumbnailService: {
     getInstance: () => ({
@@ -92,7 +82,6 @@ vi.mock('./thumbnail-service', () => ({
   },
 }));
 
-// VideoRebinder (スキャン時に呼ばれるため)
 vi.mock('./video-rebinder', () => ({
   VideoRebinder: class {
     findCandidate = vi.fn();
@@ -114,42 +103,29 @@ describe('VideoLibraryService Integration', () => {
     const destPath = path.join(targetDir, 'video.mp4');
 
     it('should update DB path after successful file move', async () => {
-      // Setup
-      // 1. ファイル移動: 成功させる
-      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT')); // 移動先にファイルなし
-      vi.mocked(fs.rename).mockResolvedValue(undefined); // 移動成功
+      vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
+      vi.mocked(fs.rename).mockResolvedValue(undefined);
 
-      // 2. DB検索: 移動前のファイルが見つかる
       videoRepoMocks.findByPath.mockReturnValue({ id: 'v1', path: srcPath });
 
-      // 3. 移動後のstat取得: 成功
       vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 12345 } as any);
 
-      // Execute
-      const movedCount = await service.moveVideos([srcPath], targetDir);
+      const response = await service.moveVideos([srcPath], targetDir);
 
-      // Verify
-      expect(movedCount).toBe(1);
-      // FileMoveServiceが呼ばれたことの確認
+      expect(response.successCount).toBe(1);
       expect(fs.rename).toHaveBeenCalledWith(srcPath, destPath);
-      // Repositoryが正しく呼ばれたことの確認
       expect(videoRepoMocks.findByPath).toHaveBeenCalledWith(srcPath);
       expect(integrityRepoMocks.updatePath).toHaveBeenCalledWith('v1', destPath, 12345);
     });
 
     it('should NOT update DB if file move fails', async () => {
-      // Setup
-      // 1. ファイル移動: 失敗させる
       vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
       vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'));
 
-      // Execute
-      const movedCount = await service.moveVideos([srcPath], targetDir);
+      const response = await service.moveVideos([srcPath], targetDir);
 
-      // Verify
-      expect(movedCount).toBe(0);
+      expect(response.successCount).toBe(0);
       expect(fs.rename).toHaveBeenCalled();
-      // DB更新は呼ばれないはず
       expect(integrityRepoMocks.updatePath).not.toHaveBeenCalled();
     });
   });
@@ -158,8 +134,6 @@ describe('VideoLibraryService Integration', () => {
     const libPath = path.normalize('/lib');
 
     it('should scan files and register new ones to DB', async () => {
-      // Setup
-      // 1. readdir: 1つのファイルを返す
       const dirent = {
         name: 'new-video.mp4',
         isFile: () => true,
@@ -168,10 +142,8 @@ describe('VideoLibraryService Integration', () => {
       };
       vi.mocked(fs.readdir).mockResolvedValue([dirent] as any);
 
-      // 2. DB: 既存データなし (findManyByPathsが空を返す)
       videoRepoMocks.findManyByPaths.mockReturnValue([]);
 
-      // 3. stat: ファイル情報
       vi.mocked(fs.stat).mockResolvedValue({
         size: 1000,
         mtimeMs: 1000,
@@ -179,14 +151,10 @@ describe('VideoLibraryService Integration', () => {
         ino: 123,
       } as any);
 
-      // Execute
       await service.scanQuietly(libPath);
 
-      // Verify
-      // Scannerが正しくfsを呼んだか
       expect(fs.readdir).toHaveBeenCalledWith(libPath, expect.anything());
 
-      // 未登録ファイルを検知してDB登録(upsertMany)を呼んだか
       expect(integrityRepoMocks.upsertMany).toHaveBeenCalledWith(
         expect.arrayContaining([
           expect.objectContaining({
@@ -194,21 +162,17 @@ describe('VideoLibraryService Integration', () => {
             size: 1000,
           }),
         ]),
-        expect.anything() // update list (empty)
+        expect.anything()
       );
     });
   });
 
   describe('searchVideos (VideoSearchRepository + Options)', () => {
     it('should apply default library folders if scope is not provided', () => {
-      // Setup
       searchRepoMocks.search.mockReturnValue([]);
 
-      // Execute
       service.searchVideos('query', [], {});
 
-      // Verify
-      // allowedRoots に store.get('libraryFolders') の値 ('/lib') がセットされているか
       expect(searchRepoMocks.search).toHaveBeenCalledWith(
         'query',
         [],

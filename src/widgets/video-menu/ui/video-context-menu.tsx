@@ -4,15 +4,10 @@ import { useState, useCallback } from 'react';
 import { ContextMenuContent } from '@/components/ui/context-menu';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { VideoFile } from '@/shared/types/video';
-// import { useQueryClient } from '@tanstack/react-query'; // 不要になったため削除
 import { useBatchDelete } from '@/features/batch-actions/model/use-batch-delete';
 import { useDeleteVideo } from '@/features/delete-video/model/use-delete-video';
-
-// Sub Components
 import { SingleVideoMenuItems } from './items/single-video-menu-items';
 import { MultiVideoMenuItems } from './items/multi-video-menu-items';
-
-// Dialogs
 import { BatchTagDialog } from '@/features/batch-actions/ui/batch-tag-dialog';
 import {
   AlertDialog,
@@ -46,10 +41,8 @@ export const VideoContextMenu = ({
 
   const { batchDelete, isPending: isBatchDeleting } = useBatchDelete();
   const { deleteVideo, isPending: isSingleDeleting } = useDeleteVideo();
-  // const queryClient = useQueryClient(); // 削除
 
   const handleBatchDelete = useCallback(() => {
-    // ▼▼▼ 変更: パス解決ロジックを削除し、IDをそのまま渡す ▼▼▼
     if (selectedVideoIds.length > 0) {
       batchDelete(selectedVideoIds);
     }
@@ -57,7 +50,6 @@ export const VideoContextMenu = ({
   }, [selectedVideoIds, batchDelete]);
 
   const handleSingleDelete = () => {
-    // ▼▼▼ 変更: IDを渡す ▼▼▼
     deleteVideo(video.id);
     setIsSingleDeleteAlertOpen(false);
   };
@@ -79,8 +71,6 @@ export const VideoContextMenu = ({
           />
         )}
       </ContextMenuContent>
-
-      {/* --- Dialogs --- */}
 
       {isMultiSelectMenu && (
         <>

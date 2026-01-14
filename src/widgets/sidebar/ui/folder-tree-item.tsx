@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ChevronRight, ChevronDown, Folder, FolderOpen, FolderSearch } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query'; // useQueryClient 追加
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchSubdirectories, openPathApi } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
@@ -27,12 +27,11 @@ interface FolderTreeItemProps {
 export const FolderTreeItem = ({ name, path, depth = 0, onRemove }: FolderTreeItemProps) => {
   const { folderPath, setFolderPath, expandedPaths, toggleExpandedPath } = useSettingsStore();
   const { resetView } = useUIStore();
-  const queryClient = useQueryClient(); // 追加
+  const queryClient = useQueryClient();
 
   const isExpanded = expandedPaths.includes(path);
   const isSelected = folderPath === path;
 
-  // DnD Hook
   const { isOver, dropProps } = useSidebarDrop({
     type: 'folder',
     targetId: path,
@@ -46,14 +45,12 @@ export const FolderTreeItem = ({ name, path, depth = 0, onRemove }: FolderTreeIt
     staleTime: 1000 * 60 * 5,
   });
 
-  // ▼▼▼ 追加: ホバー時のプリフェッチ処理 ▼▼▼
   const handleMouseEnter = () => {
-    // まだ展開されておらず、データも持っていない場合に先読みする
     if (!isExpanded) {
       queryClient.prefetchQuery({
         queryKey: ['subdirectories', path],
         queryFn: () => fetchSubdirectories(path),
-        staleTime: 1000 * 60 * 5, // 5分間は再フェッチしない
+        staleTime: 1000 * 60 * 5,
       });
     }
   };
@@ -86,7 +83,7 @@ export const FolderTreeItem = ({ name, path, depth = 0, onRemove }: FolderTreeIt
             )}
             style={{ paddingLeft: `${depth * 12 + 8}px` }}
             onClick={handleSelectFolder}
-            onMouseEnter={handleMouseEnter} // ▼▼▼ 追加: イベントハンドラ ▼▼▼
+            onMouseEnter={handleMouseEnter}
             {...dropProps}
           >
             <div

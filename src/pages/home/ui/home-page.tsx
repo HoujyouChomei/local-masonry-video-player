@@ -1,16 +1,20 @@
 // src/pages/home/ui/home-page.tsx
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { VideoGrid } from '@/widgets/video-grid/ui/video-grid';
 import { Header } from '@/widgets/header/ui/header';
-import { VideoModal } from '@/widgets/video-player/ui/video-modal';
 import { Sidebar } from '@/widgets/sidebar/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { useScrollDirection } from '@/shared/lib/use-scroll-direction';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
-// ▼▼▼ 追加 ▼▼▼
 import { useDirectoryTree } from '@/features/prefetch-directories/model/use-directory-tree';
+
+const VideoModal = lazy(() =>
+  import('@/widgets/video-player/ui/video-modal').then((module) => ({
+    default: module.VideoModal,
+  }))
+);
 
 export const HomePage = () => {
   const {
@@ -26,7 +30,6 @@ export const HomePage = () => {
   const isMobile = useIsMobile();
   useScrollDirection();
 
-  // ▼▼▼ 追加: プリフェッチフック ▼▼▼
   const { prefetchTree } = useDirectoryTree();
   const hasPrefetchedRef = useRef(false);
 
@@ -34,12 +37,10 @@ export const HomePage = () => {
     initialize();
   }, [initialize]);
 
-  // ▼▼▼ 追加: 起動後の遅延プリフェッチ実行 ▼▼▼
   useEffect(() => {
     if (isInitialized && !hasPrefetchedRef.current && libraryFolders.length > 0) {
       hasPrefetchedRef.current = true;
 
-      // 3秒後に実行（初期描画を優先）
       const timer = setTimeout(() => {
         libraryFolders.forEach((folder) => {
           prefetchTree(folder);
@@ -83,7 +84,9 @@ export const HomePage = () => {
         </div>
       </main>
 
-      <VideoModal />
+      <Suspense fallback={null}>
+        <VideoModal />
+      </Suspense>
     </div>
   );
 };

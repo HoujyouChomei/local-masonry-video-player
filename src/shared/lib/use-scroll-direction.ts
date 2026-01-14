@@ -11,7 +11,6 @@ export const useScrollDirection = () => {
       const scrollY = window.scrollY;
       const diff = scrollY - lastScrollY.current;
 
-      // 5px以上の変化があった場合のみ更新（ノイズ対策）
       if (Math.abs(diff) > 5) {
         const direction = diff > 0 ? 'down' : 'up';
         const currentDir = useUIStore.getState().scrollDirection;

@@ -8,6 +8,7 @@ import { FFmpegService } from './ffmpeg-service';
 import { NATIVE_EXTENSIONS } from '../../lib/extensions';
 import { THUMBNAIL } from '../../../src/shared/constants/assets';
 import { NotificationService } from './notification-service';
+import { logger } from '../../lib/logger';
 
 interface QueueItem {
   path: string;
@@ -44,10 +45,10 @@ export class ThumbnailService {
 
       if (fs.existsSync(thumbPath)) {
         fs.unlinkSync(thumbPath);
-        console.log(`[ThumbnailService] Deleted thumbnail for: ${path.basename(videoPath)}`);
+        logger.debug(`[ThumbnailService] Deleted thumbnail for: ${path.basename(videoPath)}`);
       }
     } catch (error) {
-      console.warn(`[ThumbnailService] Failed to delete thumbnail for: ${videoPath}`, error);
+      logger.warn(`[ThumbnailService] Failed to delete thumbnail for: ${videoPath}`, error);
     }
   }
 
@@ -82,7 +83,7 @@ export class ThumbnailService {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } catch (error) {
-      console.error('[ThumbnailService] Error during processing:', error);
+      logger.error('[ThumbnailService] Error during processing:', error);
     } finally {
       this.isProcessing = false;
     }
@@ -102,7 +103,6 @@ export class ThumbnailService {
 
       let success = false;
 
-      // 1. Native
       if (isNativeSupported) {
         try {
           const image = await nativeImage.createThumbnailFromPath(filePath, {
@@ -119,7 +119,6 @@ export class ThumbnailService {
         }
       }
 
-      // 2. FFmpeg
       if (!success) {
         success = await this.ffmpegService.generateThumbnail(filePath, thumbPath);
       }
@@ -129,7 +128,7 @@ export class ThumbnailService {
         this.notifier.notify(event);
       }
     } catch (error) {
-      console.warn(`[ThumbnailService] Failed to generate for ${filePath}`, error);
+      logger.warn(`[ThumbnailService] Failed to generate for ${filePath}`, error);
     }
   }
 }

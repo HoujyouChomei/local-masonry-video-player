@@ -5,14 +5,12 @@ import { saveSetting } from '@/shared/api/electron';
 import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
 
 export const createPlaybackSlice: SettingsSliceCreator<PlaybackSlice> = (set, get) => ({
-  // State
   autoPlayNext: DEFAULT_SETTINGS.autoPlayNext,
   playOnHoverOnly: DEFAULT_SETTINGS.playOnHoverOnly,
   openInFullscreen: DEFAULT_SETTINGS.openInFullscreen,
   volume: DEFAULT_SETTINGS.volume,
   isMuted: DEFAULT_SETTINGS.isMuted,
 
-  // Actions
   toggleAutoPlayNext: async () => {
     const newState = !get().autoPlayNext;
     set({ autoPlayNext: newState });

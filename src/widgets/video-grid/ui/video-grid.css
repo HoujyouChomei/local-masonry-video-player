@@ -1,18 +1,15 @@
 /* src/widgets/video-grid/ui/video-grid.css */
 
-/* --- Modern (Default): 16px gap --- */
 .my-masonry-grid {
   display: flex;
-  margin-left: -16px; /* gutter size offset */
-  /* ▼▼▼ 修正: ネガティブマージン分を考慮して幅を拡張 ▼▼▼ */
+  margin-left: -16px;
   width: calc(100% + 16px);
 }
 .my-masonry-grid_column {
-  padding-left: 16px; /* gutter size */
+  padding-left: 16px;
   background-clip: padding-box;
 }
 
-/* --- Mosaic: 0px gap (No spacing) --- */
 .my-masonry-grid-mosaic {
   display: flex;
   margin-left: 0;
@@ -22,8 +19,6 @@
   padding-left: 0;
   background-clip: padding-box;
 }
-
-/* --- Selection Mode Styles --- */
 
 .is-selection-mode .video-card {
   cursor: pointer;

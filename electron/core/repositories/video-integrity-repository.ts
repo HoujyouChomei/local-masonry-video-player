@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { app } from 'electron';
 import { THUMBNAIL } from '../../../src/shared/constants/assets';
 import { VideoRow, VideoCreateInput, VideoUpdateInput } from './video-repository';
+import { logger } from '../../lib/logger';
 
 export class VideoIntegrityRepository {
   private get db() {
@@ -14,7 +15,7 @@ export class VideoIntegrityRepository {
   }
 
   resetMetadata(id: string, size: number, mtime: number, ino: number | null): void {
-    console.log(`[Repo] Resetting metadata for ID: ${id}`);
+    logger.debug(`[Repo] Resetting metadata for ID: ${id}`);
     this.db
       .prepare(
         `
@@ -102,7 +103,7 @@ export class VideoIntegrityRepository {
     if (ids.length === 0) return;
     const now = Date.now();
     const placeholders = ids.map(() => '?').join(',');
-    console.log(`[Repo] Marking ${ids.length} videos as missing.`);
+    logger.debug(`[Repo] Marking ${ids.length} videos as missing.`);
     this.db
       .prepare(
         `
@@ -116,7 +117,7 @@ export class VideoIntegrityRepository {
 
   markAsMissingByPath(path: string): void {
     const now = Date.now();
-    console.log(`[Repo] Marking as missing: ${path}`);
+    logger.debug(`[Repo] Marking as missing: ${path}`);
     this.db
       .prepare(
         `
@@ -132,7 +133,7 @@ export class VideoIntegrityRepository {
     if (ids.length === 0) return;
     const now = Date.now();
     const placeholders = ids.map(() => '?').join(',');
-    console.log(`[Repo] Marking ${ids.length} videos as scan attempted.`);
+    logger.debug(`[Repo] Marking ${ids.length} videos as scan attempted.`);
     this.db
       .prepare(
         `
@@ -145,7 +146,7 @@ export class VideoIntegrityRepository {
   }
 
   restore(id: string, newPath: string, size: number, mtime: number, ino: number | null): void {
-    console.log(`[Repo] RESTORE executed for ID: ${id} -> ${newPath}`);
+    logger.debug(`[Repo] RESTORE executed for ID: ${id} -> ${newPath}`);
     const now = Date.now();
     const name = path.basename(newPath);
     this.db
@@ -187,7 +188,7 @@ export class VideoIntegrityRepository {
   }
 
   updateHash(id: string, hash: string): void {
-    console.log(`[Repo] Updating hash for ID: ${id}`);
+    logger.debug(`[Repo] Updating hash for ID: ${id}`);
     this.db.prepare('UPDATE videos SET file_hash = ? WHERE id = ?').run(hash, id);
   }
 
@@ -225,7 +226,6 @@ export class VideoIntegrityRepository {
     const idPlaceholders = ids.map(() => '?').join(',');
     const pathPlaceholders = paths.map(() => '?').join(',');
 
-    // ▼▼▼ サムネイル削除ロジック ▼▼▼
     const thumbDir = path.join(app.getPath('userData'), THUMBNAIL.DIR_NAME);
     let deletedThumbnails = 0;
 
@@ -238,14 +238,13 @@ export class VideoIntegrityRepository {
           deletedThumbnails++;
         }
       } catch (error) {
-        console.warn(`[Repo-GC] Failed to delete thumbnail for: ${row.path}`, error);
+        logger.warn(`[Repo-GC] Failed to delete thumbnail for: ${row.path}`, error);
       }
     }
 
     if (deletedThumbnails > 0) {
-      console.log(`[Repo-GC] Deleted ${deletedThumbnails} orphaned thumbnails.`);
+      logger.debug(`[Repo-GC] Deleted ${deletedThumbnails} orphaned thumbnails.`);
     }
-    // ▲▲▲ 追加ここまで ▲▲▲
 
     const tx = this.db.transaction(() => {
       this.db
@@ -260,10 +259,10 @@ export class VideoIntegrityRepository {
 
     try {
       tx();
-      console.log(`[Repo] GC deleted ${rows.length} expired videos.`);
+      logger.debug(`[Repo] GC deleted ${rows.length} expired videos.`);
       return rows.length;
     } catch (error) {
-      console.error('[Repo] GC failed:', error);
+      logger.error('[Repo] GC failed:', error);
       return 0;
     }
   }

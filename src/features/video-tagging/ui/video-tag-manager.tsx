@@ -36,7 +36,6 @@ export const VideoTagManager = ({ videoId }: VideoTagManagerProps) => {
   const [inputOpen, setInputOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
 
-  // 既に付与されているタグのIDセット
   const assignedTagIds = new Set(tags.map((t) => t.id));
 
   const handleSelectTag = (tagId: string) => {
@@ -62,7 +61,6 @@ export const VideoTagManager = ({ videoId }: VideoTagManagerProps) => {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {/* Existing Tags (Pills) */}
       {tags.map((tag) => (
         <div
           key={tag.id}
@@ -80,7 +78,6 @@ export const VideoTagManager = ({ videoId }: VideoTagManagerProps) => {
         </div>
       ))}
 
-      {/* Add Tag Button & Popover */}
       <Popover open={inputOpen} onOpenChange={setInputOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -101,15 +98,11 @@ export const VideoTagManager = ({ videoId }: VideoTagManagerProps) => {
               value={inputValue}
               onValueChange={setInputValue}
               className="h-9 text-xs"
-              // ▼▼▼ 追加: 候補がない場合のEnter作成処理 ▼▼▼
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const trimmed = inputValue.trim().toLowerCase();
                   if (!trimmed) return;
 
-                  // 入力値を含むタグが存在するか簡易チェック
-                  // (Shadcn Commandのフィルタロジックと厳密には異なるが、
-                  // 「候補がない = 入力値を含むタグがない」とみなして判定)
                   const hasCandidates = allTags.some((tag) =>
                     tag.name.toLowerCase().includes(trimmed)
                   );

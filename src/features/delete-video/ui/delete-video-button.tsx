@@ -19,7 +19,7 @@ import { useDeleteVideo } from '../model/use-delete-video';
 import { cn } from '@/lib/utils';
 
 interface DeleteVideoButtonProps {
-  videoId: string; // Changed from filePath
+  videoId: string;
   className?: string;
   size?: 'sm' | 'default' | 'lg';
   iconSize?: number;

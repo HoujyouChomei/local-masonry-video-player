@@ -12,7 +12,9 @@ import { VideoSearchRepository, SearchOptions } from '../repositories/video-sear
 import { FolderRepository } from '../repositories/folder-repository';
 import { VideoMapper } from './video-mapper';
 import { VideoFile } from '../../../src/shared/types/video';
-import { store } from '../../lib/store'; // ▼▼▼ 追加: storeへのアクセス ▼▼▼
+import { store } from '../../lib/store';
+import { MoveResponse } from '../../../src/shared/types/electron';
+import { logger } from '../../lib/logger';
 
 export class VideoLibraryService {
   private scanner = new LibraryScanner();
@@ -26,9 +28,6 @@ export class VideoLibraryService {
   private folderRepo = new FolderRepository();
   private mapper = new VideoMapper();
 
-  /**
-   * 指定フォルダをスキャンし、監視を開始する
-   */
   async loadAndWatch(folderPath: string): Promise<VideoFile[]> {
     if (!folderPath) {
       this.watcher.stop();
@@ -40,19 +39,12 @@ export class VideoLibraryService {
     return videos;
   }
 
-  /**
-   * 指定フォルダを軽量スキャンする（サムネイル生成なし）
-   * APIリクエスト時やバックグラウンドでの定期実行用
-   */
   async scanQuietly(folderPath: string): Promise<void> {
     if (!folderPath) return;
     await this.scanner.scanQuietly(folderPath);
   }
 
-  /**
-   * 動画ファイルを移動し、DBのパス情報を更新する
-   */
-  async moveVideos(videoPaths: string[], targetFolderPath: string): Promise<number> {
+  async moveVideos(videoPaths: string[], targetFolderPath: string): Promise<MoveResponse> {
     const results = await this.moveService.moveVideos(videoPaths, targetFolderPath);
     let successCount = 0;
 
@@ -65,31 +57,25 @@ export class VideoLibraryService {
             const stat = await fs.stat(result.newPath);
             const mtime = Math.floor(stat.mtimeMs);
             this.integrityRepo.updatePath(video.id, result.newPath, mtime);
-            console.log(`[DB] Updated path for ID ${video.id}: ${result.newPath}`);
+            logger.debug(`[DB] Updated path for ID ${video.id}: ${result.newPath}`);
           }
         } catch (e) {
-          console.error(`[DB] Failed to update DB for moved video: ${result.oldPath}`, e);
+          logger.error(`[DB] Failed to update DB for moved video: ${result.oldPath}`, e);
         }
       }
     }
-    return successCount;
+
+    return { successCount, results };
   }
 
-  /**
-   * 動画を正規化(再エンコード)し、ライブラリに登録する
-   */
   async normalizeVideo(filePath: string): Promise<VideoFile | null> {
     const outputPath = await this.ffmpegService.normalizeVideo(filePath);
     if (!outputPath) return null;
     return this.integrityService.processNewFile(outputPath);
   }
 
-  /**
-   * 動画検索を実行する
-   */
   searchVideos(query: string, tagIds: string[], options: SearchOptions): VideoFile[] {
     try {
-      // ▼▼▼ 追加: フォルダ指定がない場合（グローバル検索）、現在のライブラリフォルダのみを対象にする ▼▼▼
       if (!options.folderPath) {
         const libraryFolders = (store.get('libraryFolders') as string[]) || [];
         options.allowedRoots = libraryFolders;
@@ -98,21 +84,15 @@ export class VideoLibraryService {
       const rows = this.searchRepo.search(query, tagIds, options);
       return this.mapper.toEntities(rows);
     } catch (error) {
-      console.error('[VideoLibraryService] Search failed:', error);
+      logger.error('[VideoLibraryService] Search failed:', error);
       return [];
     }
   }
 
-  /**
-   * フォルダ内の動画の並び順を保存する
-   */
   saveFolderOrder(folderPath: string, videoPaths: string[]): void {
     this.folderRepo.saveSortOrder(folderPath, videoPaths);
   }
 
-  /**
-   * フォルダ内の動画の並び順を取得する
-   */
   getFolderOrder(folderPath: string): string[] {
     return this.folderRepo.getSortOrder(folderPath);
   }

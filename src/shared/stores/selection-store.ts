@@ -6,17 +6,15 @@ import { VideoFile } from '@/shared/types/video';
 interface SelectionState {
   isSelectionMode: boolean;
   selectedVideoIds: string[];
-  lastSelectedVideoId: string | null; // Shift範囲選択用
+  lastSelectedVideoId: string | null;
 
-  // Actions
   enterSelectionMode: (initialId?: string) => void;
   exitSelectionMode: () => void;
   toggleSelection: (id: string) => void;
   selectAll: (allIds: string[]) => void;
-  clearSelection: () => void; // 選択解除のみ（モード維持）
+  clearSelection: () => void;
   selectRange: (targetId: string, allVideos: VideoFile[]) => void;
 
-  // 完全リセット（モードも解除。View切り替え時などに使用）
   reset: () => void;
 }
 

@@ -5,7 +5,7 @@ import { selectFolder } from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { Button } from '@/components/ui/button';
-import { useVideoCache } from '@/shared/lib/use-video-cache'; // 追加
+import { useVideoCache } from '@/shared/lib/use-video-cache';
 
 interface SelectFolderButtonProps {
   className?: string;
@@ -14,7 +14,7 @@ interface SelectFolderButtonProps {
 export const SelectFolderButton = ({ className }: SelectFolderButtonProps) => {
   const { setFolderPath, addLibraryFolder } = useSettingsStore();
   const { resetView } = useUIStore();
-  const { invalidateAllVideoLists } = useVideoCache(); // 追加
+  const { invalidateAllVideoLists } = useVideoCache();
 
   const handleSelect = async () => {
     const path = await selectFolder();
@@ -24,7 +24,6 @@ export const SelectFolderButton = ({ className }: SelectFolderButtonProps) => {
 
       resetView();
 
-      // フォルダ変更時は全てのリストをクリアして再取得するのが適切
       invalidateAllVideoLists();
     }
   };

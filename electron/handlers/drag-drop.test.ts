@@ -6,7 +6,6 @@ import fs from 'fs';
 import path from 'path';
 import { handleDragDrop } from './drag-drop';
 
-// モックの定義
 vi.mock('electron', () => ({
   ipcMain: {
     on: vi.fn(),
@@ -14,16 +13,13 @@ vi.mock('electron', () => ({
   app: {
     getPath: vi.fn().mockReturnValue('/mock/userData'),
   },
-  // ▼▼▼ 追加: nativeImage のモック ▼▼▼
   nativeImage: {
     createEmpty: vi.fn().mockReturnValue({ isEmpty: () => true }),
   },
 }));
 
-// fsモジュールのモック修正
 vi.mock('fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs')>();
-  // デフォルトエクスポートと名前付きエクスポートの両方に対応
   return {
     ...actual,
     default: {
@@ -66,7 +62,6 @@ describe('handleDragDrop', () => {
 
   it('should start drag with icon if thumbnail exists', () => {
     const videoPath = '/path/to/video.mp4';
-    // サムネイルが存在すると仮定
     vi.mocked(fs.existsSync).mockReturnValue(true);
 
     onDragStartHandler?.(mockEvent, videoPath);
@@ -82,7 +77,6 @@ describe('handleDragDrop', () => {
 
   it('should start drag without icon if thumbnail does not exist', () => {
     const videoPath = '/path/to/video.mp4';
-    // サムネイルが存在しないと仮定
     vi.mocked(fs.existsSync).mockReturnValue(false);
 
     onDragStartHandler?.(mockEvent, videoPath);
@@ -108,7 +102,7 @@ describe('handleDragDrop', () => {
 
     expect(mockEvent.sender.startDrag).toHaveBeenCalledWith(
       expect.objectContaining({
-        file: files[0], // 代表ファイルは先頭
+        file: files[0],
         files: files,
       })
     );

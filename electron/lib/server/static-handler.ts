@@ -24,13 +24,8 @@ const getMimeType = (filePath: string) => {
 };
 
 export const handleStatic = (req: IncomingMessage, res: ServerResponse, url: URL) => {
-  // 開発環境と本番環境(パッケージ済み)でパスが異なる場合に対応
   const appPath = app.getAppPath();
 
-  // Viteのビルド出力先 (distディレクトリ)
-  // devモード: プロジェクトルート/dist
-  // prodモード: resources/app/dist または resources/app.asar/dist
-  // ▼▼▼ 変更: out -> dist ▼▼▼
   const distPath = path.join(appPath, 'dist');
 
   let pathname = url.pathname;
@@ -38,10 +33,8 @@ export const handleStatic = (req: IncomingMessage, res: ServerResponse, url: URL
     pathname = '/index.html';
   }
 
-  // 安全なパス解決
   const targetPath = path.join(distPath, pathname);
 
-  // パストラバーサル対策: distPathの内部にあるか確認
   if (!targetPath.startsWith(distPath)) {
     return sendError(res, 'Access Denied', 403);
   }
@@ -53,8 +46,6 @@ export const handleStatic = (req: IncomingMessage, res: ServerResponse, url: URL
     return;
   }
 
-  // ファイルが見つからない場合、SPAのために index.html にフォールバックする
-  // (ただし、APIや特定のアセットへのリクエストは除く)
   if (!pathname.startsWith('/api/') && !pathname.includes('.')) {
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {

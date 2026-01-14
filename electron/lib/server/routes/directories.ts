@@ -6,7 +6,6 @@ import path from 'path';
 import { isPathAllowed } from '../security';
 import { sendJson, sendError } from '../utils';
 
-// 同期版の再帰スキャン (HTTPサーバー用)
 const scanDirectoriesRecursivelySync = (dir: string, list: string[]) => {
   try {
     const dirents = fs.readdirSync(dir, { withFileTypes: true });
@@ -33,7 +32,6 @@ export const handleDirectoriesRequest = async (
 
   const dirPath = url.searchParams.get('path');
 
-  // GET /api/directories
   if (pathname === '/api/directories' && method === 'GET') {
     if (!dirPath) return sendError(res, 'Path parameter required', 400);
     if (!isPathAllowed(dirPath)) return sendError(res, 'Access Denied', 403);
@@ -53,7 +51,6 @@ export const handleDirectoriesRequest = async (
     }
   }
 
-  // ▼▼▼ 追加: GET /api/directories/tree ▼▼▼
   if (pathname === '/api/directories/tree' && method === 'GET') {
     if (!dirPath) return sendError(res, 'Path parameter required', 400);
     if (!isPathAllowed(dirPath)) return sendError(res, 'Access Denied', 403);
@@ -68,5 +65,5 @@ export const handleDirectoriesRequest = async (
     }
   }
 
-  return false; // Not handled
+  return false;
 };

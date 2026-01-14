@@ -13,15 +13,10 @@ export class FolderRepository {
     return getDB();
   }
 
-  /**
-   * フォルダの並び順を保存（既存の順序は削除して上書き）
-   */
   saveSortOrder(folderPath: string, videoPaths: string[]): void {
     const tx = this.db.transaction(() => {
-      // 1. 削除
       this.db.prepare('DELETE FROM folder_sort_orders WHERE folder_path = ?').run(folderPath);
 
-      // 2. 一括挿入
       const insertStmt = this.db.prepare(`
         INSERT INTO folder_sort_orders (folder_path, video_path, rank)
         VALUES (?, ?, ?)
@@ -35,9 +30,6 @@ export class FolderRepository {
     tx();
   }
 
-  /**
-   * フォルダの並び順（動画パスのリスト）を取得
-   */
   getSortOrder(folderPath: string): string[] {
     const rows = this.db
       .prepare(

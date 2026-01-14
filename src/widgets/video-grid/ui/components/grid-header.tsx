@@ -2,11 +2,9 @@
 
 import { Hash, Calendar, Clock, HardDrive } from 'lucide-react';
 import { cn } from '@/lib/utils';
-// import { useSettingsStore } from '@/entities/settings/model/store'; // 削除
-import { useUIStore } from '@/shared/stores/ui-store'; // 追加
+import { useUIStore } from '@/shared/stores/ui-store';
 
 export const GridHeader = () => {
-  // ▼▼▼ 修正: useUIStore から取得 ▼▼▼
   const isHeaderVisible = useUIStore((state) => state.isHeaderVisible);
 
   return (

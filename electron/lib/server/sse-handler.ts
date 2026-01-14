@@ -23,43 +23,31 @@ export class SSEHandler {
   }
 
   public handleConnection(req: IncomingMessage, res: ServerResponse) {
-    // SSE Headers
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*', // CORSはRouter側でも制御するが念のため
+      'Access-Control-Allow-Origin': '*',
     });
 
     const clientId = this.nextClientId++;
     const client: SSEClient = { id: clientId, res };
     this.clients.push(client);
 
-    // console.log(`[SSE] Client connected: ${clientId} (Total: ${this.clients.length})`);
-
-    // 初回接続時の疎通確認用コメント
     res.write(': connected\n\n');
 
-    // Keep-Alive (Heartbeat) - 30秒ごとにコメント送信
     const heartbeat = setInterval(() => {
       res.write(': heartbeat\n\n');
     }, 30000);
 
-    // クローズ時のクリーンアップ
     req.on('close', () => {
-      // console.log(`[SSE] Client disconnected: ${clientId}`);
       clearInterval(heartbeat);
       this.clients = this.clients.filter((c) => c.id !== clientId);
     });
   }
 
-  /**
-   * 全クライアントにイベントを送信する
-   */
   public broadcast(events: VideoUpdateEvent[]) {
     if (this.clients.length === 0 || events.length === 0) return;
-
-    // console.log(`[SSE] Broadcasting ${events.length} events to ${this.clients.length} clients`);
 
     const data = JSON.stringify(events);
     const message = `data: ${data}\n\n`;

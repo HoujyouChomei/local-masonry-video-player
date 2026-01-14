@@ -16,7 +16,6 @@ export const ColumnCounter = ({ className }: ColumnCounterProps) => {
 
   const isMobile = useIsMobile();
 
-  // PC Controls
   const MIN_COLUMNS = 1;
   const MAX_COLUMNS = 10;
 
@@ -32,13 +31,11 @@ export const ColumnCounter = ({ className }: ColumnCounterProps) => {
     }
   };
 
-  // Mobile Controls
   const toggleMobileColumns = () => {
     const next = mobileColumnCount === 1 ? 2 : 1;
     setMobileColumnCount(next);
   };
 
-  // --- Mobile View ---
   if (isMobile) {
     return (
       <Button
@@ -48,13 +45,11 @@ export const ColumnCounter = ({ className }: ColumnCounterProps) => {
         className={cn('text-muted-foreground hover:text-foreground', className)}
         title={mobileColumnCount === 1 ? 'Current: 1 Column' : 'Current: 2 Columns'}
       >
-        {/* ▼▼▼ 修正: アイコンを反転 (1列時はRectangleVertical, 2列時はGrid2x2) ▼▼▼ */}
         {mobileColumnCount === 1 ? <RectangleVertical size={20} /> : <Grid2x2 size={20} />}
       </Button>
     );
   }
 
-  // --- Desktop View ---
   return (
     <div className={cn('flex items-center gap-1', className)}>
       <div className="text-muted-foreground mr-1 flex items-center" title="Column Count">

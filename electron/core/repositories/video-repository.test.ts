@@ -1,9 +1,16 @@
 // electron/core/repositories/video-repository.test.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: {
+    getPath: vi.fn(() => ''),
+    isPackaged: false,
+  },
+}));
+
 import { VideoRepository } from './video-repository';
 
-// --- DB Mock Setup ---
 const mockRun = vi.fn();
 const mockGet = vi.fn();
 const mockAll = vi.fn();
@@ -25,7 +32,6 @@ describe('VideoRepository (Mocked DB)', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // デフォルトの実装をリセット
     mockPrepare.mockImplementation((_sql: string) => ({
       run: mockRun,
       get: mockGet,
@@ -97,7 +103,6 @@ describe('VideoRepository (Mocked DB)', () => {
     });
 
     it('toggleFavoriteById should flip is_favorite flag by ID', () => {
-      // Setup: 既存レコードの取得モックと更新モックを振り分ける
       mockPrepare.mockImplementation((sql: string) => {
         if (sql.includes('SELECT * FROM videos WHERE id = ?')) {
           return {
@@ -118,7 +123,6 @@ describe('VideoRepository (Mocked DB)', () => {
 
       repo.toggleFavoriteById('1');
 
-      // 0 -> 1 に更新されることを確認
       expect(mockRun).toHaveBeenCalledWith(1, '1');
     });
 
@@ -138,7 +142,6 @@ describe('VideoRepository (Mocked DB)', () => {
 
       repo.findManyByPaths(paths);
 
-      // プレースホルダーが3つ生成されているか確認
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('IN (?,?,?)'));
       expect(mockAll).toHaveBeenCalledWith('/a.mp4', '/b.mp4', '/c.mp4');
     });
@@ -156,11 +159,9 @@ describe('VideoRepository (Mocked DB)', () => {
       repo.findManyByTagIds(tagIds);
 
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('IN (?,?)'));
-      // タグの数だけ一致することを要求する HAVING COUNT 句の確認
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('HAVING COUNT(DISTINCT vt.tag_id) = ?')
       );
-      // 引数: タグIDリスト + タグの個数(2)
       expect(mockAll).toHaveBeenCalledWith('tag1', 'tag2', 2);
     });
 
@@ -176,7 +177,6 @@ describe('VideoRepository (Mocked DB)', () => {
       repo.findPathsByDirectory('/folder');
 
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('path LIKE ?'));
-      // 前方一致用の % が付与されているか
       expect(mockAll).toHaveBeenCalledWith('/folder%');
     });
 

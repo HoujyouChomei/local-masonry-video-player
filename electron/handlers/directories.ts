@@ -29,7 +29,6 @@ const scanDirectoriesRecursively = async (dir: string, list: string[]) => {
 };
 
 export const handleDirectories = () => {
-  // 指定パスの直下にあるサブディレクトリ一覧を返す (既存)
   ipcMain.handle('get-subdirectories', async (_event, dirPath: string) => {
     try {
       const dirents = await fs.readdir(dirPath, { withFileTypes: true });
@@ -50,7 +49,6 @@ export const handleDirectories = () => {
     }
   });
 
-  // ▼▼▼ 追加: 指定パス以下の全ディレクトリツリーを返す ▼▼▼
   ipcMain.handle('get-directory-tree', async (_event, dirPath: string) => {
     const results: string[] = [];
     await scanDirectoriesRecursively(dirPath, results);

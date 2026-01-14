@@ -2,15 +2,22 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: {
+    isPackaged: false,
+    getPath: vi.fn(() => '/tmp'),
+  },
+}));
+
 import { FileMoveService } from './file-move-service';
 import fs from 'fs/promises';
 import path from 'path';
 
-// fs/promises モック
 vi.mock('fs/promises', () => ({
   default: {
     rename: vi.fn(),
-    access: vi.fn(), // 存在確認用: 成功=存在, 失敗=不在
+    access: vi.fn(),
     cp: vi.fn(),
     unlink: vi.fn(),
   },
@@ -29,7 +36,6 @@ describe('FileMoveService', () => {
     const source = path.normalize('/source/video.mp4');
     const expectedDest = path.join(targetDir, 'video.mp4');
 
-    // 移動先にはファイルがない設定 (access -> rejects)
     vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.rename).mockResolvedValue(undefined);
 
@@ -42,14 +48,11 @@ describe('FileMoveService', () => {
 
   it('should auto-rename file if destination exists', async () => {
     const source = path.normalize('/source/video.mp4');
-    // dest1変数は使用されていないため削除
     const dest2 = path.join(targetDir, 'video (1).mp4');
 
-    // dest1 (video.mp4) は存在する -> access解決
-    // dest2 (video (1).mp4) は存在しない -> access拒否
     vi.mocked(fs.access)
-      .mockResolvedValueOnce(undefined) // dest1 exists
-      .mockRejectedValueOnce(new Error('ENOENT')); // dest2 missing
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('ENOENT'));
 
     vi.mocked(fs.rename).mockResolvedValue(undefined);
 
@@ -66,7 +69,6 @@ describe('FileMoveService', () => {
 
     vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
 
-    // renameがEXDEVエラー
     const exdevError: any = new Error('Cross-device link');
     exdevError.code = 'EXDEV';
     vi.mocked(fs.rename).mockRejectedValue(exdevError);
@@ -80,6 +82,35 @@ describe('FileMoveService', () => {
     expect(fs.cp).toHaveBeenCalledWith(source, expectedDest, expect.anything());
     expect(fs.unlink).toHaveBeenCalledWith(source);
     expect(results).toEqual([{ oldPath: source, newPath: expectedDest, success: true }]);
+  });
+
+  it('should return warning if copy succeeds but unlink fails', async () => {
+    const source = path.normalize('/source/video.mp4');
+    const expectedDest = path.join(targetDir, 'video.mp4');
+
+    vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
+
+    const exdevError: any = new Error('Cross-device link');
+    exdevError.code = 'EXDEV';
+    vi.mocked(fs.rename).mockRejectedValue(exdevError);
+
+    vi.mocked(fs.cp).mockResolvedValue(undefined);
+    const unlinkError: any = new Error('Operation not permitted');
+    unlinkError.code = 'EPERM';
+    vi.mocked(fs.unlink).mockRejectedValue(unlinkError);
+
+    const results = await service.moveVideos([source], targetDir);
+
+    expect(fs.cp).toHaveBeenCalledWith(source, expectedDest, expect.anything());
+    expect(fs.unlink).toHaveBeenCalledWith(source);
+    expect(results).toEqual([
+      {
+        oldPath: source,
+        newPath: expectedDest,
+        success: true,
+        warning: 'Source file could not be deleted (EPERM). Copy created.',
+      },
+    ]);
   });
 
   it('should return error result if operation fails', async () => {
@@ -103,7 +134,7 @@ describe('FileMoveService', () => {
 
   it('should skip if source and destination are same', async () => {
     const fileName = 'video.mp4';
-    const source = path.join(targetDir, fileName); // ターゲットと同じ場所
+    const source = path.join(targetDir, fileName);
 
     const results = await service.moveVideos([source], targetDir);
 

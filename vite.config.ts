@@ -11,7 +11,7 @@ export default defineConfig({
       },
     }),
   ],
-  base: './', // Electronでは相対パスが必要
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

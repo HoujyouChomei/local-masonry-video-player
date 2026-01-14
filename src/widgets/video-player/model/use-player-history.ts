@@ -13,7 +13,6 @@ export const usePlayerHistory = (isOpen: boolean, closeVideo: () => void) => {
       }
 
       const handlePopState = (_event: PopStateEvent) => {
-        // ブラウザの戻るボタンが押されたらフラグを下ろして閉じる
         isHistoryPushedRef.current = false;
         closeVideo();
       };
@@ -22,8 +21,6 @@ export const usePlayerHistory = (isOpen: boolean, closeVideo: () => void) => {
 
       return () => {
         window.removeEventListener('popstate', handlePopState);
-        // コンポーネントがアンマウントされる（閉じる）際、
-        // まだ履歴が残っていれば戻る（＝履歴をクリーンにする）
         if (isHistoryPushedRef.current) {
           isHistoryPushedRef.current = false;
           window.history.back();

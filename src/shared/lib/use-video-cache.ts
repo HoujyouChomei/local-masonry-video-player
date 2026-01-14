@@ -14,7 +14,6 @@ export const useVideoCache = () => {
     'search',
   ];
 
-  // ... (onVideoUpdated, onVideoDeleted は変更なし) ...
   const onVideoUpdated = (updatedVideo: VideoFile) => {
     VIDEO_LIST_KEYS.forEach((key) => {
       queryClient.setQueriesData<VideoFile[]>({ queryKey: [key] }, (oldData) => {
@@ -41,7 +40,6 @@ export const useVideoCache = () => {
     queryClient.invalidateQueries({ queryKey: ['tags'] });
   };
 
-  // ▼▼▼ 追加: パスベースでの削除（IDが不明な場合用） ▼▼▼
   const onVideoDeletedByPath = (path: string) => {
     VIDEO_LIST_KEYS.forEach((key) => {
       queryClient.setQueriesData<VideoFile[]>({ queryKey: [key] }, (oldData) => {
@@ -49,8 +47,6 @@ export const useVideoCache = () => {
         return oldData.filter((v) => v.path !== path);
       });
     });
-    // Note: IDリストである ['favorites'] はパスではフィルタできないため、
-    // 後の invalidateRefreshedLists での再取得に任せる
   };
 
   const invalidateAllVideoLists = () => {
@@ -62,7 +58,6 @@ export const useVideoCache = () => {
     queryClient.invalidateQueries({ queryKey: ['tags'] });
   };
 
-  // ... (onPlaylistUpdated, onTagsUpdated, syncMetadata は変更なし) ...
   const onPlaylistUpdated = (targetPlaylistId?: string) => {
     queryClient.invalidateQueries({ queryKey: ['playlists'] });
     if (targetPlaylistId) {
@@ -87,11 +82,8 @@ export const useVideoCache = () => {
     queryClient.invalidateQueries({ queryKey: ['playlists'] });
   };
 
-  // ▼▼▼ 追加: 更新種別に応じた部分的な再取得 ▼▼▼
-  // useVideoUpdates から使用
   const invalidateRefreshedLists = (keys: Set<string>) => {
     if (keys.has('videos')) {
-      // 特定フォルダだけでなく、キャッシュされている動画リスト全般を無効化対象とする
       queryClient.invalidateQueries({ queryKey: ['videos'] });
     }
     if (keys.has('favorites')) {
@@ -111,9 +103,9 @@ export const useVideoCache = () => {
   return {
     onVideoUpdated,
     onVideoDeleted,
-    onVideoDeletedByPath, // Export
+    onVideoDeletedByPath,
     invalidateAllVideoLists,
-    invalidateRefreshedLists, // Export
+    invalidateRefreshedLists,
     onPlaylistUpdated,
     onTagsUpdated,
     syncMetadata,

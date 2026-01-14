@@ -6,7 +6,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { getConnectionInfoApi } from '@/shared/api/electron';
 import { ConnectionInfo } from '@/shared/types/electron';
-import { useSettingsStore } from '@/shared/stores/settings-store'; // ストアを追加
+import { useSettingsStore } from '@/shared/stores/settings-store';
 import { SettingsSwitch } from '../components/settings-switch';
 
 export const MobileConnectionSection = () => {
@@ -15,9 +15,7 @@ export const MobileConnectionSection = () => {
 
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [loading, setLoading] = useState(false);
-  // const [error, setError] = useState(false); // IP取得エラーは重要度が低いため省略
 
-  // IPアドレス情報の取得 (パネルが開かれた時、または有効化された時に実行)
   useEffect(() => {
     if (enableMobileConnection) {
       const fetchInfo = async () => {
@@ -35,7 +33,6 @@ export const MobileConnectionSection = () => {
     }
   }, [enableMobileConnection]);
 
-  // トークンリセット確認
   const handleResetToken = async () => {
     if (
       confirm(
@@ -46,7 +43,6 @@ export const MobileConnectionSection = () => {
     }
   };
 
-  // URL構築
   const connectionUrl = connectionInfo
     ? `http://${connectionInfo.ip}:${connectionInfo.port}/?token=${authAccessToken}`
     : '';

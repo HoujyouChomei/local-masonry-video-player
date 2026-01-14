@@ -1,11 +1,16 @@
 // electron/core/services/video-rebinder.test.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+vi.mock('electron', () => ({
+  app: {
+    isPackaged: false,
+    getPath: vi.fn(() => '/tmp'),
+  },
+}));
+
 import { VideoRebinder, FileStat } from './video-rebinder';
 
-// --- Mocks Setup ---
-
-// VideoIntegrityRepository Mock
 const integrityRepoMocks = vi.hoisted(() => ({
   findByInode: vi.fn(),
   findMissingCandidatesBySize: vi.fn(),
@@ -22,7 +27,6 @@ vi.mock('../repositories/video-integrity-repository', () => ({
   },
 }));
 
-// File Hash Mock
 const hashMocks = vi.hoisted(() => ({
   calculateFileHash: vi.fn(),
 }));
@@ -82,7 +86,6 @@ describe('VideoRebinder', () => {
         last_seen_at: 200,
       };
 
-      // 順序を逆にしても Available が選ばれるか確認
       integrityRepoMocks.findByInode.mockReturnValue([rowMissing, rowAvailable]);
 
       const result = await rebinder.findCandidate(DUMMY_PATH, DUMMY_STAT, false);
@@ -91,7 +94,6 @@ describe('VideoRebinder', () => {
     });
 
     it('should prioritize newer "last_seen_at" when both are "missing"', async () => {
-      // ▼▼▼ 追加: 複数の欠損ファイル候補がある場合のソートロジック検証 ▼▼▼
       const rowOld = { id: 'v-old', status: 'missing', size: 1000, last_seen_at: 100 };
       const rowNew = { id: 'v-new', status: 'missing', size: 1000, last_seen_at: 200 };
 
@@ -118,9 +120,7 @@ describe('VideoRebinder', () => {
     });
 
     it('should not attempt hash calculation if allowHashCalc is false', async () => {
-      // ▼▼▼ 追加: フラグ制御の検証 ▼▼▼
       integrityRepoMocks.findByInode.mockReturnValue([]);
-      // 候補が存在してもハッシュ計算しないこと
       integrityRepoMocks.findMissingCandidatesBySize.mockReturnValue([
         { id: 'v1', file_hash: 'abc', size: 1000 },
       ]);
@@ -133,13 +133,12 @@ describe('VideoRebinder', () => {
     });
 
     it('should return undefined if calculated hash does not match any candidate', async () => {
-      // ▼▼▼ 追加: ハッシュ不一致の検証 ▼▼▼
       integrityRepoMocks.findByInode.mockReturnValue([]);
       integrityRepoMocks.findMissingCandidatesBySize.mockReturnValue([
         { id: 'v1', file_hash: 'hash-A', size: 1000 },
         { id: 'v2', file_hash: 'hash-B', size: 1000 },
       ]);
-      hashMocks.calculateFileHash.mockResolvedValue('hash-C'); // どちらとも一致しない
+      hashMocks.calculateFileHash.mockResolvedValue('hash-C');
 
       const result = await rebinder.findCandidate(DUMMY_PATH, DUMMY_STAT, true);
 
@@ -147,7 +146,6 @@ describe('VideoRebinder', () => {
     });
 
     it('should return undefined if hash calculation fails (returns null)', async () => {
-      // ▼▼▼ 追加: ハッシュ計算失敗時の検証 ▼▼▼
       integrityRepoMocks.findByInode.mockReturnValue([]);
       integrityRepoMocks.findMissingCandidatesBySize.mockReturnValue([
         { id: 'v1', file_hash: 'hash-A', size: 1000 },
@@ -181,7 +179,6 @@ describe('VideoRebinder', () => {
 
       expect(integrityRepoMocks.restore).toHaveBeenCalled();
 
-      // 非同期処理の完了を待つ (process.nextTick相当)
       await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(hashMocks.calculateFileHash).toHaveBeenCalledWith('/new/path.mp4');

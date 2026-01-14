@@ -3,7 +3,7 @@
 import { ElectronBase } from '../../base/electron-base';
 import { VideosApi } from '../../types';
 import { VideoFile } from '@/shared/types/video';
-import { SearchOptions } from '@/shared/types/electron';
+import { SearchOptions, MoveResponse } from '@/shared/types/electron';
 
 export class ElectronVideos extends ElectronBase implements VideosApi {
   getAll(folderPath: string): Promise<VideoFile[]> {
@@ -34,8 +34,11 @@ export class ElectronVideos extends ElectronBase implements VideosApi {
     return this.invoke((e) => e.renameVideo(id, newFileName), null);
   }
 
-  move(videoPaths: string[], targetFolderPath: string): Promise<number> {
-    return this.invoke((e) => e.moveVideos(videoPaths, targetFolderPath), 0);
+  move(videoPaths: string[], targetFolderPath: string): Promise<MoveResponse> {
+    return this.invoke((e) => e.moveVideos(videoPaths, targetFolderPath), {
+      successCount: 0,
+      results: [],
+    });
   }
 
   download(url: string, targetFolderPath: string): Promise<VideoFile | null> {

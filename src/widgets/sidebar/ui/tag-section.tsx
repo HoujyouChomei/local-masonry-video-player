@@ -5,7 +5,7 @@ import { Hash, ChevronDown, ChevronRight, Globe, Folder } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useSidebarTags } from '@/entities/tag/model/use-tags';
-import { Button } from '@/components/ui/button'; // Buttonコンポーネントを使用
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export const TagSection = () => {
@@ -43,7 +43,6 @@ export const TagSection = () => {
 
   return (
     <div className="px-4 py-2">
-      {/* Header Row: Title & Scope Toggle Icon */}
       <div className="mb-2 flex h-8 items-center justify-between px-2">
         <button
           onClick={toggleTagsSection}
@@ -55,7 +54,6 @@ export const TagSection = () => {
           </span>
         </button>
 
-        {/* Scope Toggle Icon Button */}
         <Button
           variant="ghost"
           size="icon"
@@ -75,8 +73,6 @@ export const TagSection = () => {
 
       {isTagsSectionExpanded && (
         <div className="flex flex-col gap-3">
-          {/* 以前の大きなボタンがあった場所 (削除済み) */}
-
           <div className="px-2">
             {isLoading ? (
               <div className="text-muted-foreground text-xs italic">Loading...</div>

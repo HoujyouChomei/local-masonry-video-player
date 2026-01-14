@@ -10,7 +10,6 @@ import {
 import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
 
 export const createSystemSlice: SettingsSliceCreator<SystemSlice> = (set, get) => ({
-  // State
   enableHardwareDecoding: DEFAULT_SETTINGS.enableHardwareDecoding,
   enableExperimentalNormalize: DEFAULT_SETTINGS.enableExperimentalNormalize,
   ffmpegPath: DEFAULT_SETTINGS.ffmpegPath,
@@ -18,7 +17,6 @@ export const createSystemSlice: SettingsSliceCreator<SystemSlice> = (set, get) =
   enableMobileConnection: DEFAULT_SETTINGS.enableMobileConnection,
   authAccessToken: DEFAULT_SETTINGS.authAccessToken,
 
-  // Actions
   toggleHardwareDecoding: async () => {
     const newState = !get().enableHardwareDecoding;
     set({ enableHardwareDecoding: newState });

@@ -13,8 +13,6 @@ import { VideoMetadataPanel } from './video-metadata-panel';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { VideoFile } from '@/shared/types/video';
 
-// --- Sub Components ---
-
 interface PlayerHeaderButtonsProps {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -54,7 +52,6 @@ interface MainPlayerScreenProps {
   showControls: boolean;
   autoPlayNext: boolean;
   isFullscreen: boolean;
-  // Events
   onMouseMove: () => void;
   onMouseLeave: () => void;
   onContextMenu: () => void;
@@ -134,8 +131,6 @@ const PreloadPlayer = React.memo(({ url }: PreloadPlayerProps) => {
 });
 PreloadPlayer.displayName = 'PreloadPlayer';
 
-// --- Main Component ---
-
 export const VideoModal = () => {
   const {
     selectedVideo,
@@ -161,7 +156,6 @@ export const VideoModal = () => {
     isInfoPanelOpen,
     toggleInfoPanel,
     isContentHidden,
-    // Touch Handlers
     handleTouchStart,
     handleTouchEnd,
   } = useVideoModalPlayer();
@@ -178,7 +172,6 @@ export const VideoModal = () => {
     const nextIndex = (currentIndex + 1) % playlist.length;
     const nextVideo = playlist[nextIndex];
 
-    // 変更: video.src をそのまま使用 (二重管理の廃止)
     return nextVideo.src;
   }, [selectedVideo, playlist]);
 
@@ -191,14 +184,11 @@ export const VideoModal = () => {
         isContentHidden ? 'pointer-events-none opacity-0' : 'opacity-100'
       )}
     >
-      {/* Backdrop */}
       <div onClick={closeVideo} className="absolute inset-0 bg-black/90 backdrop-blur-sm" />
 
-      {/* Wrapper */}
       <div className={cn('relative', isFullscreen ? 'h-full w-full' : 'mx-4 w-full max-w-6xl')}>
         <ContextMenu>
           <ContextMenuTrigger asChild>
-            {/* Modal Content (Main) */}
             <div
               className={cn(
                 'relative z-50 overflow-hidden bg-gray-950 shadow-2xl ring-1 ring-white/10',
@@ -253,7 +243,6 @@ export const VideoModal = () => {
           />
         </ContextMenu>
 
-        {/* Side Panel */}
         {!isFullscreen && isInfoPanelOpen && (
           <InfoSidePanel video={selectedVideo} onClick={(e) => e.stopPropagation()} />
         )}

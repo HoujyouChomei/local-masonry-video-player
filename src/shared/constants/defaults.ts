@@ -32,10 +32,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   enableExperimentalNormalize: false,
 
   enableLargeVideoRestriction: true,
-  largeVideoThreshold: 100, // 100MB
+  largeVideoThreshold: 100,
 
   openInFullscreen: false,
 
   enableMobileConnection: false,
-  authAccessToken: '', // ランタイムで生成または上書きされる
+  authAccessToken: '',
 };

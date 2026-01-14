@@ -36,10 +36,8 @@ export const Sidebar = () => {
     }
   };
 
-  // サイドバーの中身（共通部分）
   const SidebarContent = (
     <div className="flex h-full flex-col">
-      {/* Views Header */}
       <div className="shrink-0 space-y-2 p-4 pb-2">
         <h3 className="text-muted-foreground mb-2 px-2 text-xs font-semibold tracking-wider">
           VIEWS
@@ -66,27 +64,22 @@ export const Sidebar = () => {
 
       <Separator className="bg-border/40 mx-4 w-auto shrink-0" />
 
-      {/* Main Scrollable Content */}
       <ScrollArea className="flex-1 overflow-hidden *:data-[slot=scroll-area-viewport]:overscroll-contain">
         <div className="flex flex-col pb-4">
-          {/* Playlists */}
           <PlaylistSection />
 
           <Separator className="bg-border/40 mx-4 my-2 w-auto" />
 
-          {/* Library */}
           <LibrarySection />
 
           <Separator className="bg-border/40 mx-4 my-2 w-auto" />
 
-          {/* Tags */}
           <TagSection />
         </div>
       </ScrollArea>
     </div>
   );
 
-  // --- Mobile View: Sheet (Drawer) ---
   if (isMobile) {
     return (
       <Sheet open={isMobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -104,7 +97,6 @@ export const Sidebar = () => {
     );
   }
 
-  // --- Desktop View: Aside ---
   if (!isSidebarOpen) return null;
 
   return (
