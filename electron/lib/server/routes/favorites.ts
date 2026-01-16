@@ -3,6 +3,7 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { FavoriteService } from '../../../core/services/favorite-service';
 import { sendJson, sendError } from '../utils';
+import { logger } from '../../logger';
 
 const favoriteService = new FavoriteService();
 
@@ -28,7 +29,7 @@ export const handleFavoritesRequest = async (
       const favorites = await favoriteService.getFavorites();
       return sendJson(res, favorites);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to fetch favorites:', e);
       return sendError(res, 'Failed to fetch favorites');
     }
   }
@@ -40,7 +41,7 @@ export const handleFavoritesRequest = async (
       const favorites = await favoriteService.toggleFavorite(videoId);
       return sendJson(res, favorites);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to toggle favorite:', e);
       return sendError(res, 'Failed to toggle favorite');
     }
   }

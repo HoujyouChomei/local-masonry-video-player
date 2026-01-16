@@ -3,6 +3,7 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { TagService } from '../../../core/services/tag-service';
 import { sendJson, sendError } from '../utils';
+import { logger } from '../../logger';
 
 const tagService = new TagService();
 
@@ -87,7 +88,7 @@ export const handleTagsRequest = async (req: IncomingMessage, res: ServerRespons
       return sendJson(res, { success: true });
     }
   } catch (e) {
-    console.error(e);
+    logger.error('Failed to process tags request:', e);
     return sendError(res, 'Failed to process tags request');
   }
 

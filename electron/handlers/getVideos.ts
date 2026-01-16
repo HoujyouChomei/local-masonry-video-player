@@ -1,8 +1,12 @@
 // electron/handlers/getVideos.ts
 
+import { ipcMain } from 'electron';
 import { VideoLibraryService } from '../core/services/video-library-service';
 
-export const getVideos = async (folderPath: string) => {
+export const handleGetVideos = () => {
   const libraryService = new VideoLibraryService();
-  return libraryService.loadAndWatch(folderPath);
+
+  ipcMain.handle('get-videos', async (_event, folderPath: string) => {
+    return libraryService.loadAndWatch(folderPath);
+  });
 };

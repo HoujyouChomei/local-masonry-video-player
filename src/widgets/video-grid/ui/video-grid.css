@@ -33,3 +33,7 @@
   opacity: 0 !important;
   pointer-events: none;
 }
+
+body.is-scrolling .video-card {
+  pointer-events: none !important;
+}

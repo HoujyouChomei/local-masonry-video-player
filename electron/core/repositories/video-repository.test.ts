@@ -179,13 +179,5 @@ describe('VideoRepository (Mocked DB)', () => {
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('path LIKE ?'));
       expect(mockAll).toHaveBeenCalledWith('/folder%');
     });
-
-    it('deleteManyByIds should handle multiple IDs', () => {
-      const ids = ['1', '2', '3'];
-      repo.deleteManyByIds(ids);
-
-      expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('IN (?,?,?)'));
-      expect(mockRun).toHaveBeenCalledWith('1', '2', '3');
-    });
   });
 });

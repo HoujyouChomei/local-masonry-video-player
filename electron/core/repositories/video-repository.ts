@@ -164,10 +164,6 @@ export class VideoRepository {
     this.db.prepare('UPDATE videos SET is_favorite = ? WHERE id = ?').run(newVal, id);
   }
 
-  deleteByPath(path: string): void {
-    this.db.prepare('DELETE FROM videos WHERE path = ?').run(path);
-  }
-
   deleteById(id: string): void {
     this.db.prepare('DELETE FROM videos WHERE id = ?').run(id);
   }
@@ -176,11 +172,5 @@ export class VideoRepository {
     return this.db
       .prepare('SELECT id, path FROM videos WHERE path LIKE ?')
       .all(`${folderPath}%`) as { id: string; path: string }[];
-  }
-
-  deleteManyByIds(ids: string[]): void {
-    if (ids.length === 0) return;
-    const placeholders = ids.map(() => '?').join(',');
-    this.db.prepare(`DELETE FROM videos WHERE id IN (${placeholders})`).run(...ids);
   }
 }

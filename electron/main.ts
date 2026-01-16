@@ -1,7 +1,7 @@
 // electron/main.ts
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import path from 'path';
 
 if (!process.env.NODE_ENV && app.isPackaged) {
@@ -13,6 +13,7 @@ import { initializeLogger, logger } from './lib/logger';
 const { store } = require('./lib/store');
 
 import type { BackgroundVerificationService } from './core/services/background-verification-service';
+import type { SettingsService } from './core/services/settings-service';
 
 if (app.isPackaged) {
   console.log = () => {};
@@ -118,11 +119,7 @@ app.whenReady().then(async () => {
   require('./handlers/tags').handleTags();
   require('./handlers/search').handleSearch();
   require('./handlers/metadata').handleMetadata();
-
-  ipcMain.handle('get-videos', async (_event, folderPath: string) => {
-    const { getVideos } = require('./handlers/getVideos');
-    return await getVideos(folderPath);
-  });
+  require('./handlers/getVideos').handleGetVideos();
 
   createWindow();
 
@@ -130,8 +127,19 @@ app.whenReady().then(async () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
+  const { SettingsService } = require('./core/services/settings-service');
+  const settingsService = SettingsService.getInstance() as SettingsService;
+  const { startLocalServer } = require('./lib/local-server');
+
+  settingsService.on('mobile-connection-changed', (host: string) => {
+    setTimeout(() => {
+      startLocalServer(host).catch((e: unknown) => {
+        logger.error('[Main] Failed to restart server via settings change:', e);
+      });
+    }, 100);
+  });
+
   try {
-    const { startLocalServer } = require('./lib/local-server');
     await startLocalServer();
   } catch (e) {
     logger.error('[Main] Failed to start local video server:', e);

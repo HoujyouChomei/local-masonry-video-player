@@ -1,26 +1,12 @@
 // electron/lib/server/routes/directories.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import fs from 'fs';
-import path from 'path';
+import { FileSystemService } from '../../../core/services/file-system-service';
 import { isPathAllowed } from '../security';
 import { sendJson, sendError } from '../utils';
+import { logger } from '../../logger';
 
-const scanDirectoriesRecursivelySync = (dir: string, list: string[]) => {
-  try {
-    const dirents = fs.readdirSync(dir, { withFileTypes: true });
-    for (const dirent of dirents) {
-      if (dirent.isDirectory()) {
-        if (dirent.name.startsWith('.') || dirent.name === 'node_modules') continue;
-        const fullPath = path.join(dir, dirent.name);
-        list.push(fullPath);
-        scanDirectoriesRecursivelySync(fullPath, list);
-      }
-    }
-  } catch {
-    // ignore
-  }
-};
+const fileService = new FileSystemService();
 
 export const handleDirectoriesRequest = async (
   req: IncomingMessage,
@@ -37,16 +23,10 @@ export const handleDirectoriesRequest = async (
     if (!isPathAllowed(dirPath)) return sendError(res, 'Access Denied', 403);
 
     try {
-      const dirents = fs.readdirSync(dirPath, { withFileTypes: true });
-      const directories = dirents
-        .filter((dirent) => dirent.isDirectory() && !dirent.name.startsWith('.'))
-        .map((dirent) => ({
-          name: dirent.name,
-          path: path.join(dirPath, dirent.name),
-        }));
+      const directories = await fileService.getSubdirectories(dirPath);
       return sendJson(res, directories);
     } catch (e) {
-      console.error(`Failed to read directory: ${dirPath}`, e);
+      logger.error(`Failed to read directory: ${dirPath}`, e);
       return sendError(res, 'Failed to read directory');
     }
   }
@@ -56,11 +36,10 @@ export const handleDirectoriesRequest = async (
     if (!isPathAllowed(dirPath)) return sendError(res, 'Access Denied', 403);
 
     try {
-      const results: string[] = [];
-      scanDirectoriesRecursivelySync(dirPath, results);
+      const results = await fileService.getDirectoryTree(dirPath);
       return sendJson(res, results);
     } catch (e) {
-      console.error(`Failed to read directory tree: ${dirPath}`, e);
+      logger.error(`Failed to read directory tree: ${dirPath}`, e);
       return sendError(res, 'Failed to read directory tree');
     }
   }

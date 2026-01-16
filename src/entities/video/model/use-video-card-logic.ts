@@ -1,12 +1,12 @@
 // src/entities/video/model/use-video-card-logic.ts
 
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useInView } from 'react-intersection-observer';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { VideoFile } from '@/shared/types/video';
+import { useDynamicRootMargin } from '@/shared/lib/use-dynamic-root-margin';
 
 interface UseVideoCardLogicProps {
   video: VideoFile;
@@ -20,30 +20,22 @@ export const useVideoCardLogic = ({ video, onDragStart, onDragEnd }: UseVideoCar
   const [aspectRatio, setAspectRatio] = useState<number | undefined>(initialAspectRatio);
   const [isHoveredState, setIsHoveredState] = useState(false);
 
-  const settingsRootMargin = useSettingsStore((state) => state.rootMargin);
-  const scrollDirection = useUIStore((state) => state.scrollDirection);
   const playOnHoverOnly = useSettingsStore((state) => state.playOnHoverOnly);
   const enableLargeVideoRestriction = useSettingsStore(
     (state) => state.enableLargeVideoRestriction
   );
   const largeVideoThreshold = useSettingsStore((state) => state.largeVideoThreshold);
 
-  const isMobile = useIsMobile();
-  const { isSelectionMode, enterSelectionMode, exitSelectionMode } = useSelectionStore();
+  const isMobile = useUIStore((s) => s.isMobile);
+
+  const isSelectionMode = useSelectionStore((s) => s.isSelectionMode);
+  const enterSelectionMode = useSelectionStore((s) => s.enterSelectionMode);
+  const exitSelectionMode = useSelectionStore((s) => s.exitSelectionMode);
 
   const isHeavy = enableLargeVideoRestriction && video.size > largeVideoThreshold * 1024 * 1024;
   const shouldTrackHover = playOnHoverOnly || isHeavy;
 
-  const FIXED_BUFFER = 150;
-
-  const rootMargin = useMemo(() => {
-    if (scrollDirection === 'down') {
-      return `${FIXED_BUFFER}px 0px ${settingsRootMargin}px 0px`;
-    } else if (scrollDirection === 'up') {
-      return `${settingsRootMargin}px 0px ${FIXED_BUFFER}px 0px`;
-    }
-    return `${settingsRootMargin}px 0px ${settingsRootMargin}px 0px`;
-  }, [scrollDirection, settingsRootMargin]);
+  const rootMargin = useDynamicRootMargin();
 
   const elementRef = useRef<HTMLDivElement>(null);
 

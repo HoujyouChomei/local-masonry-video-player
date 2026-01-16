@@ -3,6 +3,7 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { PlaylistService } from '../../../core/services/playlist-service';
 import { sendJson, sendError } from '../utils';
+import { logger } from '../../logger';
 
 const playlistService = new PlaylistService();
 
@@ -28,7 +29,7 @@ export const handlePlaylistsRequest = async (
       const playlists = playlistService.getAll();
       return sendJson(res, playlists);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to fetch playlists:', e);
       return sendError(res, 'Failed to fetch playlists');
     }
   }
@@ -40,7 +41,7 @@ export const handlePlaylistsRequest = async (
       const playlist = playlistService.create(name);
       return sendJson(res, playlist);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to create playlist:', e);
       return sendError(res, 'Failed to create playlist');
     }
   }
@@ -52,7 +53,7 @@ export const handlePlaylistsRequest = async (
       const playlists = playlistService.delete(id);
       return sendJson(res, playlists);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to delete playlist:', e);
       return sendError(res, 'Failed to delete playlist');
     }
   }
@@ -64,7 +65,7 @@ export const handlePlaylistsRequest = async (
       const playlist = playlistService.updateName(id, name);
       return sendJson(res, playlist);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to update playlist:', e);
       return sendError(res, 'Failed to update playlist');
     }
   }
@@ -76,7 +77,7 @@ export const handlePlaylistsRequest = async (
       const playlist = await playlistService.addVideo(playlistId, videoId);
       return sendJson(res, playlist);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to add video to playlist:', e);
       return sendError(res, 'Failed to add video to playlist');
     }
   }
@@ -88,7 +89,7 @@ export const handlePlaylistsRequest = async (
       const playlist = playlistService.removeVideo(playlistId, videoId);
       return sendJson(res, playlist);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to remove video from playlist:', e);
       return sendError(res, 'Failed to remove video from playlist');
     }
   }
@@ -102,7 +103,7 @@ export const handlePlaylistsRequest = async (
       const playlist = playlistService.reorder(playlistId, videoIds);
       return sendJson(res, playlist);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to reorder playlist:', e);
       return sendError(res, 'Failed to reorder playlist');
     }
   }

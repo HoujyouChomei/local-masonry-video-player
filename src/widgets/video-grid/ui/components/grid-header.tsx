@@ -10,7 +10,7 @@ export const GridHeader = () => {
   return (
     <div
       className={cn(
-        'bg-background/95 text-muted-foreground sticky z-20 mb-2 grid grid-cols-[50px_80px_1fr_1fr_1fr_1fr] gap-4 border-b border-white/10 py-2 text-xs font-semibold tracking-wider uppercase backdrop-blur',
+        'bg-background text-muted-foreground sticky z-20 mb-2 grid grid-cols-[50px_80px_1fr_1fr_1fr_1fr] gap-4 border-b border-white/10 py-2 text-xs font-semibold tracking-wider uppercase',
         'transition-[top] duration-300 ease-in-out',
         isHeaderVisible ? 'top-16' : 'top-0'
       )}

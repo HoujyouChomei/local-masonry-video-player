@@ -16,6 +16,10 @@ vi.mock('electron', () => ({
       ipcHandlers.set(channel, handler);
     }),
   },
+  app: {
+    isPackaged: false,
+    getPath: vi.fn().mockReturnValue('/mock/path'),
+  },
 }));
 
 vi.mock('../core/services/video-library-service', () => ({

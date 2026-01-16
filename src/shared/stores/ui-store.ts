@@ -18,6 +18,7 @@ interface UIState {
   scrollDirection: 'down' | 'up' | 'none';
 
   isMobileMenuOpen: boolean;
+  isMobile: boolean;
 
   windowState: WindowState;
 
@@ -36,6 +37,7 @@ interface UIState {
   setScrollDirection: (direction: 'down' | 'up' | 'none') => void;
 
   setMobileMenuOpen: (isOpen: boolean) => void;
+  setIsMobile: (isMobile: boolean) => void; // Added
   setWindowState: (state: WindowState) => void;
 
   resetView: () => void;
@@ -55,6 +57,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   scrollDirection: 'none',
 
   isMobileMenuOpen: false,
+  isMobile: false,
 
   windowState: {
     isMaximized: false,
@@ -143,6 +146,10 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   setMobileMenuOpen: (isOpen) => {
     set({ isMobileMenuOpen: isOpen });
+  },
+
+  setIsMobile: (isMobile) => {
+    set({ isMobile });
   },
 
   setWindowState: (state) => {

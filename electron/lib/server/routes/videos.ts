@@ -6,6 +6,7 @@ import { VideoRepository } from '../../../core/repositories/video-repository';
 import { VideoMapper } from '../../../core/services/video-mapper';
 import { SearchOptions } from '../../../core/repositories/video-search-repository';
 import { sendJson, sendError } from '../utils';
+import { logger } from '../../logger';
 
 const libraryService = new VideoLibraryService();
 const videoRepo = new VideoRepository();
@@ -36,7 +37,7 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
       const videos = libraryService.searchVideos(query, tagIds, options);
       return sendJson(res, videos);
     } catch (e) {
-      console.error(e);
+      logger.error('Failed to fetch videos:', e);
       return sendError(res, 'Failed to fetch videos');
     }
   }
@@ -49,7 +50,7 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
       const row = videoRepo.findByPath(filePath);
       return sendJson(res, row ? mapper.toEntity(row) : null);
     } catch (e) {
-      console.error(e);
+      logger.error(`Failed to fetch video details for: ${filePath}`, e);
       return sendError(res, 'Failed to fetch video details');
     }
   }

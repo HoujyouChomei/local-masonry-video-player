@@ -1,12 +1,12 @@
 // electron/lib/server/routes/settings.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { store } from '../../store';
+import { SettingsService } from '../../../core/services/settings-service';
 import { sendJson, sendError } from '../utils';
-import { startLocalServer } from '../../local-server';
-import { VideoLibraryService } from '../../../core/services/video-library-service';
+import { AppSettings } from '../../../../src/shared/types/electron';
+import { logger } from '../../logger';
 
-const libraryService = new VideoLibraryService();
+const settingsService = SettingsService.getInstance();
 
 export const handleSettingsRequest = async (
   req: IncomingMessage,
@@ -17,7 +17,7 @@ export const handleSettingsRequest = async (
   const pathname = url.pathname;
 
   if (pathname === '/api/settings' && method === 'GET') {
-    return sendJson(res, store.store);
+    return sendJson(res, settingsService.getSettings());
   }
 
   if (pathname === '/api/settings' && method === 'POST') {
@@ -28,36 +28,19 @@ export const handleSettingsRequest = async (
     const bodyString = Buffer.concat(bodyBuffers).toString();
 
     try {
-      const { key, value } = JSON.parse(bodyString);
+      const { key, value } = JSON.parse(bodyString) as {
+        key: keyof AppSettings;
+        value: AppSettings[keyof AppSettings];
+      };
 
       if (!key) return sendError(res, 'Key is required', 400);
 
-      const oldValue = store.get(key);
-
-      store.set(key, value);
-
-      if (key === 'libraryFolders' && Array.isArray(value) && Array.isArray(oldValue)) {
-        const newFolders = value as string[];
-        const oldFolders = oldValue as string[];
-        const addedFolders = newFolders.filter((f) => !oldFolders.includes(f));
-
-        if (addedFolders.length > 0) {
-          Promise.all(addedFolders.map((folder) => libraryService.scanQuietly(folder))).catch(
-            console.error
-          );
-        }
-      }
-
-      if (key === 'enableMobileConnection') {
-        const enable = value as boolean;
-        const host = enable ? '0.0.0.0' : '127.0.0.1';
-        setTimeout(() => startLocalServer(host).catch(console.error), 100);
-      }
+      await settingsService.updateSetting(key, value);
 
       return sendJson(res, { success: true });
     } catch (e) {
-      console.error('Failed to save settings:', e);
-      return sendError(res, 'Invalid JSON', 400);
+      logger.error('Failed to save settings via HTTP:', e);
+      return sendError(res, 'Invalid JSON or Internal Error', 400);
     }
   }
 

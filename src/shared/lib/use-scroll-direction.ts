@@ -1,3 +1,5 @@
+// src/shared/lib/use-scroll-direction.ts
+
 import { useEffect, useRef } from 'react';
 import { useUIStore } from '@/shared/stores/ui-store';
 
@@ -5,6 +7,7 @@ export const useScrollDirection = () => {
   const setScrollDirection = useUIStore((state) => state.setScrollDirection);
   const lastScrollY = useRef(0);
   const ticking = useRef(false);
+  const scrollTimeout = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const updateScrollDir = () => {
@@ -25,6 +28,18 @@ export const useScrollDirection = () => {
     };
 
     const onScroll = () => {
+      if (!document.body.classList.contains('is-scrolling')) {
+        document.body.classList.add('is-scrolling');
+      }
+
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+
+      scrollTimeout.current = setTimeout(() => {
+        document.body.classList.remove('is-scrolling');
+      }, 150);
+
       if (!ticking.current) {
         window.requestAnimationFrame(updateScrollDir);
         ticking.current = true;
@@ -32,6 +47,13 @@ export const useScrollDirection = () => {
     };
 
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+      document.body.classList.remove('is-scrolling');
+    };
   }, [setScrollDirection]);
 };

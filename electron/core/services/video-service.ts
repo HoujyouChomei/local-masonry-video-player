@@ -2,7 +2,6 @@
 
 import fs from 'fs/promises';
 import path from 'path';
-import crypto from 'crypto';
 import { shell } from 'electron';
 import { VideoRepository } from '../repositories/video-repository';
 import { VideoIntegrityRepository } from '../repositories/video-integrity-repository';
@@ -27,43 +26,6 @@ export class VideoService {
 
   async getVideo(filePath: string): Promise<VideoFile | null> {
     return this.integrityService.processNewFile(filePath);
-  }
-
-  async ensureVideoExists(videoPath: string): Promise<string> {
-    const existing = this.videoRepo.findByPath(videoPath);
-    if (existing) return existing.id;
-
-    try {
-      const stat = await fs.stat(videoPath);
-      const id = crypto.randomUUID();
-      const name = path.basename(videoPath);
-
-      this.videoRepo.create({
-        id,
-        path: videoPath,
-        name,
-        size: stat.size,
-        mtime: Math.floor(stat.mtimeMs),
-        created_at: Date.now(),
-        ino: Number(stat.ino),
-      });
-      return id;
-    } catch (e) {
-      logger.warn(`ensureVideoExists failed for: ${videoPath}`, e);
-      const id = crypto.randomUUID();
-      const name = path.basename(videoPath);
-
-      this.videoRepo.create({
-        id,
-        path: videoPath,
-        name,
-        size: 0,
-        mtime: Date.now(),
-        created_at: Date.now(),
-        ino: null,
-      });
-      return id;
-    }
   }
 
   async renameVideo(id: string, newFileName: string): Promise<VideoFile | null> {

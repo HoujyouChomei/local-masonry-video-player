@@ -2,6 +2,7 @@
 
 import { ipcMain } from 'electron';
 import { VideoLibraryService } from '../core/services/video-library-service';
+import { logger } from '../lib/logger';
 
 export const handleSorting = () => {
   const service = new VideoLibraryService();
@@ -10,7 +11,7 @@ export const handleSorting = () => {
     try {
       service.saveFolderOrder(folderPath, videoPaths);
     } catch (error) {
-      console.error(`Failed to save folder order: ${folderPath}`, error);
+      logger.error(`Failed to save folder order: ${folderPath}`, error);
       throw error;
     }
   });
@@ -19,7 +20,7 @@ export const handleSorting = () => {
     try {
       return service.getFolderOrder(folderPath);
     } catch (error) {
-      console.error(`Failed to get folder order: ${folderPath}`, error);
+      logger.error(`Failed to get folder order: ${folderPath}`, error);
       return [];
     }
   });

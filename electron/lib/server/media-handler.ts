@@ -14,6 +14,7 @@ import {
   VIDEO_MIME_TYPES,
 } from '../../../src/shared/constants/file-types';
 import { THUMBNAIL } from '../../../src/shared/constants/assets';
+import { logger } from '../logger';
 
 const ffmpegService = new FFmpegService();
 
@@ -62,7 +63,7 @@ export const handleThumbnail = async (req: IncomingMessage, res: ServerResponse,
 
     const jpegBuffer = image.toJPEG(THUMBNAIL.QUALITY);
     fs.promises.writeFile(thumbPath, jpegBuffer).catch((err) => {
-      console.error('Failed to cache thumbnail:', err);
+      logger.error('Failed to cache thumbnail:', err);
     });
 
     res.writeHead(200, {
@@ -71,7 +72,7 @@ export const handleThumbnail = async (req: IncomingMessage, res: ServerResponse,
     });
     res.end(jpegBuffer);
   } catch (e) {
-    console.error('Thumbnail error:', e);
+    logger.error('Thumbnail error:', e);
     sendError(res, 'Internal Server Error');
   }
 };
@@ -84,7 +85,7 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
   }
 
   if (!isPathAllowed(filePath)) {
-    console.warn(`[Security] Blocked unauthorized access: ${filePath}`);
+    logger.warn(`[Security] Blocked unauthorized access: ${filePath}`);
     return sendError(res, 'Access Denied', 403);
   }
 
@@ -118,13 +119,13 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
           try {
             ffmpegProcess.kill('SIGKILL');
           } catch (e) {
-            console.error('[Media] Failed to kill FFmpeg:', e);
+            logger.error('[Media] Failed to kill FFmpeg:', e);
           }
         }
       };
 
       ffmpegProcess.on('error', (err) => {
-        console.error('[Media] FFmpeg process error:', err);
+        logger.error('[Media] FFmpeg process error:', err);
         cleanup();
       });
 
@@ -133,7 +134,7 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
       res.on('error', cleanup);
       return;
     } catch (error) {
-      console.error('[Media] Transcode failed:', error);
+      logger.error('[Media] Transcode failed:', error);
     }
   }
 
@@ -184,7 +185,7 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
       fs.createReadStream(filePath, { highWaterMark: HIGH_WATER_MARK }).pipe(res);
     }
   } catch (err) {
-    console.error('[Media] Stream error:', err);
+    logger.error('[Media] Stream error:', err);
     sendError(res, 'Internal Server Error');
   }
 };

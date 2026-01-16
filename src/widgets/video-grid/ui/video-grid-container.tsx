@@ -10,7 +10,6 @@ import { VideoGridLayout } from './video-grid-layout';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { RenameVideoDialog } from '@/features/rename-video/ui/rename-video-dialog';
-
 import { useVideoGridState } from '../model/use-video-grid-state';
 import { useGridPagination } from '../model/use-grid-pagination';
 import { useVideoGridInteractions } from '../model/use-video-grid-interactions';

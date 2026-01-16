@@ -63,6 +63,7 @@ describe('Sidebar Integration Test', () => {
       viewMode: 'folder',
       isMobileMenuOpen: false,
       isTagGlobalScope: false,
+      isMobile: false, // デフォルトはデスクトップモード
     });
 
     resizeWindow(1024);
@@ -154,18 +155,10 @@ describe('Sidebar Integration Test', () => {
   it('switches to mobile drawer when screen is small', async () => {
     resizeWindow(375);
 
-    (window.matchMedia as ReturnType<typeof vi.fn>).mockImplementation((query) => ({
-      matches: true,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    }));
-
-    useUIStore.setState({ isMobileMenuOpen: true });
+    useUIStore.setState({
+      isMobile: true,
+      isMobileMenuOpen: true,
+    });
 
     renderWithProviders(<Sidebar />);
 
