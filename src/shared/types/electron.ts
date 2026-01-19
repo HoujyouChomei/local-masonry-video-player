@@ -10,7 +10,7 @@ export interface SearchOptions {
   allowedRoots?: string[];
 }
 
-export type GridStyle = 'modern' | 'mosaic';
+export type GridStyle = 'standard' | 'tile';
 
 export interface AppSettings {
   folderPath: string;
@@ -90,6 +90,9 @@ export interface WindowState {
 }
 
 export interface IElectronAPI {
+  onAppReady: (callback: () => void) => () => void;
+  checkBackendReady: () => void;
+
   getVideos: (folderPath: string) => Promise<VideoFile[]>;
 
   searchVideos: (query: string, tagIds: string[], options: SearchOptions) => Promise<VideoFile[]>;

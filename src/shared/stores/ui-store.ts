@@ -14,6 +14,8 @@ interface UIState {
   isTagGlobalScope: boolean;
   isTagsSectionExpanded: boolean;
 
+  isFavoriteGlobalScope: boolean;
+
   isHeaderVisible: boolean;
   scrollDirection: 'down' | 'up' | 'none';
 
@@ -32,12 +34,14 @@ interface UIState {
   toggleTagGlobalScope: () => void;
   toggleTagsSection: () => void;
 
+  toggleFavoriteGlobalScope: () => void;
+
   setEditingPlaylistId: (id: string | null) => void;
   setHeaderVisible: (isVisible: boolean) => void;
   setScrollDirection: (direction: 'down' | 'up' | 'none') => void;
 
   setMobileMenuOpen: (isOpen: boolean) => void;
-  setIsMobile: (isMobile: boolean) => void; // Added
+  setIsMobile: (isMobile: boolean) => void;
   setWindowState: (state: WindowState) => void;
 
   resetView: () => void;
@@ -52,6 +56,8 @@ export const useUIStore = create<UIState>((set, get) => ({
   selectedTagIds: [],
   isTagGlobalScope: false,
   isTagsSectionExpanded: true,
+
+  isFavoriteGlobalScope: false,
 
   isHeaderVisible: true,
   scrollDirection: 'none',
@@ -130,6 +136,28 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   toggleTagsSection: () => {
     set((state) => ({ isTagsSectionExpanded: !state.isTagsSectionExpanded }));
+  },
+
+  toggleFavoriteGlobalScope: () => {
+    set((state) => {
+      const nextScope = !state.isFavoriteGlobalScope;
+
+      if (state.viewMode === 'all-favorites') {
+        return {
+          isFavoriteGlobalScope: nextScope,
+          viewMode: 'folder',
+          showFavoritesOnly: true,
+        };
+      } else if (state.showFavoritesOnly && state.viewMode === 'folder') {
+        return {
+          isFavoriteGlobalScope: nextScope,
+          viewMode: 'all-favorites',
+          showFavoritesOnly: false,
+        };
+      }
+
+      return { isFavoriteGlobalScope: nextScope };
+    });
   },
 
   setEditingPlaylistId: (id) => {

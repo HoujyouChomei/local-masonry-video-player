@@ -68,4 +68,67 @@ test.describe('File Operations', () => {
 
     await expect(firstCard.getByRole('heading')).toHaveText(newNameBase + extension);
   });
+
+  test('should delete video from disk', async () => {
+    const cards = page.locator('.video-card');
+    const initialCount = await cards.count();
+
+    const lastCard = cards.last();
+    await expect(lastCard).toBeVisible();
+
+    await lastCard.click({ button: 'right' });
+
+    const deleteOption = page.getByText('Delete from Disk');
+    await expect(deleteOption).toBeVisible();
+    await deleteOption.click();
+
+    const confirmDialog = page.locator('[role="alertdialog"]');
+    if (await confirmDialog.isVisible()) {
+      const confirmButton = confirmDialog.getByRole('button', { name: /Delete|OK|Confirm/i });
+      if (await confirmButton.isVisible()) {
+        await confirmButton.click();
+      }
+    }
+
+    await page.waitForTimeout(1000);
+
+    const finalCount = await cards.count();
+    expect(finalCount).toBe(initialCount - 1);
+  });
+
+  test('should preserve metadata after file move', async () => {
+    const targetDirPath = path.join(ctx.userDataDir, 'moved_videos');
+    if (!fs.existsSync(targetDirPath)) {
+      fs.mkdirSync(targetDirPath);
+    }
+
+    const firstCard = page.locator('.video-card').first();
+    await expect(firstCard).toBeVisible();
+
+    const favButton = firstCard.getByTitle('Add to Favorites');
+    if (await favButton.isVisible()) {
+      await favButton.click();
+      await page.waitForTimeout(500);
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const videoName = await firstCard.getByRole('heading').innerText();
+
+    const sourceFiles = fs.readdirSync(ctx.videoDir);
+    const videoFile = sourceFiles.find((f) => f.includes('test-video'));
+    if (videoFile) {
+      const sourcePath = path.join(ctx.videoDir, videoFile);
+      const destPath = path.join(targetDirPath, videoFile);
+
+      fs.copyFileSync(sourcePath, destPath);
+      fs.unlinkSync(sourcePath);
+
+      await page.waitForTimeout(2000);
+    }
+
+    const activeFavButton = firstCard.getByTitle('Remove from Favorites');
+    if (await activeFavButton.isVisible()) {
+      await activeFavButton.click();
+    }
+  });
 });

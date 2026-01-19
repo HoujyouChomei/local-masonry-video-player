@@ -2,21 +2,21 @@
 
 import React from 'react';
 import Masonry from 'react-masonry-css';
-import { useSettingsStore } from '@/shared/stores/settings-store';
 import { VideoFile } from '@/shared/types/video';
 import { VideoGridItem, VideoGridItemInteractions } from '../video-grid-item';
+import { VideoGridConfig } from '../../model/types';
+import { ContextMenuRenderer } from '@/shared/types/ui';
 
 interface MasonryViewProps {
   videos: VideoFile[];
-  columnCount: number;
-  isModalOpen: boolean;
-  isSelectionMode: boolean;
+  config: VideoGridConfig;
   interactions: VideoGridItemInteractions;
+  renderContextMenu?: ContextMenuRenderer;
 }
 
 export const MasonryView = React.memo(
-  ({ videos, columnCount, isModalOpen, isSelectionMode, interactions }: MasonryViewProps) => {
-    const gridStyle = useSettingsStore((state) => state.gridStyle);
+  ({ videos, config, interactions, renderContextMenu }: MasonryViewProps) => {
+    const { gridStyle, columnCount } = config;
 
     const breakpointColumnsObj = {
       default: columnCount,
@@ -29,13 +29,13 @@ export const MasonryView = React.memo(
 
     const getMasonryClasses = () => {
       switch (gridStyle) {
-        case 'mosaic':
+        case 'tile':
           return {
-            grid: 'my-masonry-grid-mosaic',
-            col: 'my-masonry-grid_column-mosaic',
+            grid: 'my-masonry-grid-tile',
+            col: 'my-masonry-grid_column-tile',
             mb: 'mb-0',
           };
-        case 'modern':
+        case 'standard':
         default:
           return {
             grid: 'my-masonry-grid',
@@ -57,10 +57,9 @@ export const MasonryView = React.memo(
           <div key={video.id} className={`w-full ${classes.mb}`}>
             <VideoGridItem
               video={video}
-              gridStyle={gridStyle}
-              isModalOpen={isModalOpen}
-              isSelectionMode={isSelectionMode}
+              config={config}
               interactions={interactions}
+              renderContextMenu={renderContextMenu}
             />
           </div>
         ))}

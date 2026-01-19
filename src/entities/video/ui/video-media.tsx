@@ -82,7 +82,7 @@ export const VideoMedia = React.memo(
       <div
         className={cn(
           'relative h-full w-full overflow-hidden bg-black',
-          gridStyle === 'modern' && 'rounded-lg'
+          gridStyle === 'standard' && 'rounded-lg'
         )}
       >
         {shouldLoadVideo && (

@@ -1,7 +1,7 @@
 // electron/lib/server/routes/settings.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { SettingsService } from '../../../core/services/settings-service';
+import { SettingsService } from '../../../core/services/system/settings-service';
 import { sendJson, sendError } from '../utils';
 import { AppSettings } from '../../../../src/shared/types/electron';
 import { logger } from '../../logger';

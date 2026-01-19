@@ -1,7 +1,7 @@
 // electron/lib/server/routes/favorites.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { FavoriteService } from '../../../core/services/favorite-service';
+import { FavoriteService } from '../../../core/services/collection/favorite-service';
 import { sendJson, sendError } from '../utils';
 import { logger } from '../../logger';
 

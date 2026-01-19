@@ -1,7 +1,7 @@
 // src/widgets/video-grid/ui/components/empty-state.tsx
-
 import { AlertCircle, Star, SearchX, ListMusic, FolderOpen, Hash } from 'lucide-react';
 import { SelectFolderButton } from '@/features/select-folder/ui/select-folder-button';
+import { VideoGridConfig } from '../../model/types';
 
 interface EmptyStateProps {
   isLoading: boolean;
@@ -9,11 +9,7 @@ interface EmptyStateProps {
   error: unknown;
   totalVideosCount: number;
   searchQuery: string;
-  isGlobalMode: boolean;
-  isPlaylistMode: boolean;
-  isTagMode: boolean;
-  folderPath: string;
-  showFavoritesOnly: boolean;
+  config: VideoGridConfig;
 }
 
 export const EmptyState = ({
@@ -22,13 +18,9 @@ export const EmptyState = ({
   error,
   totalVideosCount,
   searchQuery,
-  isGlobalMode,
-  isPlaylistMode,
-  isTagMode,
-  folderPath,
-  showFavoritesOnly,
+  config,
 }: EmptyStateProps) => {
-  if (!isGlobalMode && !isPlaylistMode && !isTagMode && !folderPath) {
+  if (!config.isGlobalMode && !config.isPlaylistMode && !config.isTagMode && !config.folderPath) {
     return (
       <div className="text-muted-foreground flex h-[50vh] flex-col items-center justify-center gap-4">
         <div className="bg-muted/50 rounded-full p-4">
@@ -69,19 +61,19 @@ export const EmptyState = ({
 
     return (
       <div className="text-muted-foreground flex h-[50vh] flex-col items-center justify-center">
-        {isGlobalMode ? (
+        {config.isGlobalMode ? (
           <>
             <Star size={48} className="mb-2 opacity-20" />
             <p>No favorite videos yet.</p>
             <p className="text-sm">Add videos to favorites to see them here.</p>
           </>
-        ) : isPlaylistMode ? (
+        ) : config.isPlaylistMode ? (
           <>
             <ListMusic size={48} className="mb-2 opacity-20" />
             <p>This playlist is empty.</p>
             <p className="text-sm">Right-click on videos to add them here.</p>
           </>
-        ) : isTagMode ? (
+        ) : config.isTagMode ? (
           <>
             <Hash size={48} className="mb-2 opacity-20" />
             <p>No videos found with this tag.</p>
@@ -89,7 +81,7 @@ export const EmptyState = ({
           </>
         ) : (
           <p>
-            {showFavoritesOnly
+            {config.showFavoritesOnly
               ? 'No favorite videos found in this folder.'
               : 'No supported videos found in this folder.'}
           </p>

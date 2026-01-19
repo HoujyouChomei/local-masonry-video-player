@@ -31,3 +31,19 @@ export const VIDEO_MIME_TYPES: Record<string, string> = {
   '.mpg': 'video/mpeg',
   '.mpeg': 'video/mpeg',
 };
+
+// Image extensions for future image support
+export const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+
+export const IMAGE_MIME_TYPES: Record<string, string> = {
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml',
+};
+
+// All media extensions
+export const ALL_MEDIA_EXTENSIONS = [...VIDEO_EXTENSIONS_ALL, ...IMAGE_EXTENSIONS];

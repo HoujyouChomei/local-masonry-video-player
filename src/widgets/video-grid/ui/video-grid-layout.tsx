@@ -2,11 +2,13 @@
 
 import React from 'react';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { VideoFile, SortOption } from '@/shared/types/video';
+import { VideoFile } from '@/shared/types/video';
 import { EmptyState } from './components/empty-state';
 import { MasonryView } from './views/masonry-view';
 import { ListView } from './views/list-view';
 import { VideoGridItemInteractions } from './video-grid-item';
+import { VideoGridConfig } from '../model/types';
+import { ContextMenuRenderer } from '@/shared/types/ui';
 import './video-grid.css';
 
 interface VideoGridLayoutProps {
@@ -15,25 +17,16 @@ interface VideoGridLayoutProps {
   isLoading: boolean;
   isError: boolean;
   error: unknown;
-  searchQuery: string;
 
-  columnCount: number;
-  isGlobalMode: boolean;
-  isPlaylistMode: boolean;
-  isTagMode: boolean;
-  folderPath: string;
-  showFavoritesOnly: boolean;
-  isModalOpen: boolean;
-  isSelectionMode: boolean;
+  config: VideoGridConfig;
 
-  layoutMode: 'masonry' | 'list';
-  sortOption: SortOption;
   onReorder: (newVideos: VideoFile[]) => void;
 
   hasMore: boolean;
   onFetchMore: () => void;
 
   interactions: VideoGridItemInteractions;
+  renderContextMenu?: ContextMenuRenderer;
 }
 
 export const VideoGridLayout = React.memo(
@@ -43,40 +36,27 @@ export const VideoGridLayout = React.memo(
     isLoading,
     isError,
     error,
-    searchQuery,
-    columnCount,
-    isGlobalMode,
-    isPlaylistMode,
-    isTagMode,
-    folderPath,
-    showFavoritesOnly,
-    isModalOpen,
-    isSelectionMode,
-    layoutMode,
-    sortOption,
+    config,
     onReorder,
     hasMore,
     onFetchMore,
     interactions,
+    renderContextMenu,
   }: VideoGridLayoutProps) => {
     if (
       totalVideosCount === 0 ||
       isError ||
-      (!isGlobalMode && !isPlaylistMode && !isTagMode && !folderPath)
+      (!config.isGlobalMode && !config.isPlaylistMode && !config.isTagMode && !config.folderPath)
     ) {
-      if (!isLoading || isError || !folderPath) {
+      if (!isLoading || isError || !config.folderPath) {
         return (
           <EmptyState
             isLoading={isLoading}
             isError={isError}
             error={error}
             totalVideosCount={totalVideosCount}
-            searchQuery={searchQuery}
-            isGlobalMode={isGlobalMode}
-            isPlaylistMode={isPlaylistMode}
-            isTagMode={isTagMode}
-            folderPath={folderPath}
-            showFavoritesOnly={showFavoritesOnly}
+            searchQuery={config.searchQuery}
+            config={config}
           />
         );
       }
@@ -88,7 +68,10 @@ export const VideoGridLayout = React.memo(
     }
 
     const isSortable =
-      layoutMode === 'list' && sortOption === 'custom' && !searchQuery && !isSelectionMode;
+      config.layoutMode === 'list' &&
+      config.sortOption === 'custom' &&
+      !config.searchQuery &&
+      !config.isSelectionMode;
 
     return (
       <InfiniteScroll
@@ -105,20 +88,21 @@ export const VideoGridLayout = React.memo(
           </div>
         )}
 
-        {layoutMode === 'masonry' ? (
+        {config.layoutMode === 'masonry' ? (
           <MasonryView
             videos={videos}
-            columnCount={columnCount}
-            isModalOpen={isModalOpen}
-            isSelectionMode={isSelectionMode}
+            config={config}
             interactions={interactions}
+            renderContextMenu={renderContextMenu}
           />
         ) : (
           <ListView
             videos={videos}
+            config={config}
             isSortable={isSortable}
             onReorder={onReorder}
             interactions={interactions}
+            renderContextMenu={renderContextMenu}
           />
         )}
       </InfiniteScroll>

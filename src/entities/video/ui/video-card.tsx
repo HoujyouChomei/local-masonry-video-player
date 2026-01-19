@@ -14,12 +14,12 @@ import { VideoMedia } from './video-media';
 const cardVariants = cva('group relative w-full cursor-pointer bg-gray-900', {
   variants: {
     style: {
-      modern: 'rounded-lg',
-      mosaic: 'rounded-none border-none',
+      standard: 'rounded-lg',
+      tile: 'rounded-none border-none',
     },
   },
   defaultVariants: {
-    style: 'modern',
+    style: 'standard',
   },
 });
 
@@ -52,7 +52,7 @@ export const VideoCard = React.memo(
     isModalOpen,
     actionsSlot,
     contextMenuSlot,
-    gridStyle = 'modern',
+    gridStyle = 'standard',
     isSelectionMode = false,
     isSelected = false,
     onPointerDown,

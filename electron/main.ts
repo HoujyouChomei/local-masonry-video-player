@@ -1,7 +1,7 @@
 // electron/main.ts
 
 /* eslint-disable @typescript-eslint/no-require-imports */
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 
 if (!process.env.NODE_ENV && app.isPackaged) {
@@ -12,8 +12,7 @@ if (!process.env.NODE_ENV && app.isPackaged) {
 import { initializeLogger, logger } from './lib/logger';
 const { store } = require('./lib/store');
 
-import type { BackgroundVerificationService } from './core/services/background-verification-service';
-import type { SettingsService } from './core/services/settings-service';
+import type { BackgroundVerificationService } from './core/services/system/background-verification-service';
 
 if (app.isPackaged) {
   console.log = () => {};
@@ -31,8 +30,9 @@ if (!settings.enableHardwareDecoding) {
 
 let mainWindow: BrowserWindow | null = null;
 let backgroundVerifier: BackgroundVerificationService | null = null;
+let isBackendReady = false;
 
-const { handleWindowControls, registerWindowEvents } = require('./handlers/window');
+const { handleWindowControls, registerWindowEvents } = require('./handlers/system/window');
 
 const createWindow = () => {
   const windowStateKeeper = require('electron-window-state');
@@ -90,6 +90,14 @@ const createWindow = () => {
 app.whenReady().then(async () => {
   logger.info('[Main] App Ready. Starting initialization...');
 
+  createWindow();
+
+  ipcMain.on('check-backend-ready', (event) => {
+    if (isBackendReady) {
+      event.sender.send('app-ready');
+    }
+  });
+
   try {
     const { initDB, getDB } = require('./lib/db');
     initDB();
@@ -106,38 +114,45 @@ app.whenReady().then(async () => {
 
   store.set('enableMobileConnection', false);
 
-  require('./handlers/settings').handleSettings();
-  require('./handlers/dialog').handleDialog();
-  require('./handlers/favorites').handleFavorites();
-  require('./handlers/directories').handleDirectories();
-  require('./handlers/file-ops').handleFileOps();
-  require('./handlers/playlists').handlePlaylists();
-  require('./handlers/sorting').handleSorting();
+  // Lazy load handlers
+  require('./handlers/system/settings').handleSettings();
+  require('./handlers/system/dialog').handleDialog();
+  require('./handlers/collection/favorite-handler').handleFavorites();
+  require('./handlers/system/io-handler').handleDirectories();
+  require('./handlers/media/ops-handler').handleFileOps();
+  require('./handlers/collection/playlist-handler').handlePlaylists();
+  require('./handlers/media/sorting').handleSorting();
   handleWindowControls();
-  require('./handlers/drag-drop').handleDragDrop();
-  require('./handlers/ffmpeg').handleFFmpeg();
-  require('./handlers/tags').handleTags();
-  require('./handlers/search').handleSearch();
-  require('./handlers/metadata').handleMetadata();
-  require('./handlers/getVideos').handleGetVideos();
-
-  createWindow();
+  require('./handlers/system/drag-drop').handleDragDrop();
+  require('./handlers/media/transcode-handler').handleFFmpeg();
+  require('./handlers/collection/tag-handler').handleTags();
+  require('./handlers/media/search').handleSearch();
+  require('./handlers/media/metadata-handler').handleMetadata();
+  require('./handlers/media/getVideos').handleGetVideos();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 
-  const { SettingsService } = require('./core/services/settings-service');
-  const settingsService = SettingsService.getInstance() as SettingsService;
-  const { startLocalServer } = require('./lib/local-server');
+  const { SettingsService } = require('./core/services/system/settings-service');
+  SettingsService.getInstance();
 
-  settingsService.on('mobile-connection-changed', (host: string) => {
+  const { startLocalServer } = require('./lib/local-server');
+  const { eventBus } = require('./core/events');
+
+  eventBus.on('settings:mobile-connection-changed', (data: { host: string }) => {
     setTimeout(() => {
-      startLocalServer(host).catch((e: unknown) => {
+      startLocalServer(data.host).catch((e: unknown) => {
         logger.error('[Main] Failed to restart server via settings change:', e);
       });
     }, 100);
   });
+
+  const { ThumbnailService } = require('./core/services/media/thumbnail-service');
+  ThumbnailService.getInstance();
+
+  const { NotificationService } = require('./core/services/system/notification-service');
+  NotificationService.getInstance();
 
   try {
     await startLocalServer();
@@ -147,17 +162,24 @@ app.whenReady().then(async () => {
 
   const {
     BackgroundVerificationService: BVS,
-  } = require('./core/services/background-verification-service');
+  } = require('./core/services/system/background-verification-service');
   backgroundVerifier = new BVS();
   backgroundVerifier?.start();
 
-  const { MetadataHarvester: MH } = require('./core/services/metadata-harvester');
+  const { MetadataHarvester: MH } = require('./core/services/video/metadata-harvester');
   MH.getInstance();
+
+  // 3. 全ての準備完了を通知 (Notify Renderer)
+  isBackendReady = true;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    logger.info('[Main] Initialization complete. Sending app-ready signal...');
+    mainWindow.webContents.send('app-ready');
+  }
 
   setTimeout(() => {
     logger.debug('[Main] Running delayed Garbage Collection...');
     try {
-      const { VideoService } = require('./core/services/video-service');
+      const { VideoService } = require('./core/services/media/media-service');
       const videoService = new VideoService();
       videoService.runGarbageCollection();
     } catch (e) {
@@ -168,7 +190,7 @@ app.whenReady().then(async () => {
   setTimeout(async () => {
     const folders = store.get('libraryFolders') as string[];
     if (folders && folders.length > 0) {
-      const { VideoLibraryService } = require('./core/services/video-library-service');
+      const { VideoLibraryService } = require('./core/services/media/library-service');
       const libraryService = new VideoLibraryService();
 
       logger.debug(`[Main] Starting background quiet scan for ${folders.length} folders...`);
@@ -186,8 +208,15 @@ app.on('window-all-closed', () => {
   }
 
   try {
-    const { MetadataHarvester: MH } = require('./core/services/metadata-harvester');
+    const { MetadataHarvester: MH } = require('./core/services/video/metadata-harvester');
     MH.getInstance().stop();
+  } catch {
+    // ignore
+  }
+
+  try {
+    const { NotificationService } = require('./core/services/system/notification-service');
+    NotificationService.getInstance().stop();
   } catch {
     // ignore
   }

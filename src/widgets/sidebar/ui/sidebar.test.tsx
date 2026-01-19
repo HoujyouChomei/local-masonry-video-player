@@ -61,9 +61,11 @@ describe('Sidebar Integration Test', () => {
     });
     useUIStore.setState({
       viewMode: 'folder',
+      showFavoritesOnly: false,
       isMobileMenuOpen: false,
       isTagGlobalScope: false,
-      isMobile: false, // デフォルトはデスクトップモード
+      isFavoriteGlobalScope: false,
+      isMobile: false,
     });
 
     resizeWindow(1024);
@@ -96,16 +98,17 @@ describe('Sidebar Integration Test', () => {
     expect(screen.getByText('TAGS')).toBeTruthy();
   });
 
-  it('toggles "All Favorites" view mode', () => {
+  it('toggles favorites filter', () => {
     renderWithProviders(<Sidebar />);
 
-    const favButton = screen.getByText('All Favorites');
+    const favButton = screen.getByRole('button', { name: /favorites/i });
     fireEvent.click(favButton);
 
-    expect(useUIStore.getState().viewMode).toBe('all-favorites');
-
-    fireEvent.click(favButton);
+    expect(useUIStore.getState().showFavoritesOnly).toBe(true);
     expect(useUIStore.getState().viewMode).toBe('folder');
+
+    fireEvent.click(favButton);
+    expect(useUIStore.getState().showFavoritesOnly).toBe(false);
   });
 
   it('displays playlists fetched from API', async () => {
@@ -133,8 +136,10 @@ describe('Sidebar Integration Test', () => {
       expect(screen.getByText('Movie')).toBeTruthy();
     });
 
-    const toggleButton = screen.getByTitle(/Scope: Current Folder/i);
-    fireEvent.click(toggleButton);
+    const toggleButtons = screen.getAllByTitle(/Scope: Current Folder/i);
+    const tagScopeButton = toggleButtons[1];
+
+    fireEvent.click(tagScopeButton);
 
     expect(useUIStore.getState().isTagGlobalScope).toBe(true);
 

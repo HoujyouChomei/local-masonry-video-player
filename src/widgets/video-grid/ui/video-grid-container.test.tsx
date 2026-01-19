@@ -65,7 +65,7 @@ vi.mock('@/shared/stores/settings-store', () => ({
       sortOption: 'date-desc',
       layoutMode: 'masonry',
       chunkSize: 10,
-      gridStyle: 'modern',
+      gridStyle: 'standard',
       folderPath: '/test/videos',
       mobileColumnCount: 1,
     };

@@ -6,7 +6,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { app, nativeImage } from 'electron';
 import { spawn } from 'child_process';
-import { FFmpegService } from '../../core/services/ffmpeg-service';
+import { FFmpegService } from '../../core/services/video/ffmpeg-service';
 import { isPathAllowed } from './security';
 import { sendError } from './utils';
 import {

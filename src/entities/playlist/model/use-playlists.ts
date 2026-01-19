@@ -120,7 +120,10 @@ export const useCreateAndAddToPlaylist = () => {
         onPlaylistUpdated(playlist.id);
 
         setSidebarOpen(true);
-        setEditingPlaylistId(playlist.id);
+
+        setTimeout(() => {
+          setEditingPlaylistId(playlist.id);
+        }, 100);
       }
     },
   });

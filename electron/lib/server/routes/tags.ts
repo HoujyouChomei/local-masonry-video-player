@@ -1,7 +1,7 @@
 // electron/lib/server/routes/tags.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { TagService } from '../../../core/services/tag-service';
+import { TagService } from '../../../core/services/collection/tag-service';
 import { sendJson, sendError } from '../utils';
 import { logger } from '../../logger';
 

@@ -55,5 +55,7 @@ run-tests.bat
 start-dev.bat
 public/licenses.json
 
+.agent/*
+
 # Test Binaries
 /bin

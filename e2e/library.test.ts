@@ -27,6 +27,15 @@ test.describe('Library & Data Management', () => {
     expect(count).toBe(expectedCount);
   });
 
+  test('should display thumbnails for video cards', async () => {
+    await page.waitForTimeout(2000);
+
+    const firstCard = page.locator('.video-card').first();
+    const thumbnail = firstCard.locator('img, video');
+
+    await expect(thumbnail.first()).toBeVisible();
+  });
+
   test('should filter videos by search query', async () => {
     const searchInput = page.getByPlaceholder('Filter current folder...');
     await searchInput.fill('test-video-1');
@@ -119,5 +128,22 @@ test.describe('Library & Data Management', () => {
     if (await listButton.isVisible()) {
       await listButton.click();
     }
+  });
+
+  test('Desktop: should change column count (Grid Config check)', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    const counterDisplay = page.locator('span.font-mono', { hasText: /^\d+$/ });
+    const plusBtn = page.getByTitle('More Columns');
+    const minusBtn = page.getByTitle('Less Columns');
+
+    const initialText = await counterDisplay.innerText();
+    const initialCount = parseInt(initialText, 10);
+
+    await plusBtn.click();
+    await expect(counterDisplay).toHaveText(String(initialCount + 1));
+
+    await minusBtn.click();
+    await expect(counterDisplay).toHaveText(String(initialCount));
   });
 });

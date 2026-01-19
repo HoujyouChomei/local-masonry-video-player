@@ -1,3 +1,4 @@
+// src/features/settings-panel/ui/sections/grid-style-section.tsx
 import { LayoutTemplate } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { cn } from '@/lib/utils';
@@ -12,7 +13,7 @@ export const GridStyleSection = () => {
         <LayoutTemplate size={12} /> GRID STYLE
       </h3>
       <div className="grid grid-cols-2 gap-2">
-        {(['modern', 'mosaic'] as GridStyle[]).map((style) => (
+        {(['standard', 'tile'] as GridStyle[]).map((style) => (
           <button
             key={style}
             onClick={() => setGridStyle(style)}

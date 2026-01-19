@@ -6,6 +6,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { VideoGridLayout } from './video-grid-layout';
 import { VideoFile } from '@/shared/types/video';
 import type { VideoGridItemInteractions } from './video-grid-item';
+import type { VideoGridConfig } from '../model/types';
 
 vi.mock('@/features/select-folder/ui/select-folder-button', () => ({
   SelectFolderButton: () => <button data-testid="select-folder-btn">Select Folder</button>,
@@ -161,23 +162,28 @@ const defaultInteractions = {
   onPointerLeave: vi.fn(),
 };
 
+const defaultConfig: VideoGridConfig = {
+  gridStyle: 'standard',
+  columnCount: 4,
+  layoutMode: 'masonry',
+  sortOption: 'date-desc',
+  searchQuery: '',
+  isModalOpen: false,
+  isSelectionMode: false,
+  isGlobalMode: false,
+  isPlaylistMode: false,
+  isTagMode: false,
+  folderPath: '/test/folder',
+  showFavoritesOnly: false,
+};
+
 const defaultProps = {
   videos: mockVideos,
   totalVideosCount: 2,
   isLoading: false,
   isError: false,
   error: null,
-  searchQuery: '',
-  columnCount: 4,
-  isGlobalMode: false,
-  isPlaylistMode: false,
-  isTagMode: false,
-  isModalOpen: false,
-  isSelectionMode: false,
-  folderPath: '/test/folder',
-  showFavoritesOnly: false,
-  layoutMode: 'masonry' as const,
-  sortOption: 'date-desc' as const,
+  config: defaultConfig,
   onReorder: vi.fn(),
   hasMore: false,
   onFetchMore: vi.fn(),
@@ -192,7 +198,14 @@ describe('VideoGridLayout Integration Test', () => {
 
   describe('Empty State Handling', () => {
     it('should show "Select a folder" when no folder path is set in normal mode', () => {
-      render(<VideoGridLayout {...defaultProps} videos={[]} totalVideosCount={0} folderPath="" />);
+      render(
+        <VideoGridLayout
+          {...defaultProps}
+          videos={[]}
+          totalVideosCount={0}
+          config={{ ...defaultConfig, folderPath: '' }}
+        />
+      );
       expect(screen.getByText(/Select a folder/i)).toBeTruthy();
     });
 
@@ -221,7 +234,12 @@ describe('VideoGridLayout Integration Test', () => {
 
     it('should show "No videos match" when searchQuery has no results', () => {
       render(
-        <VideoGridLayout {...defaultProps} videos={[]} totalVideosCount={0} searchQuery="nothing" />
+        <VideoGridLayout
+          {...defaultProps}
+          videos={[]}
+          totalVideosCount={0}
+          config={{ ...defaultConfig, searchQuery: 'nothing' }}
+        />
       );
       expect(screen.getByText(/No videos match "nothing"/i)).toBeTruthy();
     });
@@ -234,7 +252,9 @@ describe('VideoGridLayout Integration Test', () => {
 
   describe('Masonry View Mode', () => {
     it('should render MasonryView when layoutMode is "masonry"', () => {
-      render(<VideoGridLayout {...defaultProps} layoutMode="masonry" />);
+      render(
+        <VideoGridLayout {...defaultProps} config={{ ...defaultConfig, layoutMode: 'masonry' }} />
+      );
       expect(screen.getByTestId('masonry-grid')).toBeTruthy();
       const cards = screen.getAllByTestId('video-card');
       expect(cards).toHaveLength(2);
@@ -246,7 +266,7 @@ describe('VideoGridLayout Integration Test', () => {
       render(
         <VideoGridLayout
           {...defaultProps}
-          layoutMode="masonry"
+          config={{ ...defaultConfig, layoutMode: 'masonry' }}
           interactions={{ ...defaultInteractions, onVideoClick }}
         />
       );
@@ -260,7 +280,9 @@ describe('VideoGridLayout Integration Test', () => {
 
   describe('List View Mode', () => {
     it('should render ListView when layoutMode is "list"', () => {
-      render(<VideoGridLayout {...defaultProps} layoutMode="list" />);
+      render(
+        <VideoGridLayout {...defaultProps} config={{ ...defaultConfig, layoutMode: 'list' }} />
+      );
       expect(screen.getByTestId('list-view')).toBeTruthy();
 
       const items = screen.getAllByTestId('video-list-item');
@@ -270,7 +292,15 @@ describe('VideoGridLayout Integration Test', () => {
 
     it('should render SortableList when sortOption is "custom" and no search query', () => {
       render(
-        <VideoGridLayout {...defaultProps} layoutMode="list" sortOption="custom" searchQuery="" />
+        <VideoGridLayout
+          {...defaultProps}
+          config={{
+            ...defaultConfig,
+            layoutMode: 'list',
+            sortOption: 'custom',
+            searchQuery: '',
+          }}
+        />
       );
       const items = screen.getAllByTestId('sortable-video-list-item');
       expect(items).toHaveLength(2);
@@ -280,9 +310,12 @@ describe('VideoGridLayout Integration Test', () => {
       render(
         <VideoGridLayout
           {...defaultProps}
-          layoutMode="list"
-          sortOption="custom"
-          searchQuery="video"
+          config={{
+            ...defaultConfig,
+            layoutMode: 'list',
+            sortOption: 'custom',
+            searchQuery: 'video',
+          }}
         />
       );
       const items = screen.getAllByTestId('video-list-item');

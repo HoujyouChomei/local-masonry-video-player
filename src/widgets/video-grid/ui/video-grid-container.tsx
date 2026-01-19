@@ -15,13 +15,20 @@ import { useGridPagination } from '../model/use-grid-pagination';
 import { useVideoGridInteractions } from '../model/use-video-grid-interactions';
 import { useExternalDrop } from '../model/use-external-drop';
 import { VideoGridItemInteractions } from './video-grid-item';
+import { VideoGridConfig } from '../model/types';
+import { ContextMenuRenderer } from '@/shared/types/ui';
 
 interface VideoGridContainerProps {
   folderPath: string;
   columnCount: number;
+  renderContextMenu?: ContextMenuRenderer;
 }
 
-export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContainerProps) => {
+export const VideoGridContainer = ({
+  folderPath,
+  columnCount,
+  renderContextMenu,
+}: VideoGridContainerProps) => {
   const layoutMode = useSettingsStore((s) => s.layoutMode);
   const gridStyle = useSettingsStore((s) => s.gridStyle);
   const mobileColumnCount = useSettingsStore((s) => s.mobileColumnCount);
@@ -63,8 +70,38 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [folderPath, debouncedQuery, selectedTagIds]);
 
-  const containerPadding =
-    layoutMode === 'masonry' && deferredGridStyle === 'mosaic' ? 'p-0' : 'p-4';
+  const gridConfig = useMemo<VideoGridConfig>(
+    () => ({
+      gridStyle: deferredGridStyle,
+      columnCount: deferredColumnCount,
+      layoutMode,
+      sortOption,
+      searchQuery,
+      isModalOpen,
+      isSelectionMode,
+      isGlobalMode,
+      isPlaylistMode,
+      isTagMode,
+      folderPath,
+      showFavoritesOnly,
+    }),
+    [
+      deferredGridStyle,
+      deferredColumnCount,
+      layoutMode,
+      sortOption,
+      searchQuery,
+      isModalOpen,
+      isSelectionMode,
+      isGlobalMode,
+      isPlaylistMode,
+      isTagMode,
+      folderPath,
+      showFavoritesOnly,
+    ]
+  );
+
+  const containerPadding = layoutMode === 'masonry' && deferredGridStyle === 'tile' ? 'p-0' : 'p-4';
 
   const interactions: VideoGridItemInteractions = useMemo(
     () => ({
@@ -102,21 +139,12 @@ export const VideoGridContainer = ({ folderPath, columnCount }: VideoGridContain
         isLoading={isLoading}
         isError={isError}
         error={error}
-        searchQuery={searchQuery}
-        columnCount={deferredColumnCount}
-        isGlobalMode={isGlobalMode}
-        isPlaylistMode={isPlaylistMode}
-        isTagMode={isTagMode}
-        folderPath={folderPath}
-        showFavoritesOnly={showFavoritesOnly}
-        isModalOpen={isModalOpen}
-        isSelectionMode={isSelectionMode}
-        layoutMode={layoutMode}
-        sortOption={sortOption}
+        config={gridConfig}
         onReorder={handleReorder}
         hasMore={hasMore}
         onFetchMore={handleFetchMore}
         interactions={interactions}
+        renderContextMenu={renderContextMenu}
       />
 
       {videoToRename && (

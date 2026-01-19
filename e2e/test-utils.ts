@@ -75,7 +75,7 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
     folderPath: videoDir,
     isSidebarOpen: true,
     layoutMode: 'masonry',
-    gridStyle: 'modern',
+    gridStyle: 'standard',
     enableMobileConnection: false,
     ffmpegPath: hasFFmpeg ? ffmpegPath : '',
     ffprobePath: hasFFprobe ? ffprobePath : '',

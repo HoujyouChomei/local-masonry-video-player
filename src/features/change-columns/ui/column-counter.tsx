@@ -1,6 +1,6 @@
 // src/features/change-columns/ui/column-counter.tsx
 
-import { Columns, Minus, Plus, Grid2x2, RectangleVertical } from 'lucide-react';
+import { Minus, Plus, Grid2x2, RectangleVertical } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -52,10 +52,6 @@ export const ColumnCounter = ({ className }: ColumnCounterProps) => {
 
   return (
     <div className={cn('flex items-center gap-1', className)}>
-      <div className="text-muted-foreground mr-1 flex items-center" title="Column Count">
-        <Columns size={16} />
-      </div>
-
       <Button
         variant="ghost"
         size="icon"

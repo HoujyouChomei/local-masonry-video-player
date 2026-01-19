@@ -10,12 +10,12 @@
   background-clip: padding-box;
 }
 
-.my-masonry-grid-mosaic {
+.my-masonry-grid-tile {
   display: flex;
   margin-left: 0;
   width: auto;
 }
-.my-masonry-grid_column-mosaic {
+.my-masonry-grid_column-tile {
   padding-left: 0;
   background-clip: padding-box;
 }

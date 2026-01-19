@@ -51,4 +51,29 @@ test.describe('Selection Mode & Header Interaction', () => {
     await expect(selectAllBtn).toBeHidden();
     await expect(page.getByPlaceholder('Filter current folder...')).toBeVisible();
   });
+
+  test('should show batch context menu in selection mode', async () => {
+    const cards = page.locator('.video-card');
+    await expect(cards.first()).toBeVisible();
+
+    await cards.nth(0).click({ modifiers: ['Control'] });
+    await cards.nth(1).click({ modifiers: ['Control'] });
+
+    await expect(page.getByText('2 selected')).toBeVisible();
+
+    await cards.nth(0).click({ button: 'right' });
+
+    const menuContent = page.locator('[role="menu"]');
+    await expect(menuContent).toBeVisible();
+
+    await expect(page.getByText('2 items selected')).toBeVisible();
+    await expect(page.getByText('Add to Playlist')).toBeVisible();
+    await expect(page.getByText('Add Tags...')).toBeVisible();
+
+    await expect(page.getByText('Delete from Disk')).toBeHidden();
+    await expect(page.getByText('Delete Selected')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+  });
 });

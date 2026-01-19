@@ -4,11 +4,11 @@ import React, { useCallback } from 'react';
 import { VideoCard } from '@/entities/video/ui/video-card';
 import { FavoriteButton } from '@/features/toggle-favorite/ui/favorite-button';
 import { DeleteVideoButton } from '@/features/delete-video/ui/delete-video-button';
-import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { VideoFile } from '@/shared/types/video';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { GridStyle } from '@/shared/types/electron';
 import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
+import { VideoGridConfig } from '../model/types';
+import { ContextMenuRenderer } from '@/shared/types/ui';
 
 export interface VideoGridItemInteractions {
   onVideoClick: (video: VideoFile, e: React.MouseEvent) => void;
@@ -22,16 +22,16 @@ export interface VideoGridItemInteractions {
 
 interface VideoGridItemProps {
   video: VideoFile;
-  gridStyle: GridStyle;
-  isModalOpen: boolean;
-  isSelectionMode: boolean;
+  config: VideoGridConfig;
   interactions: VideoGridItemInteractions;
+  renderContextMenu?: ContextMenuRenderer;
 }
 
 export const VideoGridItem = React.memo(
-  ({ video, gridStyle, isModalOpen, isSelectionMode, interactions }: VideoGridItemProps) => {
+  ({ video, config, interactions, renderContextMenu }: VideoGridItemProps) => {
     const isSelected = useSelectionStore((s) => s.selectedVideoIds.includes(video.id));
 
+    const { isSelectionMode, gridStyle, isModalOpen } = config;
     const showActions = !isSelectionMode;
 
     const { handleDragStart, handleDragEnd } = useVideoDrag({
@@ -59,9 +59,12 @@ export const VideoGridItem = React.memo(
       </>
     ) : null;
 
-    const contextMenu = (
-      <VideoContextMenu video={video} onRename={() => interactions.onRenameOpen(video)} />
-    );
+    const contextMenu = renderContextMenu
+      ? renderContextMenu({
+          video,
+          onRename: () => interactions.onRenameOpen(video),
+        })
+      : null;
 
     return (
       <VideoCard

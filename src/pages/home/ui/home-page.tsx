@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useScrollDirection } from '@/shared/lib/use-scroll-direction';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { useDirectoryTree } from '@/features/prefetch-directories/model/use-directory-tree';
+import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 
 const VideoModal = lazy(() =>
   import('@/widgets/video-player/ui/video-modal').then((module) => ({
@@ -80,12 +81,16 @@ export const HomePage = () => {
         )}
       >
         <div className="p-0">
-          <VideoGrid folderPath={folderPath} columnCount={columnCount} />
+          <VideoGrid
+            folderPath={folderPath}
+            columnCount={columnCount}
+            renderContextMenu={(props) => <VideoContextMenu {...props} />}
+          />
         </div>
       </main>
 
       <Suspense fallback={null}>
-        <VideoModal />
+        <VideoModal renderContextMenu={(props) => <VideoContextMenu {...props} />} />
       </Suspense>
     </div>
   );

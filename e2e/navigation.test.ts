@@ -33,12 +33,15 @@ test.describe('Navigation & Layout', () => {
   test('Desktop: navigate between views', async () => {
     await page.setViewportSize({ width: 1280, height: 800 });
 
-    await page.getByRole('button', { name: 'All Favorites' }).click();
+    // サイドバー内のボタンに限定してクリックする
+    await page.locator('aside').getByRole('button', { name: 'Favorites' }).click();
 
-    const emptyState = page.locator('.text-muted-foreground').getByText('No favorite videos yet');
+    const emptyState = page
+      .locator('.text-muted-foreground')
+      .getByText('No favorite videos found in this folder');
     await expect(emptyState).toBeVisible();
 
-    await page.getByRole('button', { name: 'All Favorites' }).click();
+    await page.locator('aside').getByRole('button', { name: 'Favorites' }).click();
     await expect(emptyState).toBeHidden();
   });
 

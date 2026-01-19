@@ -21,18 +21,20 @@ import { VideoFile } from '@/shared/types/video';
 import { VideoListItem } from '@/entities/video/ui/video-list-item';
 import { SortableVideoListItem } from '../sortable-video-list-item';
 import { GridHeader } from '../components/grid-header';
-import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { VideoGridItemInteractions } from '../video-grid-item';
 import { useVideoDrag } from '@/features/drag-and-drop/model/use-video-drag';
+import { VideoGridConfig } from '../../model/types';
+import { ContextMenuRenderer } from '@/shared/types/ui';
 
 interface DraggableVideoListItemProps {
   video: VideoFile;
   index: number;
   interactions: VideoGridItemInteractions;
+  renderContextMenu?: ContextMenuRenderer;
 }
 
 const DraggableVideoListItem = React.memo(
-  ({ video, index, interactions }: DraggableVideoListItemProps) => {
+  ({ video, index, interactions, renderContextMenu }: DraggableVideoListItemProps) => {
     const { handleDragStart, handleDragEnd } = useVideoDrag({
       videoPath: video.path,
       videoId: video.id,
@@ -46,9 +48,12 @@ const DraggableVideoListItem = React.memo(
       [interactions, handleDragStart]
     );
 
-    const contextMenu = (
-      <VideoContextMenu video={video} onRename={() => interactions.onRenameOpen(video)} />
-    );
+    const contextMenu = renderContextMenu
+      ? renderContextMenu({
+          video,
+          onRename: () => interactions.onRenameOpen(video),
+        })
+      : null;
 
     return (
       <VideoListItem
@@ -71,13 +76,15 @@ DraggableVideoListItem.displayName = 'DraggableVideoListItem';
 
 interface ListViewProps {
   videos: VideoFile[];
+  config: VideoGridConfig;
   isSortable: boolean;
   onReorder: (videos: VideoFile[]) => void;
   interactions: VideoGridItemInteractions;
+  renderContextMenu?: ContextMenuRenderer;
 }
 
 export const ListView = React.memo(
-  ({ videos, isSortable, onReorder, interactions }: ListViewProps) => {
+  ({ videos, isSortable, onReorder, interactions, renderContextMenu }: ListViewProps) => {
     const sensors = useSensors(
       useSensor(PointerSensor, {
         activationConstraint: {
@@ -104,9 +111,12 @@ export const ListView = React.memo(
     };
 
     const renderSortableItem = (video: VideoFile, index: number) => {
-      const contextMenu = (
-        <VideoContextMenu video={video} onRename={() => interactions.onRenameOpen(video)} />
-      );
+      const contextMenu = renderContextMenu
+        ? renderContextMenu({
+            video,
+            onRename: () => interactions.onRenameOpen(video),
+          })
+        : null;
 
       return (
         <SortableVideoListItem
@@ -150,6 +160,7 @@ export const ListView = React.memo(
                 video={video}
                 index={index}
                 interactions={interactions}
+                renderContextMenu={renderContextMenu}
               />
             ))}
           </div>

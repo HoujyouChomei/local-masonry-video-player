@@ -136,8 +136,8 @@ describe('Settings Store (Persistent Only)', () => {
   });
 
   it('should update gridStyle and save', async () => {
-    await useSettingsStore.getState().setGridStyle('mosaic');
-    expect(useSettingsStore.getState().gridStyle).toBe('mosaic');
-    expect(electronApi.saveSetting).toHaveBeenCalledWith('gridStyle', 'mosaic');
+    await useSettingsStore.getState().setGridStyle('tile');
+    expect(useSettingsStore.getState().gridStyle).toBe('tile');
+    expect(electronApi.saveSetting).toHaveBeenCalledWith('gridStyle', 'tile');
   });
 });

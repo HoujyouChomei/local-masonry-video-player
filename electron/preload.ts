@@ -18,6 +18,18 @@ interface FileWithPath extends File {
 }
 
 contextBridge.exposeInMainWorld('electron', {
+  onAppReady: (callback: () => void) => {
+    const subscription = (_event: IpcRendererEvent) => callback();
+    ipcRenderer.on('app-ready', subscription);
+    return () => {
+      ipcRenderer.removeListener('app-ready', subscription);
+    };
+  },
+
+  checkBackendReady: () => {
+    ipcRenderer.send('check-backend-ready');
+  },
+
   getVideos: (folderPath: string): Promise<VideoFile[]> =>
     ipcRenderer.invoke('get-videos', folderPath),
 

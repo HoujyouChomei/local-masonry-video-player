@@ -40,7 +40,7 @@ const mocks = vi.hoisted(() => ({
   settingsState: {
     rootMargin: 500,
     playOnHoverOnly: false,
-    gridStyle: 'modern' as const,
+    gridStyle: 'standard' as const,
     debounceTime: 800,
     enableLargeVideoRestriction: true,
     largeVideoThreshold: 1024,

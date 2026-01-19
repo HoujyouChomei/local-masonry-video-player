@@ -1,15 +1,15 @@
 // electron/lib/server/routes/videos.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { VideoLibraryService } from '../../../core/services/video-library-service';
-import { VideoRepository } from '../../../core/repositories/video-repository';
-import { VideoMapper } from '../../../core/services/video-mapper';
-import { SearchOptions } from '../../../core/repositories/video-search-repository';
+import { VideoLibraryService } from '../../../core/services/media/library-service';
+import { MediaRepository } from '../../../core/repositories/media/media-repository';
+import { VideoMapper } from '../../../core/services/media/media-mapper';
+import { SearchOptions } from '../../../core/repositories/media/media-search';
 import { sendJson, sendError } from '../utils';
 import { logger } from '../../logger';
 
 const libraryService = new VideoLibraryService();
-const videoRepo = new VideoRepository();
+const mediaRepo = new MediaRepository();
 const mapper = new VideoMapper();
 
 export const handleVideosRequest = async (req: IncomingMessage, res: ServerResponse, url: URL) => {
@@ -47,7 +47,7 @@ export const handleVideosRequest = async (req: IncomingMessage, res: ServerRespo
     if (!filePath) return sendError(res, 'Path required', 400);
 
     try {
-      const row = videoRepo.findByPath(filePath);
+      const row = mediaRepo.findByPath(filePath);
       return sendJson(res, row ? mapper.toEntity(row) : null);
     } catch (e) {
       logger.error(`Failed to fetch video details for: ${filePath}`, e);

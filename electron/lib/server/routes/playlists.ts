@@ -1,7 +1,7 @@
 // electron/lib/server/routes/playlists.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { PlaylistService } from '../../../core/services/playlist-service';
+import { PlaylistService } from '../../../core/services/collection/playlist-service';
 import { sendJson, sendError } from '../utils';
 import { logger } from '../../logger';
 

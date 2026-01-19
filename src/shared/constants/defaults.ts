@@ -24,7 +24,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
   layoutMode: 'masonry',
 
-  gridStyle: 'modern',
+  gridStyle: 'standard',
 
   ffmpegPath: '',
   ffprobePath: '',

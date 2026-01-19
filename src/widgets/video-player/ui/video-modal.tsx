@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useVideoModalPlayer } from '@/widgets/video-player/model/use-video-modal-player';
 import { ContextMenu, ContextMenuTrigger } from '@/components/ui/context-menu';
-import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
 import { RenameVideoDialog } from '@/features/rename-video/ui/rename-video-dialog';
 import { VideoModalFooter } from './video-modal-footer';
 import { VideoMetadataPanel } from './video-metadata-panel';
 import { useVideoPlayerStore } from '@/features/video-player/model/store';
 import { VideoFile } from '@/shared/types/video';
+import { ContextMenuRenderer } from '@/shared/types/ui';
 
 interface PlayerHeaderButtonsProps {
   isFullscreen: boolean;
@@ -131,7 +131,11 @@ const PreloadPlayer = React.memo(({ url }: PreloadPlayerProps) => {
 });
 PreloadPlayer.displayName = 'PreloadPlayer';
 
-export const VideoModal = () => {
+interface VideoModalProps {
+  renderContextMenu?: ContextMenuRenderer;
+}
+
+export const VideoModal = ({ renderContextMenu }: VideoModalProps) => {
   const {
     selectedVideo,
     isOpen,
@@ -176,6 +180,14 @@ export const VideoModal = () => {
   }, [selectedVideo, playlist]);
 
   if (!isOpen || !selectedVideo) return null;
+
+  const contextMenu = renderContextMenu
+    ? renderContextMenu({
+        video: selectedVideo,
+        onRename: () => setIsRenameOpen(true),
+        enablePlaybackControls: true,
+      })
+    : null;
 
   return (
     <div
@@ -236,11 +248,7 @@ export const VideoModal = () => {
             </div>
           </ContextMenuTrigger>
 
-          <VideoContextMenu
-            video={selectedVideo}
-            onRename={() => setIsRenameOpen(true)}
-            enablePlaybackControls={true}
-          />
+          {contextMenu}
         </ContextMenu>
 
         {!isFullscreen && isInfoPanelOpen && (

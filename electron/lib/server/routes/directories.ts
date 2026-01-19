@@ -1,7 +1,7 @@
 // electron/lib/server/routes/directories.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { FileSystemService } from '../../../core/services/file-system-service';
+import { FileSystemService } from '../../../core/services/file/file-system-service';
 import { isPathAllowed } from '../security';
 import { sendJson, sendError } from '../utils';
 import { logger } from '../../logger';

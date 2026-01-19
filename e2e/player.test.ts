@@ -43,6 +43,26 @@ test.describe('Video Player', () => {
     await expect(videoPlayer).toBeHidden();
   });
 
+  test('should show context menu inside player modal', async () => {
+    const firstCard = page.locator('.video-card').first();
+    await firstCard.click();
+
+    const videoPlayer = page.locator('.fixed.z-50 video:not(.hidden)');
+    await expect(videoPlayer).toBeVisible();
+
+    await videoPlayer.click({ button: 'right' });
+
+    const menuContent = page.locator('[role="menu"]');
+    await expect(menuContent).toBeVisible();
+
+    await expect(page.getByText('Playback Mode')).toBeVisible();
+    await expect(page.getByText('Auto-Play Next')).toBeVisible();
+    await expect(page.getByText('Add to Playlist')).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await page.keyboard.press('Escape');
+  });
+
   test('should navigate to next video', async () => {
     const cards = page.locator('.video-card');
     await cards.nth(0).click();
