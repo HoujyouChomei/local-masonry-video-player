@@ -2,18 +2,20 @@
 
 import { useEffect, useRef, lazy, Suspense } from 'react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { VideoGrid } from '@/widgets/video-grid/ui/video-grid';
+import { MediaGrid } from '@/widgets/media-grid/ui/media-grid';
 import { Header } from '@/widgets/header/ui/header';
 import { Sidebar } from '@/widgets/sidebar/ui/sidebar';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useScrollDirection } from '@/shared/lib/use-scroll-direction';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
-import { useDirectoryTree } from '@/features/prefetch-directories/model/use-directory-tree';
-import { VideoContextMenu } from '@/widgets/video-menu/ui/video-context-menu';
+import { useDirectoryTree } from '@/entities/directory/model/use-directory-tree';
+import { MediaContextMenu } from '@/widgets/context-menu/ui/media-context-menu';
+import { FolderContextMenu } from '@/widgets/context-menu/ui/folder-context-menu';
+import { useHotkeys } from '@/shared/lib/use-hotkeys';
 
-const VideoModal = lazy(() =>
-  import('@/widgets/video-player/ui/video-modal').then((module) => ({
-    default: module.VideoModal,
+const MediaModal = lazy(() =>
+  import('@/widgets/media-player/ui/media-modal').then((module) => ({
+    default: module.MediaModal,
   }))
 );
 
@@ -52,17 +54,13 @@ export const HomePage = () => {
     }
   }, [isInitialized, libraryFolders, prefetchTree]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
-        e.preventDefault();
-        toggleSidebar();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar]);
+  useHotkeys(
+    ['ctrl+b', 'meta+b'],
+    () => {
+      toggleSidebar();
+    },
+    { preventDefault: true }
+  );
 
   if (!isInitialized) {
     return null;
@@ -72,7 +70,7 @@ export const HomePage = () => {
     <div className="min-h-screen bg-black text-white">
       <Header />
 
-      <Sidebar />
+      <Sidebar renderFolderContextMenu={(path) => <FolderContextMenu path={path} />} />
 
       <main
         className={cn(
@@ -81,16 +79,16 @@ export const HomePage = () => {
         )}
       >
         <div className="p-0">
-          <VideoGrid
+          <MediaGrid
             folderPath={folderPath}
             columnCount={columnCount}
-            renderContextMenu={(props) => <VideoContextMenu {...props} />}
+            renderContextMenu={(props) => <MediaContextMenu {...props} />}
           />
         </div>
       </main>
 
       <Suspense fallback={null}>
-        <VideoModal renderContextMenu={(props) => <VideoContextMenu {...props} />} />
+        <MediaModal renderContextMenu={(props) => <MediaContextMenu {...props} />} />
       </Suspense>
     </div>
   );

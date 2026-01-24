@@ -1,4 +1,5 @@
 // e2e/mobile-safety.test.ts
+
 import { Page } from 'playwright';
 import { test, expect } from '@playwright/test';
 import { launchAppWithFakeData, cleanupTestContext, TestContext } from './test-utils';
@@ -10,7 +11,7 @@ test.describe('Mobile Safety & Features', () => {
   test.beforeAll(async () => {
     ctx = await launchAppWithFakeData();
     page = await ctx.app.firstWindow();
-    await page.waitForSelector('.video-card', { state: 'visible', timeout: 15000 });
+    await page.waitForSelector('.media-card', { state: 'visible', timeout: 5000 });
   });
 
   test.afterAll(async () => {
@@ -20,11 +21,11 @@ test.describe('Mobile Safety & Features', () => {
   test.beforeEach(async () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.reload();
-    await page.waitForSelector('.video-card', { state: 'visible' });
+    await page.waitForSelector('.media-card', { state: 'visible' });
   });
 
   test('should NOT show delete actions in context menu', async () => {
-    const firstCard = page.locator('.video-card').first();
+    const firstCard = page.locator('.media-card').first();
 
     await firstCard.click({ button: 'right' });
 

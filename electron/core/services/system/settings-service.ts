@@ -1,7 +1,6 @@
 // electron/core/services/system/settings-service.ts
 
 import { store } from '../../../lib/store';
-import { VideoLibraryService } from '../media/library-service';
 import { AppSettings } from '../../../../src/shared/types/electron';
 import { logger } from '../../../lib/logger';
 import crypto from 'crypto';
@@ -9,7 +8,6 @@ import { eventBus } from '../../events';
 
 export class SettingsService {
   private static instance: SettingsService;
-  private libraryService = new VideoLibraryService();
 
   private constructor() {}
 
@@ -38,9 +36,7 @@ export class SettingsService {
 
       if (addedFolders.length > 0) {
         logger.info(`[Settings] New library folders detected: ${addedFolders.join(', ')}`);
-        Promise.all(addedFolders.map((folder) => this.libraryService.scanQuietly(folder)))
-          .then(() => logger.info('[Settings] Quiet scan for new folders completed.'))
-          .catch((err) => logger.error('[Settings] Quiet scan failed:', err));
+        eventBus.emit('settings:library-folders-added', { folders: addedFolders });
       }
     }
 

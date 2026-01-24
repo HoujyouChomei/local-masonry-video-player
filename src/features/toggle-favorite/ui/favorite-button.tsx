@@ -3,22 +3,22 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
 import { useFavorites } from '../model/use-favorite';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
 
 interface FavoriteButtonProps {
-  videoId: string;
+  mediaId: string;
   className?: string;
   size?: 'sm' | 'default' | 'lg';
 }
 
-export const FavoriteButton = ({ videoId, className, size = 'default' }: FavoriteButtonProps) => {
+export const FavoriteButton = ({ mediaId, className, size = 'default' }: FavoriteButtonProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
-  const active = isFavorite(videoId);
+  const active = isFavorite(mediaId);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavorite(videoId);
+    toggleFavorite(mediaId);
   };
 
   return (

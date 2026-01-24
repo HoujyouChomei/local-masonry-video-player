@@ -4,9 +4,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Sidebar } from './sidebar';
 import { Providers } from '@/app/providers';
-import * as electronApi from '@/shared/api/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
+
+vi.mock('electron-trpc/renderer', () => ({
+  ipcLink: () => () => ({}),
+}));
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -22,18 +25,25 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-vi.mock('@/shared/api/electron', async (importOriginal) => {
-  const actual = await importOriginal<typeof electronApi>();
-  return {
-    ...actual,
-    fetchPlaylists: vi.fn(),
-    createPlaylistApi: vi.fn(),
-    fetchTagsActiveApi: vi.fn(),
-    fetchTagsByFolderApi: vi.fn(),
-    fetchSubdirectories: vi.fn(),
-    selectFolder: vi.fn(),
-  };
-});
+const mockFetchPlaylists = vi.fn();
+const mockFetchTagsByFolder = vi.fn();
+const mockFetchTagsActive = vi.fn();
+
+vi.mock('@/shared/api', () => ({
+  api: {
+    playlists: {
+      getAll: () => mockFetchPlaylists(),
+    },
+    tags: {
+      getByFolder: (folderPath: string) => mockFetchTagsByFolder(folderPath),
+      getActive: () => mockFetchTagsActive(),
+    },
+    system: {
+      getSubdirectories: vi.fn().mockResolvedValue([]),
+      selectFolder: vi.fn(),
+    },
+  },
+}));
 
 global.ResizeObserver = class ResizeObserver {
   observe() {}
@@ -70,17 +80,17 @@ describe('Sidebar Integration Test', () => {
 
     resizeWindow(1024);
 
-    (electronApi.fetchPlaylists as ReturnType<typeof vi.fn>).mockResolvedValue([
-      { id: 'pl-1', name: 'My Playlist', videoPaths: [], createdAt: 0, updatedAt: 0 },
-      { id: 'pl-2', name: 'Favorites Mix', videoPaths: [], createdAt: 0, updatedAt: 0 },
+    mockFetchPlaylists.mockResolvedValue([
+      { id: 'pl-1', name: 'My Playlist', mediaPaths: [], createdAt: 0, updatedAt: 0 },
+      { id: 'pl-2', name: 'Favorites Mix', mediaPaths: [], createdAt: 0, updatedAt: 0 },
     ]);
 
-    (electronApi.fetchTagsByFolderApi as ReturnType<typeof vi.fn>).mockResolvedValue([
+    mockFetchTagsByFolder.mockResolvedValue([
       { id: 'tag-1', name: 'Anime', count: 10 },
       { id: 'tag-2', name: 'Movie', count: 5 },
     ]);
 
-    (electronApi.fetchTagsActiveApi as ReturnType<typeof vi.fn>).mockResolvedValue([
+    mockFetchTagsActive.mockResolvedValue([
       { id: 'tag-1', name: 'Anime', count: 20 },
       { id: 'tag-3', name: 'Drama', count: 8 },
     ]);
@@ -131,7 +141,7 @@ describe('Sidebar Integration Test', () => {
     renderWithProviders(<Sidebar />);
 
     await waitFor(() => {
-      expect(electronApi.fetchTagsByFolderApi).toHaveBeenCalledWith('/video/folder/1');
+      expect(mockFetchTagsByFolder).toHaveBeenCalledWith('/video/folder/1');
       expect(screen.getByText('Anime')).toBeTruthy();
       expect(screen.getByText('Movie')).toBeTruthy();
     });
@@ -144,7 +154,7 @@ describe('Sidebar Integration Test', () => {
     expect(useUIStore.getState().isTagGlobalScope).toBe(true);
 
     await waitFor(() => {
-      expect(electronApi.fetchTagsActiveApi).toHaveBeenCalled();
+      expect(mockFetchTagsActive).toHaveBeenCalled();
       expect(screen.getByText('Drama')).toBeTruthy();
     });
   });

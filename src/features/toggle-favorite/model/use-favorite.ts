@@ -1,21 +1,21 @@
 // src/features/toggle-favorite/model/use-favorite.ts
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchFavorites, toggleFavoriteApi } from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { api } from '@/shared/api';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 
 export const useFavorites = () => {
   const queryClient = useQueryClient();
-  const { invalidateAllVideoLists } = useVideoCache();
+  const { invalidateAllMediaLists } = useMediaCache();
 
   const { data: favorites = [] } = useQuery({
     queryKey: ['favorites'],
-    queryFn: fetchFavorites,
+    queryFn: () => api.favorites.getAll(),
     staleTime: Infinity,
   });
 
   const { mutate: toggleFavorite } = useMutation({
-    mutationFn: toggleFavoriteApi,
+    mutationFn: (mediaId: string) => api.favorites.toggle(mediaId),
     onMutate: async (filePath) => {
       await queryClient.cancelQueries({ queryKey: ['favorites'] });
 
@@ -37,11 +37,11 @@ export const useFavorites = () => {
       }
     },
     onSettled: () => {
-      invalidateAllVideoLists();
+      invalidateAllMediaLists();
     },
   });
 
-  const isFavorite = (videoId: string) => favorites.includes(videoId);
+  const isFavorite = (mediaId: string) => favorites.includes(mediaId);
 
   return { favorites, toggleFavorite, isFavorite };
 };

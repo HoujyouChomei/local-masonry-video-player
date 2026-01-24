@@ -2,14 +2,14 @@
 
 import { TagRepository, TagRow } from '../../repositories/collection/tag-repository';
 import { MediaRepository } from '../../repositories/media/media-repository';
-import { VideoMapper } from '../media/media-mapper';
-import { VideoFile } from '../../../../src/shared/types/video';
+import { MediaMapper } from '../media/media-mapper';
+import { Media } from '../../../../src/shared/schemas/media';
 import { eventBus } from '../../events';
 
 export class TagService {
   private tagRepo = new TagRepository();
   private mediaRepo = new MediaRepository();
-  private mapper = new VideoMapper();
+  private mapper = new MediaMapper();
 
   createTag(name: string): TagRow {
     return this.tagRepo.createOrGet(name);
@@ -27,44 +27,44 @@ export class TagService {
     return this.tagRepo.getAll();
   }
 
-  getVideoTags(videoId: string): TagRow[] {
-    return this.tagRepo.getTagsByVideoId(videoId);
+  getMediaTags(mediaId: string): TagRow[] {
+    return this.tagRepo.getTagsByMediaId(mediaId);
   }
 
-  assignTag(videoId: string, tagId: string): TagRow[] {
-    this.tagRepo.assignTag(videoId, tagId);
+  assignTag(mediaId: string, tagId: string): TagRow[] {
+    this.tagRepo.assignTag(mediaId, tagId);
 
-    const video = this.mediaRepo.findById(videoId);
-    if (video) {
-      eventBus.emit('video:updated', { id: video.id, path: video.path });
+    const media = this.mediaRepo.findById(mediaId);
+    if (media) {
+      eventBus.emit('media:updated', { id: media.id, path: media.path });
     }
 
-    return this.tagRepo.getTagsByVideoId(videoId);
+    return this.tagRepo.getTagsByMediaId(mediaId);
   }
 
-  unassignTag(videoId: string, tagId: string): TagRow[] {
-    this.tagRepo.unassignTag(videoId, tagId);
+  unassignTag(mediaId: string, tagId: string): TagRow[] {
+    this.tagRepo.unassignTag(mediaId, tagId);
 
-    const video = this.mediaRepo.findById(videoId);
-    if (video) {
-      eventBus.emit('video:updated', { id: video.id, path: video.path });
+    const media = this.mediaRepo.findById(mediaId);
+    if (media) {
+      eventBus.emit('media:updated', { id: media.id, path: media.path });
     }
 
-    return this.tagRepo.getTagsByVideoId(videoId);
+    return this.tagRepo.getTagsByMediaId(mediaId);
   }
 
-  getVideosByTag(tagIds: string[]): VideoFile[] {
+  getMediaByTag(tagIds: string[]): Media[] {
     const rows = this.mediaRepo.findManyByTagIds(tagIds);
     return this.mapper.toEntities(rows);
   }
 
-  assignTagToVideos(videoIds: string[], tagId: string): void {
-    this.tagRepo.assignTagToVideos(videoIds, tagId);
+  assignTagToMedia(mediaIds: string[], tagId: string): void {
+    this.tagRepo.assignTagToMedia(mediaIds, tagId);
     eventBus.emit('ui:library-refresh', { force: false });
   }
 
-  unassignTagFromVideos(videoIds: string[], tagId: string): void {
-    this.tagRepo.unassignTagFromVideos(videoIds, tagId);
+  unassignTagFromMedia(mediaIds: string[], tagId: string): void {
+    this.tagRepo.unassignTagFromMedia(mediaIds, tagId);
     eventBus.emit('ui:library-refresh', { force: false });
   }
 }

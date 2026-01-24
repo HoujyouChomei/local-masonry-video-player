@@ -1,7 +1,7 @@
 // electron/lib/server/sse-handler.ts
 
 import { IncomingMessage, ServerResponse } from 'http';
-import { VideoUpdateEvent } from '../../../src/shared/types/electron';
+import { MediaUpdateEvent } from '../../../src/shared/types/electron';
 
 interface SSEClient {
   id: number;
@@ -46,7 +46,7 @@ export class SSEHandler {
     });
   }
 
-  public broadcast(events: VideoUpdateEvent[]) {
+  public broadcast(events: MediaUpdateEvent[]) {
     if (this.clients.length === 0 || events.length === 0) return;
 
     const data = JSON.stringify(events);

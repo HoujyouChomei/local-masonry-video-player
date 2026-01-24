@@ -12,13 +12,12 @@ import {
   Plus,
   ListX,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { Button } from '@/shared/ui/shadcn/button';
+import { Separator } from '@/shared/ui/shadcn/separator';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useSettingsStore } from '@/shared/stores/settings-store';
-import { useVideoGridState } from '@/widgets/video-grid/model/use-video-grid-state';
 import { usePlaylists } from '@/entities/playlist/model/use-playlists';
+import { useResolvedSelection } from '@/entities/media/lib/use-resolved-selection';
 
 import { useBatchDelete } from '@/features/batch-actions/model/use-batch-delete';
 import { useBatchMove } from '@/features/batch-actions/model/use-batch-move';
@@ -37,29 +36,23 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+} from '@/shared/ui/shadcn/alert-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/shared/ui/shadcn/dropdown-menu';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 export const SelectionHeader = () => {
-  const { selectedVideoIds, exitSelectionMode, selectAll, clearSelection } = useSelectionStore();
+  const { selectedMediaIds, exitSelectionMode, clearSelection } = useSelectionStore();
 
   const { viewMode, selectedPlaylistId } = useUIStore();
+  const { getSelectedPaths } = useResolvedSelection();
 
-  const folderPath = useSettingsStore((s) => s.folderPath);
-  const { allSortedVideos } = useVideoGridState(folderPath);
-
-  const selectedPaths = allSortedVideos
-    .filter((v) => selectedVideoIds.includes(v.id))
-    .map((v) => v.path);
-
-  const count = selectedVideoIds.length;
+  const count = selectedMediaIds.length;
 
   const { batchDelete, isPending: isDeleting } = useBatchDelete();
   const { handleBatchMove, isPending: isMoving } = useBatchMove();
@@ -75,32 +68,26 @@ export const SelectionHeader = () => {
   const isMobile = useIsMobile();
 
   const handleSelectAll = () => {
-    const allIds = allSortedVideos.map((v) => v.id);
-    const isAllSelected = allIds.length > 0 && allIds.every((id) => selectedVideoIds.includes(id));
-
-    if (isAllSelected) {
-      clearSelection();
-    } else {
-      selectAll(allIds);
-    }
+    window.dispatchEvent(new CustomEvent('media-view:select-all'));
   };
 
   const executeDelete = () => {
-    if (selectedVideoIds.length > 0) {
-      batchDelete(selectedVideoIds);
+    if (selectedMediaIds.length > 0) {
+      batchDelete(selectedMediaIds);
       setIsDeleteAlertOpen(false);
     }
   };
 
   const executeMove = () => {
+    const selectedPaths = getSelectedPaths();
     if (selectedPaths.length > 0) {
       handleBatchMove(selectedPaths);
     }
   };
 
   const executeRemoveFromPlaylist = () => {
-    if (selectedPlaylistId && selectedVideoIds.length > 0) {
-      removeFromPlaylist({ playlistId: selectedPlaylistId, videoIds: selectedVideoIds });
+    if (selectedPlaylistId && selectedMediaIds.length > 0) {
+      removeFromPlaylist({ playlistId: selectedPlaylistId, mediaIds: selectedMediaIds });
     }
   };
 
@@ -185,7 +172,7 @@ export const SelectionHeader = () => {
               )}
 
               <DropdownMenuItem
-                onSelect={() => createAndAdd({ name: 'New Playlist', videoIds: selectedVideoIds })}
+                onSelect={() => createAndAdd({ name: 'New Playlist', mediaIds: selectedMediaIds })}
                 className="text-primary font-medium"
               >
                 <Plus className="mr-2 h-4 w-4" /> Create New Playlist
@@ -198,7 +185,7 @@ export const SelectionHeader = () => {
                   <DropdownMenuItem
                     key={pl.id}
                     onSelect={() =>
-                      addToPlaylist({ playlistId: pl.id, videoIds: selectedVideoIds })
+                      addToPlaylist({ playlistId: pl.id, mediaIds: selectedMediaIds })
                     }
                   >
                     {pl.name}
@@ -262,7 +249,7 @@ export const SelectionHeader = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {count} Items?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete these videos? This action will move them to the system
+              Are you sure you want to delete these items? This action will move them to the system
               trash.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -281,7 +268,7 @@ export const SelectionHeader = () => {
       <BatchTagDialog
         isOpen={isTagDialogOpen}
         onOpenChange={setIsTagDialogOpen}
-        selectedVideoIds={selectedVideoIds}
+        selectedMediaIds={selectedMediaIds}
       />
     </>
   );

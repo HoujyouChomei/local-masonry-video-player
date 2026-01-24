@@ -1,37 +1,33 @@
 // src/features/batch-actions/model/use-batch-tag.ts
 
 import { useMutation } from '@tanstack/react-query';
-import {
-  assignTagToVideosApi,
-  unassignTagFromVideosApi,
-  createTagApi,
-} from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { api } from '@/shared/api';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 
 export const useBatchTag = () => {
-  const { onTagsUpdated } = useVideoCache();
+  const { onTagsUpdated } = useMediaCache();
 
   const { mutate: batchAssign, isPending: isAssigning } = useMutation({
-    mutationFn: async ({ videoIds, tagId }: { videoIds: string[]; tagId: string }) => {
-      await assignTagToVideosApi(videoIds, tagId);
+    mutationFn: async ({ mediaIds, tagId }: { mediaIds: string[]; tagId: string }) => {
+      await api.tags.assignToMedia(mediaIds, tagId);
     },
     onSuccess: (_, variables) => {
-      onTagsUpdated(variables.videoIds);
+      onTagsUpdated(variables.mediaIds);
     },
   });
 
   const { mutate: batchUnassign, isPending: isUnassigning } = useMutation({
-    mutationFn: async ({ videoIds, tagId }: { videoIds: string[]; tagId: string }) => {
-      await unassignTagFromVideosApi(videoIds, tagId);
+    mutationFn: async ({ mediaIds, tagId }: { mediaIds: string[]; tagId: string }) => {
+      await api.tags.unassignFromMedia(mediaIds, tagId);
     },
     onSuccess: (_, variables) => {
-      onTagsUpdated(variables.videoIds);
+      onTagsUpdated(variables.mediaIds);
     },
   });
 
   const { mutateAsync: createTagAsync, isPending: isCreating } = useMutation({
     mutationFn: async (name: string) => {
-      return await createTagApi(name);
+      return await api.tags.create(name);
     },
     onSuccess: () => {
       onTagsUpdated();

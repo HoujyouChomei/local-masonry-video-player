@@ -2,11 +2,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ListMusic, Trash2, Pencil } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Playlist } from '@/shared/types/playlist';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/shared/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { Input } from '@/shared/ui/shadcn/input';
+import { Playlist } from '@/shared/schemas/playlist';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/shadcn/popover';
 import { useRenamePlaylist, useDeletePlaylist } from '@/entities/playlist/model/use-playlists';
 import { useSidebarDrop } from '@/widgets/sidebar/model/use-sidebar-drop';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
@@ -111,7 +111,7 @@ export const SidebarPlaylistItem = ({
       <div className="pointer-events-none flex min-w-0 flex-1 items-center gap-2 truncate">
         <ListMusic size={16} className="shrink-0" />
         <span className="truncate">{playlist.name}</span>
-        <span className="shrink-0 text-xs opacity-50">({playlist.videoPaths.length})</span>
+        <span className="shrink-0 text-xs opacity-50">({playlist.mediaPaths.length})</span>
       </div>
 
       <div

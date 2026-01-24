@@ -12,7 +12,7 @@ export interface SearchOptions {
   allowedRoots?: string[];
 }
 
-export class VideoSearchRepository {
+export class MediaSearchRepository {
   private get db() {
     return getDB();
   }
@@ -150,7 +150,7 @@ export class VideoSearchRepository {
     try {
       return this.db.prepare(sql).all(...params) as MediaRow[];
     } catch (error) {
-      logger.error('[VideoSearchRepository] Search failed:', error);
+      logger.error('[MediaSearchRepository] Search failed:', error);
       return [];
     }
   }

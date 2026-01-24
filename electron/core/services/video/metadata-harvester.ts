@@ -1,7 +1,7 @@
 // electron/core/services/video/metadata-harvester.ts
 
 import { MediaRepository, MediaRow } from '../../repositories/media/media-repository';
-import { VideoMetadataRepository } from '../../repositories/media/media-metadata';
+import { MediaMetadataRepository } from '../../repositories/media/media-metadata';
 import { FFmpegService } from './../video/ffmpeg-service';
 import { eventBus } from '../../events';
 import { logger } from '../../../lib/logger';
@@ -10,7 +10,7 @@ export class MetadataHarvester {
   private static instance: MetadataHarvester;
 
   private mediaRepo = new MediaRepository();
-  private metaRepo = new VideoMetadataRepository();
+  private metaRepo = new MediaMetadataRepository();
   private ffmpegService = new FFmpegService();
 
   private isRunning = false;
@@ -35,9 +35,9 @@ export class MetadataHarvester {
     return MetadataHarvester.instance;
   }
 
-  public requestHarvest(videoId: string) {
-    this.onDemandQueue = this.onDemandQueue.filter((id) => id !== videoId);
-    this.onDemandQueue.unshift(videoId);
+  public requestHarvest(mediaId: string) {
+    this.onDemandQueue = this.onDemandQueue.filter((id) => id !== mediaId);
+    this.onDemandQueue.unshift(mediaId);
 
     if (!this.isProcessing) {
       this.tick();
@@ -105,7 +105,7 @@ export class MetadataHarvester {
 
       if (!target) {
         if (this.batchQueue.length === 0) {
-          this.batchQueue = this.metaRepo.getPendingVideos(this.BATCH_SIZE);
+          this.batchQueue = this.metaRepo.getPendingMedia(this.BATCH_SIZE);
           if (this.batchQueue.length > 0) {
             logger.debug(
               `[MetadataHarvester] Refilled batch queue: ${this.batchQueue.length} items.`
@@ -160,7 +160,7 @@ export class MetadataHarvester {
         this.metaRepo.updateMetadata(target.path, d, w, h, fps, codec);
       }
 
-      eventBus.emit('video:updated', { id: target.id, path: target.path });
+      eventBus.emit('media:updated', { id: target.id, path: target.path });
     } else {
       this.metaRepo.updateMetadataStatus(target.id, 'failed');
     }

@@ -1,22 +1,18 @@
 // src/features/batch-actions/model/use-batch-playlist.ts
 
 import { useMutation } from '@tanstack/react-query';
-import {
-  addVideoToPlaylistApi,
-  createPlaylistApi,
-  removeVideoFromPlaylistApi,
-} from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 
 export const useBatchPlaylist = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   const { mutate: addToPlaylist, isPending: isAdding } = useMutation({
-    mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
-      for (const id of videoIds) {
-        await addVideoToPlaylistApi(playlistId, id);
+    mutationFn: async ({ playlistId, mediaIds }: { playlistId: string; mediaIds: string[] }) => {
+      for (const id of mediaIds) {
+        await api.playlists.addMedia(playlistId, id);
       }
     },
     onSuccess: (_, variables) => {
@@ -28,12 +24,12 @@ export const useBatchPlaylist = () => {
   });
 
   const { mutate: createAndAdd, isPending: isCreating } = useMutation({
-    mutationFn: async ({ name, videoIds }: { name: string; videoIds: string[] }) => {
-      const newPlaylist = await createPlaylistApi(name);
+    mutationFn: async ({ name, mediaIds }: { name: string; mediaIds: string[] }) => {
+      const newPlaylist = await api.playlists.create(name);
       if (!newPlaylist) throw new Error('Failed to create playlist');
 
-      for (const id of videoIds) {
-        await addVideoToPlaylistApi(newPlaylist.id, id);
+      for (const id of mediaIds) {
+        await api.playlists.addMedia(newPlaylist.id, id);
       }
       return newPlaylist;
     },
@@ -54,11 +50,11 @@ export const useBatchPlaylist = () => {
 
 export const useBatchRemoveFromPlaylist = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   const { mutate: removeFromPlaylist, isPending } = useMutation({
-    mutationFn: async ({ playlistId, videoIds }: { playlistId: string; videoIds: string[] }) => {
-      const promises = videoIds.map((id) => removeVideoFromPlaylistApi(playlistId, id));
+    mutationFn: async ({ playlistId, mediaIds }: { playlistId: string; mediaIds: string[] }) => {
+      const promises = mediaIds.map((id) => api.playlists.removeMedia(playlistId, id));
       await Promise.all(promises);
     },
     onSuccess: (_, variables) => {

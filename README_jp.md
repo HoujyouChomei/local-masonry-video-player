@@ -150,15 +150,16 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
 ## 技術概要
 ### 技術スタック
-*   **Core**: Electron, **Vite**, React, TypeScript
-*   **Frontend UI**: React, Tailwind CSS, Shadcn UI, Lucide React
+*   **Core**: Electron, Vite, React, TypeScript
+*   **Frontend UI**: Tailwind CSS, Shadcn UI, Lucide React
 *   **State Management**: Zustand, TanStack Query
 *   **Database**: better-sqlite3 (SQLite)
 *   **Server**: Node.js HTTP Server + SSE (Server-Sent Events)
+*   **Communication**: tRPC (Abstracts IPC/HTTP for unified codebase)
 
 ### アーキテクチャ
-*   **Frontend**: Feature-Sliced Design (FSD) ベース。IPC通信とHTTP通信を抽象化した `ApiClient` パターンを採用し、デスクトップとモバイルでコードベースを共通化しています。
-*   **Backend**: Electronメインプロセス内にHTTPサーバーを内蔵。デスクトップ操作とモバイル操作をリアルタイムに同期します。
+*   **Frontend**: Feature-Sliced Design (FSD) ベース。
+*   **Backend**: Repositoryパターンを用いたレイヤードアーキテクチャを基盤とし、内部Event Busによるイベント駆動アーキテクチャ(EDA)を採用。
 
 ### データ管理と検索
 *   **SQLite**: メタデータ、設定、プレイリスト情報を単一の `.db` ファイルで管理。
@@ -177,6 +178,7 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 *実装を保証するものではありません*
 
 *   画像ファイルのサポート
+*   ヘッドレスサーバーモード
 
 ## アンインストール方法
 
@@ -210,16 +212,6 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
     npm run dist
     ```
 
-## フィードバックと貢献について
-
-バグの報告や、新機能の提案はいつでも歓迎します。[Discussionsページ](https://github.com/HoujyouChomei/local-masonry-video-player/discussions)からお気軽にご連絡ください。
-
-**コードの貢献 (プルリクエスト) について:**
-プルリクエストを通じたコードの貢献も歓迎します。しかし、本プロジェクトは主にAIの支援を受けて開発されており、**作者自身はコードの読み書きやレビューに関する専門的なスキルを持っていません。**
-
-そのため、提案されたコードが安全か、またアプリケーション全体にどのような影響を与えるかを適切に判断することが非常に困難です。
-
-レビューや返信が大幅に遅れたり、最終的にマージ（取り込み）できない可能性があることを、あらかじめご了承ください。ご自身の変更をすぐに利用したい場合は、リポジトリをフォークしていただくのが最も確実な方法です。
 
 ## ライセンス
 

@@ -1,7 +1,7 @@
 // electron/core/repositories/media/media-metadata.test.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { VideoMetadataRepository } from './media-metadata';
+import { MediaMetadataRepository } from './media-metadata';
 
 const mockRun = vi.fn();
 const mockGet = vi.fn();
@@ -18,12 +18,12 @@ vi.mock('../../../lib/db', () => ({
   }),
 }));
 
-describe('VideoMetadataRepository', () => {
-  let repo: VideoMetadataRepository;
+describe('MediaMetadataRepository', () => {
+  let repo: MediaMetadataRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    repo = new VideoMetadataRepository();
+    repo = new MediaMetadataRepository();
   });
 
   it('updateMetadata should update dimension, duration, fps and codec', () => {
@@ -42,10 +42,10 @@ describe('VideoMetadataRepository', () => {
     expect(mockRun).toHaveBeenCalledWith('{"prompt": "test"}', 'id-1');
   });
 
-  it('getPendingVideos should return videos with pending metadata', () => {
-    mockAll.mockReturnValue([{ id: '1', path: '/pending.mp4' }]);
+  it('getPendingMedia should return media with pending metadata', () => {
+    mockAll.mockReturnValue([{ id: '1', path: '/video.mp4' }]);
 
-    const result = repo.getPendingVideos(5);
+    const result = repo.getPendingMedia(5);
 
     expect(mockPrepare).toHaveBeenCalledWith(
       expect.stringContaining("metadata_status = 'pending'")

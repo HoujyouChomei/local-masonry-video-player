@@ -1,7 +1,7 @@
 // src/shared/stores/settings/core-slice.ts
 
 import { SettingsSliceCreator, CoreSlice } from './types';
-import { fetchSettings, saveSetting } from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
 import { logger } from '@/shared/lib/logger';
 
@@ -13,7 +13,7 @@ export const createCoreSlice: SettingsSliceCreator<CoreSlice> = (set, get) => ({
 
   initialize: async () => {
     try {
-      const settings = await fetchSettings();
+      const settings = await api.settings.get();
       set({ ...settings, isInitialized: true });
     } catch (error) {
       logger.error('Failed to load settings:', error);
@@ -23,7 +23,7 @@ export const createCoreSlice: SettingsSliceCreator<CoreSlice> = (set, get) => ({
 
   setFolderPath: async (path) => {
     set({ folderPath: path });
-    await saveSetting('folderPath', path);
+    await api.settings.save('folderPath', path);
   },
 
   addLibraryFolder: async (path) => {
@@ -31,7 +31,7 @@ export const createCoreSlice: SettingsSliceCreator<CoreSlice> = (set, get) => ({
     if (!current.includes(path)) {
       const newFolders = [...current, path];
       set({ libraryFolders: newFolders });
-      await saveSetting('libraryFolders', newFolders);
+      await api.settings.save('libraryFolders', newFolders);
     }
   },
 
@@ -39,7 +39,7 @@ export const createCoreSlice: SettingsSliceCreator<CoreSlice> = (set, get) => ({
     const current = get().libraryFolders;
     const newFolders = current.filter((p) => p !== path);
     set({ libraryFolders: newFolders });
-    await saveSetting('libraryFolders', newFolders);
+    await api.settings.save('libraryFolders', newFolders);
   },
 
   toggleExpandedPath: async (path) => {
@@ -54,6 +54,6 @@ export const createCoreSlice: SettingsSliceCreator<CoreSlice> = (set, get) => ({
     }
 
     set({ expandedPaths: newPaths });
-    await saveSetting('expandedPaths', newPaths);
+    await api.settings.save('expandedPaths', newPaths);
   },
 });

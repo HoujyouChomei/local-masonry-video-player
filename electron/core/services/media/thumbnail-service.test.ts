@@ -128,20 +128,20 @@ describe('ThumbnailService', () => {
     });
 
     service = ThumbnailService.getInstance();
-    const videoPath = '/videos/test.mp4';
+    const mediaPath = '/videos/test.mp4';
 
-    service.addToQueue([videoPath]);
+    service.addToQueue([mediaPath]);
 
     await vi.advanceTimersByTimeAsync(200);
 
-    expect(nativeImage.createThumbnailFromPath).toHaveBeenCalledWith(videoPath, expect.anything());
+    expect(nativeImage.createThumbnailFromPath).toHaveBeenCalledWith(mediaPath, expect.anything());
     expect(fsMocks.writeFile).toHaveBeenCalledWith(
       expect.stringContaining(THUMBNAIL.EXTENSION),
       expect.anything()
     );
 
     expect(eventBusMocks.emit).toHaveBeenCalledWith('thumbnail:generated', {
-      path: videoPath,
+      path: mediaPath,
       thumbnailPath: expect.stringContaining(THUMBNAIL.EXTENSION),
     });
     expect(ffmpegMocks.generateThumbnail).not.toHaveBeenCalled();
@@ -154,22 +154,22 @@ describe('ThumbnailService', () => {
     });
 
     service = ThumbnailService.getInstance();
-    const videoPath = '/videos/test.mp4';
+    const mediaPath = '/videos/test.mp4';
 
     mockNativeImage.isEmpty.mockReturnValue(true);
     ffmpegMocks.generateThumbnail.mockResolvedValue(true);
 
-    service.addToQueue([videoPath]);
+    service.addToQueue([mediaPath]);
     await vi.advanceTimersByTimeAsync(200);
 
     expect(nativeImage.createThumbnailFromPath).toHaveBeenCalled();
     expect(ffmpegMocks.generateThumbnail).toHaveBeenCalledWith(
-      videoPath,
+      mediaPath,
       expect.stringContaining(THUMBNAIL.EXTENSION)
     );
 
     expect(eventBusMocks.emit).toHaveBeenCalledWith('thumbnail:generated', {
-      path: videoPath,
+      path: mediaPath,
       thumbnailPath: expect.stringContaining(THUMBNAIL.EXTENSION),
     });
   });
@@ -181,11 +181,11 @@ describe('ThumbnailService', () => {
     });
 
     service = ThumbnailService.getInstance();
-    const videoPath = '/videos/test.mkv';
+    const mediaPath = '/videos/test.mkv';
 
     ffmpegMocks.generateThumbnail.mockResolvedValue(true);
 
-    service.addToQueue([videoPath]);
+    service.addToQueue([mediaPath]);
     await vi.advanceTimersByTimeAsync(200);
 
     expect(nativeImage.createThumbnailFromPath).not.toHaveBeenCalled();
@@ -194,7 +194,7 @@ describe('ThumbnailService', () => {
 
   it('should skip generation if thumbnail exists and force is false', async () => {
     service = ThumbnailService.getInstance();
-    const videoPath = '/videos/test.mp4';
+    const mediaPath = '/videos/test.mp4';
 
     fsMocks.existsSync.mockImplementation((p: any) => {
       if (p === thumbDir) return true;
@@ -202,7 +202,7 @@ describe('ThumbnailService', () => {
       return false;
     });
 
-    service.addToQueue([videoPath], false);
+    service.addToQueue([mediaPath], false);
     await vi.advanceTimersByTimeAsync(200);
 
     expect(nativeImage.createThumbnailFromPath).not.toHaveBeenCalled();
@@ -212,11 +212,11 @@ describe('ThumbnailService', () => {
 
   it('should force regenerate if force is true', async () => {
     service = ThumbnailService.getInstance();
-    const videoPath = '/videos/test.mp4';
+    const mediaPath = '/videos/test.mp4';
 
     fsMocks.existsSync.mockReturnValue(true);
 
-    service.addToQueue([videoPath], true);
+    service.addToQueue([mediaPath], true);
     await vi.advanceTimersByTimeAsync(200);
 
     expect(nativeImage.createThumbnailFromPath).toHaveBeenCalled();
@@ -224,11 +224,11 @@ describe('ThumbnailService', () => {
 
   it('should delete thumbnail', () => {
     service = ThumbnailService.getInstance();
-    const videoPath = '/videos/test.mp4';
+    const mediaPath = '/videos/test.mp4';
 
     fsMocks.existsSync.mockReturnValue(true);
 
-    service.deleteThumbnail(videoPath);
+    service.deleteThumbnail(mediaPath);
 
     expect(fsMocks.unlinkSync).toHaveBeenCalledWith(expect.stringContaining(THUMBNAIL.EXTENSION));
   });
@@ -238,21 +238,21 @@ describe('ThumbnailService', () => {
 
     expect(eventBusMocks.on).toHaveBeenCalledWith('thumbnail:request', expect.any(Function));
     expect(eventBusMocks.on).toHaveBeenCalledWith('thumbnail:delete', expect.any(Function));
-    expect(eventBusMocks.on).toHaveBeenCalledWith('video:deleted', expect.any(Function));
+    expect(eventBusMocks.on).toHaveBeenCalledWith('media:deleted', expect.any(Function));
   });
 
-  it('should delete thumbnail when video:deleted event is emitted', () => {
+  it('should delete thumbnail when media:deleted event is emitted', () => {
     fsMocks.existsSync.mockReturnValue(true);
     service = ThumbnailService.getInstance();
 
-    const videoPath = '/videos/deleted.mp4';
+    const mediaPath = '/videos/deleted.mp4';
 
     const deletedHandler = eventBusMocks.on.mock.calls.find(
-      (call: [string, unknown]) => call[0] === 'video:deleted'
+      (call: [string, unknown]) => call[0] === 'media:deleted'
     )?.[1] as ((data: { id: string; path: string }) => void) | undefined;
 
     expect(deletedHandler).toBeDefined();
-    deletedHandler!({ id: 'test-id', path: videoPath });
+    deletedHandler!({ id: 'test-id', path: mediaPath });
 
     expect(fsMocks.unlinkSync).toHaveBeenCalledWith(expect.stringContaining(THUMBNAIL.EXTENSION));
   });

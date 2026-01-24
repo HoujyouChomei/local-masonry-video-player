@@ -4,24 +4,24 @@ import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
 import { MediaRepository } from '../../repositories/media/media-repository';
-import { VideoIntegrityRepository } from '../../repositories/media/media-integrity';
-import { VideoFile } from '../../../../src/shared/types/video';
-import { VideoMapper } from '../media/media-mapper';
+import { MediaIntegrityRepository } from '../../repositories/media/media-integrity';
+import { Media } from '../../../../src/shared/schemas/media';
+import { MediaMapper } from '../media/media-mapper';
 import { calculateFileHash } from '../../../lib/file-hash';
 import { FastPathIndexer } from './fast-path-indexer';
 import { store } from '../../../lib/store';
-import { VideoRebinder, FileStat } from '../media/rebinder';
+import { MediaRebinder, FileStat } from '../media/rebinder';
 import { eventBus } from '../../events';
 import { logger } from '../../../lib/logger';
 
 export class FileIntegrityService {
   private mediaRepo = new MediaRepository();
-  private integrityRepo = new VideoIntegrityRepository();
-  private mapper = new VideoMapper();
+  private integrityRepo = new MediaIntegrityRepository();
+  private mapper = new MediaMapper();
   private pathIndexer = new FastPathIndexer();
-  private rebinder = new VideoRebinder();
+  private rebinder = new MediaRebinder();
 
-  async processNewFile(filePath: string): Promise<VideoFile | null> {
+  async processNewFile(filePath: string): Promise<Media | null> {
     try {
       const fsStat = await fs.stat(filePath);
       const stat: FileStat = {
@@ -102,7 +102,7 @@ export class FileIntegrityService {
           id,
           path: filePath,
           name,
-          type: 'video', // Default
+          type: 'video',
           size: stat.size,
           mtime: stat.mtime,
           created_at: Date.now(),
@@ -123,14 +123,14 @@ export class FileIntegrityService {
     }
   }
 
-  async verifyAndRecover(videoPaths: string[]): Promise<boolean> {
-    if (videoPaths.length === 0) return false;
+  async verifyAndRecover(mediaPaths: string[]): Promise<boolean> {
+    if (mediaPaths.length === 0) return false;
 
     const missingPaths: string[] = [];
     const existingPaths: string[] = [];
 
     await Promise.all(
-      videoPaths.map(async (p) => {
+      mediaPaths.map(async (p) => {
         try {
           await fs.access(p);
           existingPaths.push(p);

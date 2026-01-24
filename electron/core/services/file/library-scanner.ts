@@ -8,11 +8,11 @@ import {
   MediaCreateInput,
   MediaUpdateInput,
 } from '../../repositories/media/media-repository';
-import { VideoIntegrityRepository } from '../../repositories/media/media-integrity';
-import { VideoFile } from '../../../../src/shared/types/video';
-import { VideoMapper } from '../media/media-mapper';
+import { MediaIntegrityRepository } from '../../repositories/media/media-integrity';
+import { Media } from '../../../../src/shared/schemas/media';
+import { MediaMapper } from '../media/media-mapper';
 import { calculateFileHash } from '../../../lib/file-hash';
-import { VideoRebinder, FileStat } from '../media/rebinder';
+import { MediaRebinder, FileStat } from '../media/rebinder';
 import { eventBus } from '../../events';
 import { FFmpegService } from '../video/ffmpeg-service';
 import { NATIVE_EXTENSIONS, EXTENDED_EXTENSIONS } from '../../../lib/extensions';
@@ -23,12 +23,12 @@ const BATCH_LIMIT = 50;
 
 export class LibraryScanner {
   private mediaRepo = new MediaRepository();
-  private integrityRepo = new VideoIntegrityRepository();
-  private mapper = new VideoMapper();
-  private rebinder = new VideoRebinder();
+  private integrityRepo = new MediaIntegrityRepository();
+  private mapper = new MediaMapper();
+  private rebinder = new MediaRebinder();
   private ffmpegService = new FFmpegService();
 
-  async scan(folderPath: string): Promise<VideoFile[]> {
+  async scan(folderPath: string): Promise<Media[]> {
     try {
       const hasFFmpeg = await this.ffmpegService.validatePath(
         this.ffmpegService.ffmpegPath,
@@ -37,7 +37,7 @@ export class LibraryScanner {
       const targetExtensions = hasFFmpeg ? EXTENDED_EXTENSIONS : NATIVE_EXTENSIONS;
 
       const dirents = await fs.readdir(folderPath, { withFileTypes: true });
-      const videoFiles = dirents
+      const mediaFiles = dirents
         .filter((dirent) => {
           if (!dirent.isFile()) return false;
           const ext = path.extname(dirent.name).toLowerCase();
@@ -45,7 +45,7 @@ export class LibraryScanner {
         })
         .map((dirent) => path.join(folderPath, dirent.name));
 
-      const existingFileSet = new Set(videoFiles.map((p) => path.normalize(p)));
+      const existingFileSet = new Set(mediaFiles.map((p) => path.normalize(p)));
       const dbFiles = this.mediaRepo.findPathsByDirectory(folderPath);
 
       const idsToMarkMissing = dbFiles
@@ -60,14 +60,14 @@ export class LibraryScanner {
         this.integrityRepo.markAsMissing(idsToMarkMissing);
       }
 
-      if (videoFiles.length === 0) return [];
+      if (mediaFiles.length === 0) return [];
 
-      eventBus.emit('thumbnail:request', { paths: videoFiles, regenerate: false });
+      eventBus.emit('thumbnail:request', { paths: mediaFiles, regenerate: false });
 
       const statsMap = new Map<string, FileStat>();
 
-      for (let i = 0; i < videoFiles.length; i += BATCH_LIMIT) {
-        const batch = videoFiles.slice(i, i + BATCH_LIMIT);
+      for (let i = 0; i < mediaFiles.length; i += BATCH_LIMIT) {
+        const batch = mediaFiles.slice(i, i + BATCH_LIMIT);
         await Promise.all(
           batch.map(async (filePath) => {
             try {
@@ -85,7 +85,7 @@ export class LibraryScanner {
         );
       }
 
-      const validPaths = videoFiles.filter((p) => statsMap.has(p));
+      const validPaths = mediaFiles.filter((p) => statsMap.has(p));
       const changedPaths: string[] = [];
 
       for (let i = 0; i < validPaths.length; i += CHUNK_SIZE) {
@@ -214,15 +214,15 @@ export class LibraryScanner {
       );
       const targetExtensions = hasFFmpeg ? EXTENDED_EXTENSIONS : NATIVE_EXTENSIONS;
 
-      const videoFiles: string[] = [];
+      const mediaFiles: string[] = [];
 
       console.log(`[LibraryScanner] Starting quiet recursive scan for: ${folderPath}`);
-      await this.scanDirRecursively(folderPath, targetExtensions, 0, videoFiles);
+      await this.scanDirRecursively(folderPath, targetExtensions, 0, mediaFiles);
 
-      if (videoFiles.length === 0) return false;
+      if (mediaFiles.length === 0) return false;
 
-      for (let i = 0; i < videoFiles.length; i += CHUNK_SIZE) {
-        const chunkPaths = videoFiles.slice(i, i + CHUNK_SIZE);
+      for (let i = 0; i < mediaFiles.length; i += CHUNK_SIZE) {
+        const chunkPaths = mediaFiles.slice(i, i + CHUNK_SIZE);
         const existingRows = this.mediaRepo.findManyByPaths(chunkPaths);
         const existingPathSet = new Set(existingRows.map((r) => r.path));
 

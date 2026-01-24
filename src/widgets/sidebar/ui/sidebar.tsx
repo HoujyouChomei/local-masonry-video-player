@@ -1,12 +1,12 @@
 // src/widgets/sidebar/ui/sidebar.tsx
-
+import { ReactNode } from 'react';
 import { Heart, Globe, Folder } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { Separator } from '@/shared/ui/shadcn/separator';
+import { ScrollArea } from '@/shared/ui/shadcn/scroll-area';
+import { cn } from '@/shared/lib/utils';
 import { LibrarySection } from './library-section';
 import { PlaylistSection } from './playlist-section';
 import { TagSection } from './tag-section';
@@ -17,9 +17,13 @@ import {
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from '@/components/ui/sheet';
+} from '@/shared/ui/shadcn/sheet';
 
-export const Sidebar = () => {
+interface SidebarProps {
+  renderFolderContextMenu?: (path: string) => ReactNode;
+}
+
+export const Sidebar = ({ renderFolderContextMenu }: SidebarProps) => {
   const isSidebarOpen = useSettingsStore((s) => s.isSidebarOpen);
   const {
     viewMode,
@@ -109,7 +113,7 @@ export const Sidebar = () => {
 
           <Separator className="bg-border/40 mx-4 my-2 w-auto" />
 
-          <LibrarySection />
+          <LibrarySection renderFolderContextMenu={renderFolderContextMenu} />
 
           <Separator className="bg-border/40 mx-4 my-2 w-auto" />
 

@@ -2,9 +2,9 @@
 
 import { Zap, Check, Weight } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { SettingsSwitch } from '../components/settings-switch';
-import { Input } from '@/components/ui/input';
+import { Input } from '@/shared/ui/shadcn/input';
 
 export const PerformanceSection = () => {
   const {
@@ -66,7 +66,7 @@ export const PerformanceSection = () => {
           <div className="space-y-0.5 pr-2">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Weight size={14} className="text-muted-foreground" />
-              Heavy Video Limit
+              Heavy Media Limit
             </div>
             <div className="text-muted-foreground text-[10px] leading-tight">
               Play large files only on hover to prevent crashes.

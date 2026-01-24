@@ -1,7 +1,7 @@
 // electron/core/services/media/rebinder.ts
 
 import { MediaRow } from '../../repositories/media/media-repository';
-import { VideoIntegrityRepository } from '../../repositories/media/media-integrity';
+import { MediaIntegrityRepository } from '../../repositories/media/media-integrity';
 import { calculateFileHash } from '../../../lib/file-hash';
 import { logger } from '../../../lib/logger';
 
@@ -12,8 +12,8 @@ export interface FileStat {
   ino: number;
 }
 
-export class VideoRebinder {
-  private integrityRepo = new VideoIntegrityRepository();
+export class MediaRebinder {
+  private integrityRepo = new MediaIntegrityRepository();
 
   async findCandidate(
     filePath: string,

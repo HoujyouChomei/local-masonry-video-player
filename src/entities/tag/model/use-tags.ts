@@ -1,26 +1,17 @@
 // src/entities/tag/model/use-tags.ts
 
 import { useQuery, useMutation } from '@tanstack/react-query';
-import {
-  fetchTagsActiveApi,
-  fetchTagsByFolderApi,
-  fetchTagsAllApi,
-  fetchVideoTagsApi,
-  createTagApi,
-  assignTagApi,
-  unassignTagApi,
-  fetchVideosByTagApi,
-} from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { api } from '@/shared/api';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 
 export const useSidebarTags = (folderPath: string, isGlobal: boolean) => {
   return useQuery({
     queryKey: ['tags', 'sidebar', isGlobal ? 'global' : folderPath],
     queryFn: () => {
       if (isGlobal || !folderPath) {
-        return fetchTagsActiveApi();
+        return api.tags.getActive();
       }
-      return fetchTagsByFolderApi(folderPath);
+      return api.tags.getByFolder(folderPath);
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -29,32 +20,32 @@ export const useSidebarTags = (folderPath: string, isGlobal: boolean) => {
 export const useTagsAll = () => {
   return useQuery({
     queryKey: ['tags', 'all'],
-    queryFn: fetchTagsAllApi,
+    queryFn: () => api.tags.getAll(),
     staleTime: 1000 * 60 * 5,
   });
 };
 
-export const useVideoTags = (videoId: string) => {
+export const useMediaTags = (mediaId: string) => {
   return useQuery({
-    queryKey: ['video-tags', videoId],
-    queryFn: () => fetchVideoTagsApi(videoId),
-    enabled: !!videoId,
+    queryKey: ['media-tags', mediaId],
+    queryFn: () => api.tags.getByMedia(mediaId),
+    enabled: !!mediaId,
   });
 };
 
-export const useVideosByTag = (tagIds: string[]) => {
+export const useMediaByTag = (tagIds: string[]) => {
   return useQuery({
-    queryKey: ['tag-videos', tagIds],
-    queryFn: () => (tagIds.length > 0 ? fetchVideosByTagApi(tagIds) : Promise.resolve([])),
+    queryKey: ['tag-media', tagIds],
+    queryFn: () => (tagIds.length > 0 ? api.tags.getMedia(tagIds) : Promise.resolve([])),
     enabled: tagIds.length > 0,
   });
 };
 
 export const useCreateTag = () => {
-  const { onTagsUpdated } = useVideoCache();
+  const { onTagsUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: (name: string) => createTagApi(name),
+    mutationFn: (name: string) => api.tags.create(name),
     onSuccess: () => {
       onTagsUpdated();
     },
@@ -62,25 +53,25 @@ export const useCreateTag = () => {
 };
 
 export const useAssignTag = () => {
-  const { onTagsUpdated } = useVideoCache();
+  const { onTagsUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: ({ videoId, tagId }: { videoId: string; tagId: string }) =>
-      assignTagApi(videoId, tagId),
+    mutationFn: ({ mediaId, tagId }: { mediaId: string; tagId: string }) =>
+      api.tags.assign(mediaId, tagId),
     onSuccess: (_, variables) => {
-      onTagsUpdated([variables.videoId]);
+      onTagsUpdated([variables.mediaId]);
     },
   });
 };
 
 export const useUnassignTag = () => {
-  const { onTagsUpdated } = useVideoCache();
+  const { onTagsUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: ({ videoId, tagId }: { videoId: string; tagId: string }) =>
-      unassignTagApi(videoId, tagId),
+    mutationFn: ({ mediaId, tagId }: { mediaId: string; tagId: string }) =>
+      api.tags.unassign(mediaId, tagId),
     onSuccess: (_, variables) => {
-      onTagsUpdated([variables.videoId]);
+      onTagsUpdated([variables.mediaId]);
     },
   });
 };

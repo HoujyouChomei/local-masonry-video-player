@@ -3,7 +3,7 @@
 import { getDB } from '../../../lib/db';
 import { MediaRow } from './media-repository';
 
-export class VideoMetadataRepository {
+export class MediaMetadataRepository {
   private get db() {
     return getDB();
   }
@@ -62,7 +62,7 @@ export class VideoMetadataRepository {
       .run(status, id);
   }
 
-  getPendingVideos(limit = 10): MediaRow[] {
+  getPendingMedia(limit = 10): MediaRow[] {
     return this.db
       .prepare(
         `

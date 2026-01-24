@@ -39,7 +39,7 @@ describe('FileMoveService', () => {
     vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.rename).mockResolvedValue(undefined);
 
-    const results = await service.moveVideos([source], targetDir);
+    const results = await service.moveMedia([source], targetDir);
 
     expect(fs.access).toHaveBeenCalledWith(expectedDest);
     expect(fs.rename).toHaveBeenCalledWith(source, expectedDest);
@@ -56,7 +56,7 @@ describe('FileMoveService', () => {
 
     vi.mocked(fs.rename).mockResolvedValue(undefined);
 
-    const results = await service.moveVideos([source], targetDir);
+    const results = await service.moveMedia([source], targetDir);
 
     expect(fs.access).toHaveBeenCalledTimes(2);
     expect(fs.rename).toHaveBeenCalledWith(source, dest2);
@@ -76,7 +76,7 @@ describe('FileMoveService', () => {
     vi.mocked(fs.cp).mockResolvedValue(undefined);
     vi.mocked(fs.unlink).mockResolvedValue(undefined);
 
-    const results = await service.moveVideos([source], targetDir);
+    const results = await service.moveMedia([source], targetDir);
 
     expect(fs.rename).toHaveBeenCalledWith(source, expectedDest);
     expect(fs.cp).toHaveBeenCalledWith(source, expectedDest, expect.anything());
@@ -99,7 +99,7 @@ describe('FileMoveService', () => {
     unlinkError.code = 'EPERM';
     vi.mocked(fs.unlink).mockRejectedValue(unlinkError);
 
-    const results = await service.moveVideos([source], targetDir);
+    const results = await service.moveMedia([source], targetDir);
 
     expect(fs.cp).toHaveBeenCalledWith(source, expectedDest, expect.anything());
     expect(fs.unlink).toHaveBeenCalledWith(source);
@@ -120,7 +120,7 @@ describe('FileMoveService', () => {
     vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
     vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'));
 
-    const results = await service.moveVideos([source], targetDir);
+    const results = await service.moveMedia([source], targetDir);
 
     expect(results).toEqual([
       {
@@ -136,7 +136,7 @@ describe('FileMoveService', () => {
     const fileName = 'video.mp4';
     const source = path.join(targetDir, fileName);
 
-    const results = await service.moveVideos([source], targetDir);
+    const results = await service.moveMedia([source], targetDir);
 
     expect(fs.rename).not.toHaveBeenCalled();
     expect(results).toEqual([

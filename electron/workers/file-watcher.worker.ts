@@ -2,7 +2,7 @@
 
 import { parentPort } from 'worker_threads';
 import chokidar, { FSWatcher } from 'chokidar';
-import { isVideoFile } from '../lib/extensions';
+import { isMedia } from '../lib/extensions';
 
 type WorkerCommand =
   | { type: 'START_WATCH'; folderPath: string; enableExtendedExtensions: boolean }
@@ -46,17 +46,17 @@ async function startWatch(folderPath: string) {
 
   watcher
     .on('add', (path: string) => {
-      if (isVideoFile(path, enableExtended)) {
+      if (isMedia(path, enableExtended)) {
         parentPort?.postMessage({ type: 'file-added', path });
       }
     })
     .on('unlink', (path: string) => {
-      if (isVideoFile(path, true)) {
+      if (isMedia(path, true)) {
         parentPort?.postMessage({ type: 'file-deleted', path });
       }
     })
     .on('change', (path: string) => {
-      if (isVideoFile(path, enableExtended)) {
+      if (isMedia(path, enableExtended)) {
         parentPort?.postMessage({ type: 'file-changed', path });
       }
     })

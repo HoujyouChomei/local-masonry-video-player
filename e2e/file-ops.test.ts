@@ -11,23 +11,29 @@ test.describe('File Operations', () => {
   let page: Page;
 
   test.beforeAll(async () => {
+    test.setTimeout(5000);
+
     ctx = await launchAppWithFakeData();
     page = await ctx.app.firstWindow();
-    await page.waitForSelector('.video-card', { state: 'visible', timeout: 10000 });
+
+    page.on('console', (msg) => console.log(`[Renderer] ${msg.text()}`));
+    page.on('pageerror', (err) => console.error(`[Renderer Error] ${err.message}`));
+
+    await page.waitForSelector('.media-card', { state: 'visible', timeout: 5000 });
   });
 
   test.afterAll(async () => {
     await cleanupTestContext(ctx);
   });
 
-  test('should move video to a new folder', async () => {
-    const targetDirName = 'moved_videos';
+  test('should move media to a new folder', async () => {
+    const targetDirName = 'moved_media';
     const targetDirPath = path.join(ctx.userDataDir, targetDirName);
     if (!fs.existsSync(targetDirPath)) {
       fs.mkdirSync(targetDirPath);
     }
 
-    const firstCard = page.locator('.video-card').first();
+    const firstCard = page.locator('.media-card').first();
     await expect(firstCard).toBeVisible();
 
     await firstCard.click({ modifiers: ['Control'] });
@@ -46,14 +52,14 @@ test.describe('File Operations', () => {
     await page.keyboard.press('Escape');
   });
 
-  test('should rename video', async () => {
-    const firstCard = page.locator('.video-card').first();
+  test('should rename media', async () => {
+    const firstCard = page.locator('.media-card').first();
     const originalName = await firstCard.getByRole('heading').innerText();
 
     const lastDotIndex = originalName.lastIndexOf('.');
     const extension = lastDotIndex !== -1 ? originalName.substring(lastDotIndex) : '';
 
-    const newNameBase = 'renamed_video';
+    const newNameBase = 'renamed_media';
 
     await firstCard.click({ button: 'right' });
     await page.getByText('Rename').click();
@@ -69,8 +75,8 @@ test.describe('File Operations', () => {
     await expect(firstCard.getByRole('heading')).toHaveText(newNameBase + extension);
   });
 
-  test('should delete video from disk', async () => {
-    const cards = page.locator('.video-card');
+  test('should delete media from disk', async () => {
+    const cards = page.locator('.media-card');
     const initialCount = await cards.count();
 
     const lastCard = cards.last();
@@ -97,12 +103,12 @@ test.describe('File Operations', () => {
   });
 
   test('should preserve metadata after file move', async () => {
-    const targetDirPath = path.join(ctx.userDataDir, 'moved_videos');
+    const targetDirPath = path.join(ctx.userDataDir, 'moved_media');
     if (!fs.existsSync(targetDirPath)) {
       fs.mkdirSync(targetDirPath);
     }
 
-    const firstCard = page.locator('.video-card').first();
+    const firstCard = page.locator('.media-card').first();
     await expect(firstCard).toBeVisible();
 
     const favButton = firstCard.getByTitle('Add to Favorites');
@@ -112,13 +118,13 @@ test.describe('File Operations', () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const videoName = await firstCard.getByRole('heading').innerText();
+    const mediaName = await firstCard.getByRole('heading').innerText();
 
-    const sourceFiles = fs.readdirSync(ctx.videoDir);
-    const videoFile = sourceFiles.find((f) => f.includes('test-video'));
-    if (videoFile) {
-      const sourcePath = path.join(ctx.videoDir, videoFile);
-      const destPath = path.join(targetDirPath, videoFile);
+    const sourceFiles = fs.readdirSync(ctx.mediaDir);
+    const mediaFile = sourceFiles.find((f) => f.includes('test-media'));
+    if (mediaFile) {
+      const sourcePath = path.join(ctx.mediaDir, mediaFile);
+      const destPath = path.join(targetDirPath, mediaFile);
 
       fs.copyFileSync(sourcePath, destPath);
       fs.unlinkSync(sourcePath);

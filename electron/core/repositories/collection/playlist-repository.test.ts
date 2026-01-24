@@ -61,7 +61,7 @@ describe('PlaylistRepository', () => {
       expect(result).toEqual({
         id: 'p1',
         name: 'My Playlist',
-        videoPaths: ['/v1.mp4', '/v2.mp4'],
+        mediaPaths: ['/v1.mp4', '/v2.mp4'],
         createdAt: 1000,
         updatedAt: 2000,
       });
@@ -87,8 +87,8 @@ describe('PlaylistRepository', () => {
       const result = repo.getAll();
 
       expect(result).toHaveLength(2);
-      expect(result[0].videoPaths).toEqual(['/v1.mp4']);
-      expect(result[1].videoPaths).toEqual([]);
+      expect(result[0].mediaPaths).toEqual(['/v1.mp4']);
+      expect(result[1].mediaPaths).toEqual([]);
     });
   });
 
@@ -97,7 +97,7 @@ describe('PlaylistRepository', () => {
       const playlist = {
         id: 'new-id',
         name: 'New Playlist',
-        videoPaths: [],
+        mediaPaths: [],
         createdAt: 1000,
         updatedAt: 1000,
       };
@@ -129,13 +129,13 @@ describe('PlaylistRepository', () => {
     });
   });
 
-  describe('addVideo', () => {
+  describe('addMedia', () => {
     it('should add video if not exists', () => {
       mockGet.mockReturnValueOnce(undefined);
 
       mockGet.mockReturnValueOnce({ maxRank: 5 });
 
-      repo.addVideo('p1', 'v1');
+      repo.addMedia('p1', 'v1');
 
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO playlist_items')
@@ -150,7 +150,7 @@ describe('PlaylistRepository', () => {
     it('should skip adding if video already exists in playlist', () => {
       mockGet.mockReturnValueOnce({ 1: 1 });
 
-      repo.addVideo('p1', 'v1');
+      repo.addMedia('p1', 'v1');
 
       expect(mockPrepare).not.toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO playlist_items')
@@ -158,9 +158,9 @@ describe('PlaylistRepository', () => {
     });
   });
 
-  describe('removeVideo', () => {
+  describe('removeMedia', () => {
     it('should delete video from playlist', () => {
-      repo.removeVideo('p1', 'v1');
+      repo.removeMedia('p1', 'v1');
 
       expect(mockPrepare).toHaveBeenCalledWith(
         expect.stringContaining('DELETE FROM playlist_items')
@@ -173,11 +173,11 @@ describe('PlaylistRepository', () => {
     });
   });
 
-  describe('reorderVideos', () => {
+  describe('reorderMedia', () => {
     it('should update ranks in transaction', () => {
       const videoIds = ['v1', 'v2', 'v3'];
 
-      repo.reorderVideos('p1', videoIds);
+      repo.reorderMedia('p1', videoIds);
 
       expect(mockTransaction).toHaveBeenCalled();
       expect(mockPrepare).toHaveBeenCalledWith(expect.stringContaining('UPDATE playlist_items'));

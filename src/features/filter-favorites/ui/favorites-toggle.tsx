@@ -2,8 +2,8 @@
 
 import { Heart } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
 
 export const FavoritesToggle = () => {
   const { showFavoritesOnly, toggleShowFavoritesOnly } = useUIStore();
@@ -19,7 +19,7 @@ export const FavoritesToggle = () => {
           ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20 hover:text-red-600'
           : 'text-muted-foreground hover:text-white'
       )}
-      title={showFavoritesOnly ? 'Show All Videos' : 'Show Favorites Only'}
+      title={showFavoritesOnly ? 'Show All Media' : 'Show Favorites Only'}
     >
       <Heart
         className={cn('h-5 w-5 transition-all', showFavoritesOnly && 'scale-110 fill-current')}

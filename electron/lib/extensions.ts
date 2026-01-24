@@ -12,7 +12,7 @@ export const EXTENDED_EXTENSIONS = new Set(VIDEO_EXTENSIONS_ALL);
 
 export const IMAGE_EXTENSIONS_SET = new Set(IMAGE_EXTENSIONS);
 
-export const isVideoFile = (filePath: string, enableExtended: boolean): boolean => {
+export const isMedia = (filePath: string, enableExtended: boolean): boolean => {
   const ext = filePath.split('.').pop()?.toLowerCase();
   if (!ext) return false;
   const dotExt = `.${ext}`;
@@ -29,7 +29,7 @@ export const isImageFile = (filePath: string): boolean => {
 export type MediaType = 'video' | 'image' | 'unknown';
 
 export const getMediaType = (filePath: string, enableExtended: boolean): MediaType => {
-  if (isVideoFile(filePath, enableExtended)) return 'video';
+  if (isMedia(filePath, enableExtended)) return 'video';
   if (isImageFile(filePath)) return 'image';
   return 'unknown';
 };

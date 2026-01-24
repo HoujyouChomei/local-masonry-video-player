@@ -7,7 +7,7 @@ import { useDragStore } from '@/shared/stores/drag-store';
 import { useBatchMove } from '@/features/batch-actions/model/use-batch-move';
 import { useBatchPlaylist } from '@/features/batch-actions/model/use-batch-playlist';
 import { toast } from 'sonner';
-import { VideoFile } from '@/shared/types/video';
+import { Media } from '@/shared/schemas/media';
 import { logger } from '@/shared/lib/logger';
 
 type DropTargetType = 'playlist' | 'folder';
@@ -26,24 +26,24 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
   const { addToPlaylist } = useBatchPlaylist();
 
   const resolvePaths = useCallback((): string[] => {
-    const { isSelectionMode, selectedVideoIds } = useSelectionStore.getState();
+    const { isSelectionMode, selectedMediaIds } = useSelectionStore.getState();
 
-    if (isSelectionMode && selectedVideoIds.length > 0) {
+    if (isSelectionMode && selectedMediaIds.length > 0) {
       const allQueries = queryClient.getQueryCache().findAll();
-      const allKnownVideos = new Map<string, string>();
+      const allKnownMedia = new Map<string, string>();
 
       for (const query of allQueries) {
         const data = query.state.data;
         if (Array.isArray(data)) {
           for (const item of data) {
             if (item && typeof item === 'object' && 'id' in item && 'path' in item) {
-              const v = item as VideoFile;
-              allKnownVideos.set(v.id, v.path);
+              const v = item as Media;
+              allKnownMedia.set(v.id, v.path);
             }
           }
         }
       }
-      return selectedVideoIds.map((id) => allKnownVideos.get(id)).filter((p): p is string => !!p);
+      return selectedMediaIds.map((id) => allKnownMedia.get(id)).filter((p): p is string => !!p);
     }
 
     const draggedPath = useDragStore.getState().draggedFilePath;
@@ -52,13 +52,13 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
   }, [queryClient]);
 
   const resolveIds = useCallback((): string[] => {
-    const { isSelectionMode, selectedVideoIds } = useSelectionStore.getState();
+    const { isSelectionMode, selectedMediaIds } = useSelectionStore.getState();
 
-    if (isSelectionMode && selectedVideoIds.length > 0) {
-      return selectedVideoIds;
+    if (isSelectionMode && selectedMediaIds.length > 0) {
+      return selectedMediaIds;
     }
 
-    const draggedId = useDragStore.getState().draggedVideoId;
+    const draggedId = useDragStore.getState().draggedMediaId;
     if (!draggedId) return [];
     return Array.isArray(draggedId) ? draggedId : [draggedId];
   }, []);
@@ -89,8 +89,8 @@ export const useSidebarDrop = ({ type, targetId, targetName }: UseSidebarDropPro
           const ids = resolveIds();
           if (ids.length === 0) return;
 
-          addToPlaylist({ playlistId: targetId, videoIds: ids });
-          toast.success(`Added ${ids.length} videos to "${targetName}"`);
+          addToPlaylist({ playlistId: targetId, mediaIds: ids });
+          toast.success(`Added ${ids.length} items to "${targetName}"`);
         } else if (type === 'folder') {
           const paths = resolvePaths();
           if (paths.length === 0) return;

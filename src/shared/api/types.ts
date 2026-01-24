@@ -1,29 +1,29 @@
 // src/shared/api/types.ts
 
-import { VideoFile } from '../types/video';
-import { Playlist } from '../types/playlist';
+import { Media } from '../schemas/media';
+import { Playlist } from '../schemas/playlist';
 import {
   AppSettings,
   DirectoryEntry,
   Tag,
-  VideoUpdateEvent,
+  MediaUpdateEvent,
   SearchOptions,
   ConnectionInfo,
   MoveResponse,
   WindowState,
 } from '../types/electron';
 
-export interface VideosApi {
-  getAll(folderPath: string): Promise<VideoFile[]>;
-  search(query: string, tagIds: string[], options: SearchOptions): Promise<VideoFile[]>;
-  getDetails(path: string): Promise<VideoFile | null>;
-  harvestMetadata(videoId: string): Promise<void>;
-  updateMetadata(videoId: string, duration: number, width: number, height: number): Promise<void>;
+export interface MediaApi {
+  getAll(folderPath: string): Promise<Media[]>;
+  search(query: string, tagIds: string[], options: SearchOptions): Promise<Media[]>;
+  getDetails(path: string): Promise<Media | null>;
+  harvestMetadata(mediaId: string): Promise<void>;
+  updateMetadata(mediaId: string, duration: number, width: number, height: number): Promise<void>;
   delete(id: string): Promise<boolean>;
-  rename(id: string, newFileName: string): Promise<VideoFile | null>;
-  move(videoPaths: string[], targetFolderPath: string): Promise<MoveResponse>;
-  download(url: string, targetFolderPath: string): Promise<VideoFile | null>;
-  normalize(path: string): Promise<VideoFile | null>;
+  rename(id: string, newFileName: string): Promise<Media | null>;
+  move(mediaPaths: string[], targetFolderPath: string): Promise<MoveResponse>;
+  download(url: string, targetFolderPath: string): Promise<Media | null>;
+  normalize(path: string): Promise<Media | null>;
 }
 
 export interface PlaylistsApi {
@@ -31,10 +31,10 @@ export interface PlaylistsApi {
   create(name: string): Promise<Playlist | null>;
   delete(id: string): Promise<Playlist[]>;
   updateMeta(id: string, name: string): Promise<Playlist | null>;
-  addVideo(playlistId: string, videoId: string): Promise<Playlist | null>;
-  removeVideo(playlistId: string, videoId: string): Promise<Playlist | null>;
-  reorder(playlistId: string, newVideoIds: string[]): Promise<Playlist | null>;
-  getVideos(playlistId: string): Promise<VideoFile[]>;
+  addMedia(playlistId: string, mediaId: string): Promise<Playlist | null>;
+  removeMedia(playlistId: string, mediaId: string): Promise<Playlist | null>;
+  reorder(playlistId: string, newMediaIds: string[]): Promise<Playlist | null>;
+  getMedia(playlistId: string): Promise<Media[]>;
 }
 
 export interface TagsApi {
@@ -42,18 +42,18 @@ export interface TagsApi {
   getActive(): Promise<Tag[]>;
   getByFolder(folderPath: string): Promise<Tag[]>;
   getAll(): Promise<Tag[]>;
-  getByVideo(videoId: string): Promise<Tag[]>;
-  assign(videoId: string, tagId: string): Promise<Tag[]>;
-  unassign(videoId: string, tagId: string): Promise<Tag[]>;
-  getVideos(tagIds: string[]): Promise<VideoFile[]>;
-  assignToVideos(videoIds: string[], tagId: string): Promise<void>;
-  unassignFromVideos(videoIds: string[], tagId: string): Promise<void>;
+  getByMedia(mediaId: string): Promise<Tag[]>;
+  assign(mediaId: string, tagId: string): Promise<Tag[]>;
+  unassign(mediaId: string, tagId: string): Promise<Tag[]>;
+  getMedia(tagIds: string[]): Promise<Media[]>;
+  assignToMedia(mediaIds: string[], tagId: string): Promise<void>;
+  unassignFromMedia(mediaIds: string[], tagId: string): Promise<void>;
 }
 
 export interface FavoritesApi {
   getAll(): Promise<string[]>;
-  getVideos(): Promise<VideoFile[]>;
-  toggle(videoId: string): Promise<string[]>;
+  getMedia(): Promise<Media[]>;
+  toggle(mediaId: string): Promise<string[]>;
 }
 
 export interface SettingsApi {
@@ -74,7 +74,7 @@ export interface SystemApi {
   closeWindow(): Promise<void>;
   getWindowState(): Promise<WindowState>;
   onWindowStateChange(callback: (state: WindowState) => void): () => void;
-  revealInExplorer(videoId: string): Promise<void>;
+  revealInExplorer(mediaId: string): Promise<void>;
   openPath(filePath: string): Promise<void>;
   getSubdirectories(dirPath: string): Promise<DirectoryEntry[]>;
   getDirectoryTree(dirPath: string): Promise<string[]>;
@@ -85,16 +85,16 @@ export interface SystemApi {
 }
 
 export interface SortingApi {
-  saveFolderOrder(folderPath: string, videoPaths: string[]): Promise<void>;
+  saveFolderOrder(folderPath: string, mediaPaths: string[]): Promise<void>;
   getFolderOrder(folderPath: string): Promise<string[]>;
 }
 
 export interface EventsApi {
-  onVideoUpdate(callback: (events: VideoUpdateEvent[]) => void): () => void;
+  onMediaUpdate(callback: (events: MediaUpdateEvent[]) => void): () => void;
 }
 
 export interface ApiClient {
-  videos: VideosApi;
+  media: MediaApi;
   playlists: PlaylistsApi;
   tags: TagsApi;
   favorites: FavoritesApi;

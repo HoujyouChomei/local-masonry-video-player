@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import path from 'path';
-import { VideoService } from './media-service';
+import { MediaService } from './media-service';
 
 const repoMocks = vi.hoisted(() => ({
   findByPath: vi.fn(),
@@ -23,14 +23,14 @@ vi.mock('../../repositories/media/media-repository', () => {
 
 const integrityRepoMocks = vi.hoisted(() => ({
   updatePath: vi.fn(),
-  deleteExpiredMissingVideos: vi.fn(),
+  deleteExpiredMissingMedia: vi.fn(),
 }));
 
 vi.mock('../../repositories/media/media-integrity', () => {
   return {
-    VideoIntegrityRepository: class {
+    MediaIntegrityRepository: class {
       updatePath = integrityRepoMocks.updatePath;
-      deleteExpiredMissingVideos = integrityRepoMocks.deleteExpiredMissingVideos;
+      deleteExpiredMissingMedia = integrityRepoMocks.deleteExpiredMissingMedia;
     },
   };
 });
@@ -41,7 +41,7 @@ const metaRepoMocks = vi.hoisted(() => ({
 
 vi.mock('../../repositories/media/media-metadata', () => {
   return {
-    VideoMetadataRepository: class {
+    MediaMetadataRepository: class {
       updateMetadata = metaRepoMocks.updateMetadata;
     },
   };
@@ -123,13 +123,13 @@ vi.mock('../../../lib/logger', () => ({
   },
 }));
 
-describe('VideoService', () => {
-  let service: VideoService;
+describe('MediaService', () => {
+  let service: MediaService;
   const dummyFolder = path.normalize('/videos');
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new VideoService();
+    service = new MediaService();
   });
 
   describe('scanFolder', () => {
@@ -139,15 +139,15 @@ describe('VideoService', () => {
     });
   });
 
-  describe('getVideo', () => {
+  describe('getMedia', () => {
     it('should delegate to FileIntegrityService.processNewFile', async () => {
       const filePath = path.join(dummyFolder, 'new.mp4');
-      await service.getVideo(filePath);
+      await service.getMedia(filePath);
       expect(integrityMocks.processNewFile).toHaveBeenCalledWith(filePath);
     });
   });
 
-  describe('renameVideo', () => {
+  describe('renameMedia', () => {
     it('should rename file and update DB via IntegrityRepo (ID-based)', async () => {
       const id = '1';
       const oldPath = path.join(dummyFolder, 'old.mp4');
@@ -157,25 +157,25 @@ describe('VideoService', () => {
       repoMocks.findById.mockReturnValue({ id, path: oldPath });
       vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 12345 } as any);
 
-      await service.renameVideo(id, newName);
+      await service.renameMedia(id, newName);
 
       expect(fs.rename).toHaveBeenCalledWith(oldPath, newPath);
       expect(integrityRepoMocks.updatePath).toHaveBeenCalledWith(id, newPath, 12345);
     });
   });
 
-  describe('deleteVideo', () => {
+  describe('deleteMedia', () => {
     it('should trash file and mark as missing via IntegrityService (ID-based)', async () => {
       const id = '1';
       const filePath = path.join(dummyFolder, 'del.mp4');
 
       repoMocks.findById.mockReturnValue({ id, path: filePath });
 
-      await service.deleteVideo(id);
+      await service.deleteMedia(id);
 
       expect(shell.trashItem).toHaveBeenCalledWith(filePath);
       expect(integrityMocks.markAsMissingById).toHaveBeenCalledWith(id);
-      expect(eventBusMocks.emit).toHaveBeenCalledWith('video:deleted', { id, path: filePath });
+      expect(eventBusMocks.emit).toHaveBeenCalledWith('media:deleted', { id, path: filePath });
     });
   });
 
@@ -193,7 +193,7 @@ describe('VideoService', () => {
   });
 
   describe('updateMetadata', () => {
-    it('should call VideoMetadataRepository.updateMetadata with resolved path', async () => {
+    it('should call MediaMetadataRepository.updateMetadata with resolved path', async () => {
       const id = 'meta-1';
       const path = '/v.mp4';
       repoMocks.findById.mockReturnValue({ id, path });
@@ -219,10 +219,10 @@ describe('VideoService', () => {
   });
 
   describe('runGarbageCollection', () => {
-    it('should call VideoIntegrityRepository.deleteExpiredMissingVideos', () => {
-      integrityRepoMocks.deleteExpiredMissingVideos.mockReturnValue(5);
+    it('should call MediaIntegrityRepository.deleteExpiredMissingMedia', () => {
+      integrityRepoMocks.deleteExpiredMissingMedia.mockReturnValue(5);
       service.runGarbageCollection();
-      expect(integrityRepoMocks.deleteExpiredMissingVideos).toHaveBeenCalledWith(30);
+      expect(integrityRepoMocks.deleteExpiredMissingMedia).toHaveBeenCalledWith(30);
     });
   });
 });

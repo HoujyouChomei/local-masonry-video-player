@@ -1,10 +1,10 @@
 // src/shared/types/ui.ts
 
 import { ReactNode } from 'react';
-import { VideoFile } from './video';
+import { Media } from '../schemas/media';
 
 export type ContextMenuRenderer = (props: {
-  video: VideoFile;
+  media: Media;
   onRename: () => void;
   enablePlaybackControls?: boolean;
 }) => ReactNode;

@@ -1,28 +1,28 @@
 // src/features/batch-actions/model/use-batch-delete.ts
 
 import { useMutation } from '@tanstack/react-query';
-import { deleteVideoApi } from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 import { logger } from '@/shared/lib/logger';
 
 export const useBatchDelete = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { invalidateAllVideoLists } = useVideoCache();
+  const { invalidateAllMediaLists } = useMediaCache();
 
   const { mutate: batchDelete, isPending } = useMutation({
-    mutationFn: async (videoIds: string[]) => {
-      const promises = videoIds.map((id) => deleteVideoApi(id));
+    mutationFn: async (mediaIds: string[]) => {
+      const promises = mediaIds.map((id) => api.media.delete(id));
       await Promise.all(promises);
     },
     onSuccess: () => {
-      invalidateAllVideoLists();
+      invalidateAllMediaLists();
 
       clearSelection();
       exitSelectionMode();
     },
     onError: (error) => {
-      logger.error('Failed to delete video batch', error);
+      logger.error('Failed to delete media batch', error);
     },
   });
 

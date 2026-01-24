@@ -9,7 +9,7 @@ vi.mock('electron', () => ({
   },
 }));
 
-import { VideoRebinder, FileStat } from './rebinder';
+import { MediaRebinder, FileStat } from './rebinder';
 
 const integrityRepoMocks = vi.hoisted(() => ({
   findByInode: vi.fn(),
@@ -19,7 +19,7 @@ const integrityRepoMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../repositories/media/media-integrity', () => ({
-  VideoIntegrityRepository: class {
+  MediaIntegrityRepository: class {
     findByInode = integrityRepoMocks.findByInode;
     findMissingCandidatesBySize = integrityRepoMocks.findMissingCandidatesBySize;
     restore = integrityRepoMocks.restore;
@@ -35,8 +35,8 @@ vi.mock('../../../lib/file-hash', () => ({
   calculateFileHash: hashMocks.calculateFileHash,
 }));
 
-describe('VideoRebinder', () => {
-  let rebinder: VideoRebinder;
+describe('MediaRebinder', () => {
+  let rebinder: MediaRebinder;
 
   const DUMMY_PATH = '/path/to/video.mp4';
   const DUMMY_STAT: FileStat = {
@@ -48,7 +48,7 @@ describe('VideoRebinder', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    rebinder = new VideoRebinder();
+    rebinder = new MediaRebinder();
   });
 
   describe('findCandidate', () => {

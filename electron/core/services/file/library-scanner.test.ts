@@ -24,7 +24,7 @@ const integrityRepoMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../repositories/media/media-integrity', () => ({
-  VideoIntegrityRepository: class {
+  MediaIntegrityRepository: class {
     markAsMissing = integrityRepoMocks.markAsMissing;
     upsertMany = integrityRepoMocks.upsertMany;
     updateHash = integrityRepoMocks.updateHash;
@@ -46,7 +46,7 @@ const rebinderMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../media/rebinder', () => ({
-  VideoRebinder: class {
+  MediaRebinder: class {
     findCandidate = rebinderMocks.findCandidate;
     execute = rebinderMocks.execute;
   },
@@ -182,7 +182,6 @@ describe('LibraryScanner', () => {
         paths: [filePath],
         regenerate: true,
       });
-      // 修正: イベントは発行しない
       expect(eventBusMocks.emit).not.toHaveBeenCalledWith('ui:library-refresh', expect.anything());
     });
 

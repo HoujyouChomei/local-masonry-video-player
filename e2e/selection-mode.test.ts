@@ -3,6 +3,8 @@
 import { Page } from 'playwright';
 import { test, expect } from '@playwright/test';
 import { launchAppWithFakeData, cleanupTestContext, TestContext } from './test-utils';
+import fs from 'fs';
+import path from 'path';
 
 test.describe('Selection Mode & Header Interaction', () => {
   let ctx: TestContext;
@@ -11,7 +13,7 @@ test.describe('Selection Mode & Header Interaction', () => {
   test.beforeAll(async () => {
     ctx = await launchAppWithFakeData();
     page = await ctx.app.firstWindow();
-    await page.waitForSelector('.video-card', { state: 'visible', timeout: 10000 });
+    await page.waitForSelector('.media-card', { state: 'visible', timeout: 5000 });
   });
 
   test.afterAll(async () => {
@@ -19,7 +21,7 @@ test.describe('Selection Mode & Header Interaction', () => {
   });
 
   test('should enter selection mode and interact with header buttons', async () => {
-    const firstCard = page.locator('.video-card').first();
+    const firstCard = page.locator('.media-card').first();
 
     await firstCard.click({ modifiers: ['Control'] });
 
@@ -39,7 +41,7 @@ test.describe('Selection Mode & Header Interaction', () => {
     await selectAllBtn.click();
 
     const countBadge = page.locator('span', { hasText: 'selected' });
-    const cardCount = await page.locator('.video-card').count();
+    const cardCount = await page.locator('.media-card').count();
     await expect(countBadge).toHaveText(`${cardCount} selected`);
 
     await clearBtn.click();
@@ -53,7 +55,7 @@ test.describe('Selection Mode & Header Interaction', () => {
   });
 
   test('should show batch context menu in selection mode', async () => {
-    const cards = page.locator('.video-card');
+    const cards = page.locator('.media-card');
     await expect(cards.first()).toBeVisible();
 
     await cards.nth(0).click({ modifiers: ['Control'] });
@@ -75,5 +77,35 @@ test.describe('Selection Mode & Header Interaction', () => {
 
     await page.keyboard.press('Escape');
     await page.keyboard.press('Escape');
+  });
+
+  test('should move media via Header Move button', async () => {
+    const targetDirName = 'header_move_test';
+    const targetDirPath = path.join(ctx.userDataDir, targetDirName);
+    if (!fs.existsSync(targetDirPath)) {
+      fs.mkdirSync(targetDirPath);
+    }
+
+    const firstCard = page.locator('.media-card').first();
+    await expect(firstCard).toBeVisible();
+    await firstCard.click({ modifiers: ['Control'] });
+
+    await ctx.app.evaluate(async ({ dialog }, folderPath) => {
+      dialog.showOpenDialog = () => {
+        return Promise.resolve({
+          canceled: false,
+          filePaths: [folderPath],
+        });
+      };
+    }, targetDirPath);
+
+    const moveBtn = page.getByTitle('Move to Folder');
+    await expect(moveBtn).toBeVisible();
+    await moveBtn.click();
+
+    await expect(page.getByText(/Moved .* items/)).toBeVisible({ timeout: 5000 });
+
+    const files = fs.readdirSync(targetDirPath);
+    expect(files.length).toBeGreaterThan(0);
   });
 });

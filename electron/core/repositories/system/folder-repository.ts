@@ -13,7 +13,7 @@ export class FolderRepository {
     return getDB();
   }
 
-  saveSortOrder(folderPath: string, videoPaths: string[]): void {
+  saveSortOrder(folderPath: string, mediaPaths: string[]): void {
     const tx = this.db.transaction(() => {
       this.db.prepare('DELETE FROM folder_sort_orders WHERE folder_path = ?').run(folderPath);
 
@@ -22,8 +22,8 @@ export class FolderRepository {
         VALUES (?, ?, ?)
       `);
 
-      videoPaths.forEach((videoPath, index) => {
-        insertStmt.run(folderPath, videoPath, index);
+      mediaPaths.forEach((mediaPath, index) => {
+        insertStmt.run(folderPath, mediaPath, index);
       });
     });
 

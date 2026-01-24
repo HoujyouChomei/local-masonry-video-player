@@ -32,8 +32,6 @@ let mainWindow: BrowserWindow | null = null;
 let backgroundVerifier: BackgroundVerificationService | null = null;
 let isBackendReady = false;
 
-const { handleWindowControls, registerWindowEvents } = require('./handlers/system/window');
-
 const createWindow = () => {
   const windowStateKeeper = require('electron-window-state');
 
@@ -61,7 +59,6 @@ const createWindow = () => {
   });
 
   mainWindowState.manage(mainWindow);
-  registerWindowEvents(mainWindow);
 
   const isDev =
     process.env.NODE_ENV === 'development' || (!app.isPackaged && process.env.NODE_ENV !== 'test');
@@ -85,6 +82,9 @@ const createWindow = () => {
       backgroundVerifier.runVerification();
     }
   });
+
+  const { createCustomIPCHandler } = require('./trpc/adapter');
+  createCustomIPCHandler();
 };
 
 app.whenReady().then(async () => {
@@ -114,22 +114,6 @@ app.whenReady().then(async () => {
 
   store.set('enableMobileConnection', false);
 
-  // Lazy load handlers
-  require('./handlers/system/settings').handleSettings();
-  require('./handlers/system/dialog').handleDialog();
-  require('./handlers/collection/favorite-handler').handleFavorites();
-  require('./handlers/system/io-handler').handleDirectories();
-  require('./handlers/media/ops-handler').handleFileOps();
-  require('./handlers/collection/playlist-handler').handlePlaylists();
-  require('./handlers/media/sorting').handleSorting();
-  handleWindowControls();
-  require('./handlers/system/drag-drop').handleDragDrop();
-  require('./handlers/media/transcode-handler').handleFFmpeg();
-  require('./handlers/collection/tag-handler').handleTags();
-  require('./handlers/media/search').handleSearch();
-  require('./handlers/media/metadata-handler').handleMetadata();
-  require('./handlers/media/getVideos').handleGetVideos();
-
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -139,6 +123,8 @@ app.whenReady().then(async () => {
 
   const { startLocalServer } = require('./lib/local-server');
   const { eventBus } = require('./core/events');
+  const { LibraryService } = require('./core/services/media/library-service');
+  const libraryService = new LibraryService();
 
   eventBus.on('settings:mobile-connection-changed', (data: { host: string }) => {
     setTimeout(() => {
@@ -146,6 +132,13 @@ app.whenReady().then(async () => {
         logger.error('[Main] Failed to restart server via settings change:', e);
       });
     }, 100);
+  });
+
+  eventBus.on('settings:library-folders-added', (data: { folders: string[] }) => {
+    logger.info('[Main] Received library-folders-added event. Triggering quiet scan...');
+    Promise.all(data.folders.map((folder) => libraryService.scanQuietly(folder)))
+      .then(() => logger.info('[Main] Quiet scan for new folders completed.'))
+      .catch((err) => logger.error('[Main] Quiet scan failed:', err));
   });
 
   const { ThumbnailService } = require('./core/services/media/thumbnail-service');
@@ -157,7 +150,7 @@ app.whenReady().then(async () => {
   try {
     await startLocalServer();
   } catch (e) {
-    logger.error('[Main] Failed to start local video server:', e);
+    logger.error('[Main] Failed to start local media server:', e);
   }
 
   const {
@@ -169,7 +162,6 @@ app.whenReady().then(async () => {
   const { MetadataHarvester: MH } = require('./core/services/video/metadata-harvester');
   MH.getInstance();
 
-  // 3. 全ての準備完了を通知 (Notify Renderer)
   isBackendReady = true;
   if (mainWindow && !mainWindow.isDestroyed()) {
     logger.info('[Main] Initialization complete. Sending app-ready signal...');
@@ -179,9 +171,9 @@ app.whenReady().then(async () => {
   setTimeout(() => {
     logger.debug('[Main] Running delayed Garbage Collection...');
     try {
-      const { VideoService } = require('./core/services/media/media-service');
-      const videoService = new VideoService();
-      videoService.runGarbageCollection();
+      const { MediaService } = require('./core/services/media/media-service');
+      const mediaService = new MediaService();
+      mediaService.runGarbageCollection();
     } catch (e) {
       logger.error('[Main] Failed to run garbage collection:', e);
     }
@@ -190,9 +182,6 @@ app.whenReady().then(async () => {
   setTimeout(async () => {
     const folders = store.get('libraryFolders') as string[];
     if (folders && folders.length > 0) {
-      const { VideoLibraryService } = require('./core/services/media/library-service');
-      const libraryService = new VideoLibraryService();
-
       logger.debug(`[Main] Starting background quiet scan for ${folders.length} folders...`);
       for (const folder of folders) {
         await libraryService.scanQuietly(folder);

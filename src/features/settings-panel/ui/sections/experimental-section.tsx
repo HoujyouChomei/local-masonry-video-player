@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Beaker, ChevronDown } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { SettingsSwitch } from '../components/settings-switch';
 import { MobileConnectionSection } from './mobile-connection-section';
 

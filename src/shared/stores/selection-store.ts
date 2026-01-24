@@ -1,105 +1,105 @@
 // src/shared/stores/selection-store.ts
 
 import { create } from 'zustand';
-import { VideoFile } from '@/shared/types/video';
+import { Media } from '@/shared/schemas/media';
 
 interface SelectionState {
   isSelectionMode: boolean;
-  selectedVideoIds: string[];
-  lastSelectedVideoId: string | null;
+  selectedMediaIds: string[];
+  lastSelectedMediaId: string | null;
 
   enterSelectionMode: (initialId?: string) => void;
   exitSelectionMode: () => void;
   toggleSelection: (id: string) => void;
   selectAll: (allIds: string[]) => void;
   clearSelection: () => void;
-  selectRange: (targetId: string, allVideos: VideoFile[]) => void;
+  selectRange: (targetId: string, allMedia: Media[]) => void;
 
   reset: () => void;
 }
 
 export const useSelectionStore = create<SelectionState>((set, get) => ({
   isSelectionMode: false,
-  selectedVideoIds: [],
-  lastSelectedVideoId: null,
+  selectedMediaIds: [],
+  lastSelectedMediaId: null,
 
   enterSelectionMode: (initialId) => {
     set({
       isSelectionMode: true,
-      selectedVideoIds: initialId ? [initialId] : [],
-      lastSelectedVideoId: initialId || null,
+      selectedMediaIds: initialId ? [initialId] : [],
+      lastSelectedMediaId: initialId || null,
     });
   },
 
   exitSelectionMode: () => {
     set({
       isSelectionMode: false,
-      selectedVideoIds: [],
-      lastSelectedVideoId: null,
+      selectedMediaIds: [],
+      lastSelectedMediaId: null,
     });
   },
 
   toggleSelection: (id) => {
-    const { selectedVideoIds } = get();
-    const isSelected = selectedVideoIds.includes(id);
+    const { selectedMediaIds } = get();
+    const isSelected = selectedMediaIds.includes(id);
     let newSelectedIds: string[];
 
     if (isSelected) {
-      newSelectedIds = selectedVideoIds.filter((vId) => vId !== id);
+      newSelectedIds = selectedMediaIds.filter((vId) => vId !== id);
     } else {
-      newSelectedIds = [...selectedVideoIds, id];
+      newSelectedIds = [...selectedMediaIds, id];
     }
 
     set({
-      selectedVideoIds: newSelectedIds,
-      lastSelectedVideoId: id,
+      selectedMediaIds: newSelectedIds,
+      lastSelectedMediaId: id,
     });
   },
 
   selectAll: (allIds) => {
     set({
-      selectedVideoIds: allIds,
-      lastSelectedVideoId: allIds.length > 0 ? allIds[allIds.length - 1] : null,
+      selectedMediaIds: allIds,
+      lastSelectedMediaId: allIds.length > 0 ? allIds[allIds.length - 1] : null,
     });
   },
 
   clearSelection: () => {
     set({
-      selectedVideoIds: [],
-      lastSelectedVideoId: null,
+      selectedMediaIds: [],
+      lastSelectedMediaId: null,
     });
   },
 
-  selectRange: (targetId, allVideos) => {
-    const { lastSelectedVideoId, selectedVideoIds } = get();
+  selectRange: (targetId, allMedia) => {
+    const { lastSelectedMediaId, selectedMediaIds } = get();
 
-    if (!lastSelectedVideoId) {
+    if (!lastSelectedMediaId) {
       get().toggleSelection(targetId);
       return;
     }
 
-    const lastIndex = allVideos.findIndex((v) => v.id === lastSelectedVideoId);
-    const targetIndex = allVideos.findIndex((v) => v.id === targetId);
+    const lastIndex = allMedia.findIndex((v) => v.id === lastSelectedMediaId);
+    const targetIndex = allMedia.findIndex((v) => v.id === targetId);
 
     if (lastIndex === -1 || targetIndex === -1) return;
 
     const start = Math.min(lastIndex, targetIndex);
     const end = Math.max(lastIndex, targetIndex);
 
-    const rangeIds = allVideos.slice(start, end + 1).map((v) => v.id);
-    const mergedIds = Array.from(new Set([...selectedVideoIds, ...rangeIds]));
+    const rangeIds = allMedia.slice(start, end + 1).map((v) => v.id);
+    const mergedIds = Array.from(new Set([...selectedMediaIds, ...rangeIds]));
 
     set({
-      selectedVideoIds: mergedIds,
-      lastSelectedVideoId: targetId,
+      selectedMediaIds: mergedIds,
+      lastSelectedMediaId: targetId,
     });
   },
 
   reset: () => {
     set({
       isSelectionMode: false,
-      selectedVideoIds: [],
-      lastSelectedVideoId: null,
+      selectedMediaIds: [],
+      lastSelectedMediaId: null,
     });
   },
 }));

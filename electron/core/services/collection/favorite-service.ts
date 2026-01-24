@@ -1,21 +1,21 @@
 // electron/core/services/collection/favorite-service.ts
 
 import { MediaRepository } from '../../repositories/media/media-repository';
-import { VideoMapper } from '../media/media-mapper';
+import { MediaMapper } from '../media/media-mapper';
 import { FileIntegrityService } from '../file/file-integrity-service';
-import { VideoFile } from '../../../../src/shared/types/video';
+import { Media } from '../../../../src/shared/schemas/media';
 import { eventBus } from '../../events';
 
 export class FavoriteService {
   private mediaRepo = new MediaRepository();
-  private mapper = new VideoMapper();
+  private mapper = new MediaMapper();
   private integrityService = new FileIntegrityService();
 
   async getFavorites(): Promise<string[]> {
     return this.mediaRepo.getFavoriteIds();
   }
 
-  async getFavoriteVideos(): Promise<VideoFile[]> {
+  async getFavoriteMedia(): Promise<Media[]> {
     let rows = this.mediaRepo.getFavorites();
     const paths = rows.map((r) => r.path);
 
@@ -29,12 +29,12 @@ export class FavoriteService {
     return this.mapper.toEntities(rows.filter((r) => r.status === 'available'));
   }
 
-  async toggleFavorite(videoId: string): Promise<string[]> {
-    this.mediaRepo.toggleFavoriteById(videoId);
+  async toggleFavorite(mediaId: string): Promise<string[]> {
+    this.mediaRepo.toggleFavoriteById(mediaId);
 
-    const row = this.mediaRepo.findById(videoId);
+    const row = this.mediaRepo.findById(mediaId);
     if (row) {
-      eventBus.emit('video:updated', { id: row.id, path: row.path });
+      eventBus.emit('media:updated', { id: row.id, path: row.path });
     }
 
     return this.mediaRepo.getFavoriteIds();

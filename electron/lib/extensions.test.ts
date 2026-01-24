@@ -2,7 +2,7 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  isVideoFile,
+  isMedia,
   isImageFile,
   getMediaType,
   NATIVE_EXTENSIONS,
@@ -36,27 +36,27 @@ describe('extensions', () => {
     });
   });
 
-  describe('isVideoFile', () => {
+  describe('isMedia', () => {
     it('should return true for native video files', () => {
-      expect(isVideoFile('/path/to/video.mp4', false)).toBe(true);
-      expect(isVideoFile('/path/to/video.webm', false)).toBe(true);
+      expect(isMedia('/path/to/video.mp4', false)).toBe(true);
+      expect(isMedia('/path/to/video.webm', false)).toBe(true);
     });
 
     it('should return false for extended formats when not enabled', () => {
-      expect(isVideoFile('/path/to/video.mkv', false)).toBe(false);
+      expect(isMedia('/path/to/video.mkv', false)).toBe(false);
     });
 
     it('should return true for extended formats when enabled', () => {
-      expect(isVideoFile('/path/to/video.mkv', true)).toBe(true);
-      expect(isVideoFile('/path/to/video.avi', true)).toBe(true);
+      expect(isMedia('/path/to/video.mkv', true)).toBe(true);
+      expect(isMedia('/path/to/video.avi', true)).toBe(true);
     });
 
     it('should handle uppercase extensions', () => {
-      expect(isVideoFile('/path/to/video.MP4', false)).toBe(true);
+      expect(isMedia('/path/to/video.MP4', false)).toBe(true);
     });
 
     it('should return false for non-video files', () => {
-      expect(isVideoFile('/path/to/image.png', true)).toBe(false);
+      expect(isMedia('/path/to/image.png', true)).toBe(false);
     });
   });
 

@@ -7,18 +7,18 @@ import { app } from 'electron';
 import { pathToFileURL } from 'url';
 import { getServerPort } from '../../../lib/server-state';
 import { MediaRow } from '../../repositories/media/media-repository';
-import { VideoFile } from '../../../../src/shared/types/video';
+import { Media } from '../../../../src/shared/schemas/media';
 import { THUMBNAIL } from '../../../../src/shared/constants/assets';
 import { NATIVE_EXTENSIONS } from '../../../lib/extensions';
 
-export class VideoMapper {
+export class MediaMapper {
   private thumbDir: string;
 
   constructor() {
     this.thumbDir = path.join(app.getPath('userData'), THUMBNAIL.DIR_NAME);
   }
 
-  toEntity(row: MediaRow): VideoFile {
+  toEntity(row: MediaRow): Media {
     const ext = path.extname(row.path).toLowerCase();
     const isNative = NATIVE_EXTENSIONS.has(ext);
 
@@ -61,7 +61,7 @@ export class VideoMapper {
     };
   }
 
-  toEntities(rows: MediaRow[]): VideoFile[] {
+  toEntities(rows: MediaRow[]): Media[] {
     return rows.map((row) => this.toEntity(row));
   }
 }

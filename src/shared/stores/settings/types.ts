@@ -2,7 +2,7 @@
 
 import { StateCreator } from 'zustand';
 import { AppSettings, GridStyle } from '@/shared/types/electron';
-import { SortOption } from '@/shared/types/video';
+import { SortOption } from '@/shared/schemas/settings';
 
 export interface CoreSlice {
   folderPath: string;

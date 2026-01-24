@@ -10,12 +10,12 @@ interface FileSystemError extends Error {
 }
 
 export class FileMoveService {
-  async moveVideos(videoPaths: string[], targetFolderPath: string): Promise<MoveResultDetail[]> {
+  async moveMedia(mediaPaths: string[], targetFolderPath: string): Promise<MoveResultDetail[]> {
     logger.debug(`[Move] Request received. Target: ${targetFolderPath}`);
 
     const results: MoveResultDetail[] = [];
 
-    for (const rawOldPath of videoPaths) {
+    for (const rawOldPath of mediaPaths) {
       const oldPath = path.normalize(rawOldPath);
       const fileName = path.basename(oldPath);
       let newPath = path.join(targetFolderPath, fileName);

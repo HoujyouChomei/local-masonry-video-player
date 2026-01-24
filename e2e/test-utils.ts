@@ -1,4 +1,5 @@
 // e2e/test-utils.ts
+
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -8,17 +9,20 @@ import { _electron as electron, ElectronApplication } from 'playwright';
 export interface TestContext {
   app: ElectronApplication;
   userDataDir: string;
-  videoDir: string;
+  mediaDir: string;
+  mediaDir2: string;
   hasFFmpeg: boolean;
 }
 
 export async function launchAppWithFakeData(): Promise<TestContext> {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lvm-e2e-'));
   const userDataDir = path.join(tempDir, 'userData');
-  const videoDir = path.join(tempDir, 'videos');
+  const mediaDir = path.join(tempDir, 'media');
+  const mediaDir2 = path.join(tempDir, 'media2');
 
   fs.mkdirSync(userDataDir);
-  fs.mkdirSync(videoDir);
+  fs.mkdirSync(mediaDir);
+  fs.mkdirSync(mediaDir2);
 
   const projectRoot = path.resolve(__dirname, '..');
   const binDir = path.join(projectRoot, 'bin');
@@ -41,9 +45,9 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
 
   const minimalMp4 = Buffer.from('00000018667479706d703432000000006d70343269736f6d', 'hex');
 
-  if (hasFFmpeg) {
-    const generateVideo = (fileName: string) => {
-      const outputPath = path.join(videoDir, fileName);
+  const generateOrCopyMedia = (fileName: string, targetDir: string) => {
+    const outputPath = path.join(targetDir, fileName);
+    if (hasFFmpeg) {
       try {
         execSync(
           `"${ffmpegPath}" -y -f lavfi -i color=c=black:s=320x180:d=1 -c:v libx264 -tune zerolatency -preset ultrafast -t 1 "${outputPath}"`,
@@ -51,28 +55,34 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
         );
       } catch (e) {
         console.warn(
-          `[Test] Failed to generate video with ffmpeg: ${fileName}, using fallback.`,
+          `[Test] Failed to generate media with ffmpeg: ${fileName}, using fallback. Error:`,
           e
         );
         fs.writeFileSync(outputPath, minimalMp4);
       }
-    };
+    } else {
+      fs.writeFileSync(outputPath, minimalMp4);
+    }
+  };
 
-    generateVideo('test-video-1.mp4');
-    generateVideo('test-video-2.mp4');
-    generateVideo('test-video-3.mp4');
-
-    generateVideo('test-video-4.mkv');
-    generateVideo('test-video-5.avi');
+  if (hasFFmpeg) {
+    generateOrCopyMedia('test-media-1.mp4', mediaDir);
+    generateOrCopyMedia('test-media-2.mp4', mediaDir);
+    generateOrCopyMedia('test-media-3.mp4', mediaDir);
+    generateOrCopyMedia('test-media-4.mkv', mediaDir);
+    generateOrCopyMedia('test-media-5.avi', mediaDir);
   } else {
-    ['test-video-1.mp4', 'test-video-2.mp4', 'test-video-3.mp4'].forEach((fileName) => {
-      fs.writeFileSync(path.join(videoDir, fileName), minimalMp4);
+    ['test-media-1.mp4', 'test-media-2.mp4', 'test-media-3.mp4'].forEach((fileName) => {
+      generateOrCopyMedia(fileName, mediaDir);
     });
   }
 
+  // Create a unique file in the second directory
+  generateOrCopyMedia('new-folder-media.mp4', mediaDir2);
+
   const config = {
-    libraryFolders: [videoDir],
-    folderPath: videoDir,
+    libraryFolders: [mediaDir],
+    folderPath: mediaDir,
     isSidebarOpen: true,
     layoutMode: 'masonry',
     gridStyle: 'standard',
@@ -101,7 +111,7 @@ export async function launchAppWithFakeData(): Promise<TestContext> {
   if (app.process().stdout) monitorLog(app.process().stdout!);
   if (app.process().stderr) monitorLog(app.process().stderr!);
 
-  return { app, userDataDir, videoDir, hasFFmpeg };
+  return { app, userDataDir, mediaDir, mediaDir2, hasFFmpeg };
 }
 
 export async function cleanupTestContext(ctx: TestContext) {

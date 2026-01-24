@@ -5,8 +5,8 @@ import { Hash, ChevronDown, ChevronRight, Globe, Folder } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useSidebarTags } from '@/entities/tag/model/use-tags';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
 
 export const TagSection = () => {
   const {

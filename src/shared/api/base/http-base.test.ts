@@ -2,11 +2,11 @@
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { HttpBase } from './http-base';
-import { VideoFile } from '@/shared/types/video';
+import { Media } from '@/shared/schemas/media';
 
 class TestHttpBase extends HttpBase {
-  public testAdaptVideo(video: VideoFile): VideoFile {
-    return this.adaptVideo(video);
+  public testAdaptMedia(media: Media): Media {
+    return this.adaptMedia(media);
   }
 }
 
@@ -35,16 +35,16 @@ describe('HttpBase (Mobile/Web Client Logic)', () => {
   });
 
   it('should convert file:// thumbnail to HTTP API URL', () => {
-    const inputVideo = {
+    const inputMedia = {
       id: 'v1',
       path: 'C:\\Videos\\test.mp4',
       thumbnailSrc: 'file://C:/Users/Test/AppData/Roaming/lvm/thumbnails/abc.jpg',
       src: '',
       updatedAt: 123456789,
       size: 1024,
-    } as VideoFile;
+    } as Media;
 
-    const result = client.testAdaptVideo(inputVideo);
+    const result = client.testAdaptMedia(inputMedia);
 
     expect(result.thumbnailSrc).not.toContain('file://');
 
@@ -57,14 +57,14 @@ describe('HttpBase (Mobile/Web Client Logic)', () => {
   });
 
   it('should fix localhost IP to current hostname for http:// thumbnails', () => {
-    const inputVideo = {
+    const inputMedia = {
       id: 'v2',
       path: '/video.mp4',
       thumbnailSrc: 'http://127.0.0.1:54321/thumbnail?path=...',
       src: '',
-    } as VideoFile;
+    } as Media;
 
-    const result = client.testAdaptVideo(inputVideo);
+    const result = client.testAdaptMedia(inputMedia);
 
     expect(result.thumbnailSrc).not.toContain('127.0.0.1');
     expect(result.thumbnailSrc).toContain('192.168.1.10');

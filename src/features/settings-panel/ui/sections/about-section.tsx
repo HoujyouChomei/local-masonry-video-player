@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { Info, FileText, ExternalLink, FolderSearch } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/shadcn/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
+} from '@/shared/ui/shadcn/dialog';
+import { ScrollArea } from '@/shared/ui/shadcn/scroll-area';
 import { logger } from '@/shared/lib/logger';
-import { openLogFolderApi } from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface LicenseData {
@@ -59,7 +59,7 @@ export const AboutSection = () => {
   };
 
   const handleOpenLogs = () => {
-    openLogFolderApi();
+    api.system.openLogFolder();
   };
 
   return (
@@ -70,7 +70,7 @@ export const AboutSection = () => {
         </h3>
 
         <div className="text-muted-foreground mb-3 text-[10px] leading-relaxed">
-          <p>Local Masonry Video Player v0.2.6</p>
+          <p>Local Masonry Video Player v0.2.7</p>
           <p>Powered by Electron, Vite & Open Source Software.</p>
         </div>
 

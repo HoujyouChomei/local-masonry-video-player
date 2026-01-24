@@ -1,21 +1,28 @@
 // src/widgets/sidebar/ui/library-section.tsx
 
+import { ReactNode } from 'react';
 import { Plus, Library } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { selectFolder } from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { FolderTreeItem } from './folder-tree-item';
-import { Button } from '@/components/ui/button';
-import { useDirectoryTree } from '@/features/prefetch-directories/model/use-directory-tree';
+import { Button } from '@/shared/ui/shadcn/button';
+import { useDirectoryTree } from '@/entities/directory/model/use-directory-tree';
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
-export const LibrarySection = () => {
+interface LibrarySectionProps {
+  renderFolderContextMenu?: (path: string) => ReactNode;
+}
+
+export const LibrarySection = ({ renderFolderContextMenu }: LibrarySectionProps) => {
   const { libraryFolders, addLibraryFolder, removeLibraryFolder, setFolderPath } =
     useSettingsStore();
   const { resetView } = useUIStore();
   const { prefetchTree } = useDirectoryTree();
+  const isMobile = useIsMobile();
 
   const handleAddFolder = async () => {
-    const path = await selectFolder();
+    const path = await api.system.selectFolder();
     if (path) {
       await addLibraryFolder(path);
       await setFolderPath(path);
@@ -30,22 +37,30 @@ export const LibrarySection = () => {
         <h3 className="text-muted-foreground flex items-center gap-2 text-xs font-semibold tracking-wider">
           <Library size={12} /> LIBRARY
         </h3>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-5 w-5 hover:bg-white/20"
-          onClick={handleAddFolder}
-          title="Add Folder to Library"
-        >
-          <Plus size={14} />
-        </Button>
+        {!isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 hover:bg-white/20"
+            onClick={handleAddFolder}
+            title="Add Folder to Library"
+          >
+            <Plus size={14} />
+          </Button>
+        )}
       </div>
 
       <div className="space-y-1">
         {libraryFolders.map((path) => {
           const name = path.split(/[/\\]/).pop() || path;
           return (
-            <FolderTreeItem key={path} name={name} path={path} onRemove={removeLibraryFolder} />
+            <FolderTreeItem
+              key={path}
+              name={name}
+              path={path}
+              onRemove={removeLibraryFolder}
+              contextMenuSlot={renderFolderContextMenu?.(path)}
+            />
           );
         })}
 

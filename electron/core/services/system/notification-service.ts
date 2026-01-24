@@ -2,13 +2,13 @@
 
 import { BrowserWindow } from 'electron';
 import { SSEHandler } from '../../../lib/server/sse-handler';
-import { VideoUpdateEvent } from '../../../../src/shared/types/electron';
+import { MediaUpdateEvent } from '../../../../src/shared/types/electron';
 import { eventBus } from '../../events';
 import { logger } from '../../../lib/logger';
 
 export class NotificationService {
   private static instance: NotificationService;
-  private queue: VideoUpdateEvent[] = [];
+  private queue: MediaUpdateEvent[] = [];
   private interval: NodeJS.Timeout | null = null;
 
   private readonly FLUSH_INTERVAL = 500;
@@ -25,15 +25,15 @@ export class NotificationService {
   }
 
   private registerListeners() {
-    eventBus.on('video:added', (payload) => {
+    eventBus.on('media:added', (payload) => {
       this.notify({ type: 'add', path: payload.path });
     });
 
-    eventBus.on('video:deleted', (payload) => {
+    eventBus.on('media:deleted', (payload) => {
       this.notify({ type: 'delete', path: payload.path });
     });
 
-    eventBus.on('video:updated', (payload) => {
+    eventBus.on('media:updated', (payload) => {
       this.notify({ type: 'update', path: payload.path });
     });
 
@@ -48,7 +48,7 @@ export class NotificationService {
     logger.debug('[NotificationService] Event listeners registered.');
   }
 
-  public notify(event: VideoUpdateEvent) {
+  public notify(event: MediaUpdateEvent) {
     this.queue.push(event);
     this.startScheduler();
   }
@@ -64,7 +64,7 @@ export class NotificationService {
   private flush() {
     if (this.queue.length === 0) return;
 
-    const uniqueEvents = new Map<string, VideoUpdateEvent>();
+    const uniqueEvents = new Map<string, MediaUpdateEvent>();
     for (const event of this.queue) {
       const key = `${event.type}:${event.path}`;
       uniqueEvents.set(key, event);
@@ -75,7 +75,7 @@ export class NotificationService {
 
     const mainWindow = BrowserWindow.getAllWindows()[0];
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('on-video-update', eventsToSend);
+      mainWindow.webContents.send('on-media-update', eventsToSend);
     }
 
     SSEHandler.getInstance().broadcast(eventsToSend);

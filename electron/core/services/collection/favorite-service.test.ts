@@ -33,7 +33,7 @@ vi.mock('../../events', () => ({
 
 vi.mock('../media/media-mapper', () => {
   return {
-    VideoMapper: class {
+    MediaMapper: class {
       toEntities = vi.fn().mockReturnValue([]);
     },
   };
@@ -62,15 +62,15 @@ describe('FavoriteService', () => {
   });
 
   it('should toggle favorite by ID', async () => {
-    const videoId = 'id-1';
+    const mediaId = 'id-1';
     repoMocks.getFavoriteIds.mockReturnValue(['id-1']);
-    repoMocks.findById.mockReturnValue({ id: videoId, path: '/path/to/video.mp4' });
+    repoMocks.findById.mockReturnValue({ id: mediaId, path: '/path/to/video.mp4' });
 
-    const result = await service.toggleFavorite(videoId);
+    const result = await service.toggleFavorite(mediaId);
 
-    expect(repoMocks.toggleFavoriteById).toHaveBeenCalledWith(videoId);
-    expect(eventBusMocks.emit).toHaveBeenCalledWith('video:updated', {
-      id: videoId,
+    expect(repoMocks.toggleFavoriteById).toHaveBeenCalledWith(mediaId);
+    expect(eventBusMocks.emit).toHaveBeenCalledWith('media:updated', {
+      id: mediaId,
       path: '/path/to/video.mp4',
     });
     expect(result).toEqual(['id-1']);

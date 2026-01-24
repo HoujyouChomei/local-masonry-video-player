@@ -2,10 +2,10 @@
 
 import { FileCog, FolderOpen, CheckCircle, XCircle, Trash2 } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { selectFileApi } from '@/shared/api/electron';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { Button } from '@/shared/ui/shadcn/button';
+import { Input } from '@/shared/ui/shadcn/input';
+import { api } from '@/shared/api';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 
 interface ExternalToolsSectionProps {
   isFFmpegValid: boolean | null;
@@ -21,40 +21,40 @@ export const ExternalToolsSection = ({
   setIsFFprobeValid,
 }: ExternalToolsSectionProps) => {
   const { ffmpegPath, setFFmpegPath, ffprobePath, setFFprobePath } = useSettingsStore();
-  const { invalidateAllVideoLists } = useVideoCache();
+  const { invalidateAllMediaLists } = useMediaCache();
 
-  const refreshVideoList = () => {
-    invalidateAllVideoLists();
+  const refreshMediaList = () => {
+    invalidateAllMediaLists();
   };
 
   const handleSelectFFmpeg = async () => {
-    const path = await selectFileApi();
+    const path = await api.system.selectFile();
     if (path) {
       const valid = await setFFmpegPath(path);
       setIsFFmpegValid(valid);
-      if (valid) refreshVideoList();
+      if (valid) refreshMediaList();
     }
   };
 
   const handleClearFFmpeg = async () => {
     await setFFmpegPath('');
     setIsFFmpegValid(null);
-    refreshVideoList();
+    refreshMediaList();
   };
 
   const handleSelectFFprobe = async () => {
-    const path = await selectFileApi();
+    const path = await api.system.selectFile();
     if (path) {
       const valid = await setFFprobePath(path);
       setIsFFprobeValid(valid);
-      if (valid) refreshVideoList();
+      if (valid) refreshMediaList();
     }
   };
 
   const handleClearFFprobe = async () => {
     await setFFprobePath('');
     setIsFFprobeValid(null);
-    refreshVideoList();
+    refreshMediaList();
   };
 
   return (

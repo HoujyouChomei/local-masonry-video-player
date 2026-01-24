@@ -1,4 +1,5 @@
 // e2e/settings.test.ts
+
 import { Page } from 'playwright';
 import { test, expect } from '@playwright/test';
 import { launchAppWithFakeData, cleanupTestContext, TestContext } from './test-utils';
@@ -10,7 +11,7 @@ test.describe('Settings & External Tools', () => {
   test.beforeAll(async () => {
     ctx = await launchAppWithFakeData();
     page = await ctx.app.firstWindow();
-    await page.waitForSelector('header', { state: 'visible', timeout: 15000 });
+    await page.waitForSelector('header', { state: 'visible', timeout: 5000 });
   });
 
   test.afterAll(async () => {

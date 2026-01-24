@@ -1,17 +1,18 @@
 // electron/core/events/event-types.ts
 
 export interface AppEvents {
-  'video:deleted': { id: string; path: string };
-  'video:added': { id: string; path: string };
-  'video:updated': { id: string; path: string };
-  'video:missing': { id: string; path: string };
-  'video:recovered': { id: string; path: string };
+  'media:deleted': { id: string; path: string };
+  'media:added': { id: string; path: string };
+  'media:updated': { id: string; path: string };
+  'media:missing': { id: string; path: string };
+  'media:recovered': { id: string; path: string };
 
   'thumbnail:request': { paths: string[]; regenerate: boolean };
   'thumbnail:delete': { path: string };
   'thumbnail:generated': { path: string; thumbnailPath: string };
 
   'settings:changed': { key: string; value: unknown };
+  'settings:library-folders-added': { folders: string[] };
 
   'settings:mobile-connection-changed': { host: string };
 

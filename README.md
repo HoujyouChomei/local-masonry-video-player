@@ -148,15 +148,16 @@ If this occurs, try one of the following solutions:
 ## Technical Overview
 
 ### Tech Stack
-*   **Core**: Electron, **Vite**, React, TypeScript
-*   **Frontend UI**: React, Tailwind CSS, Shadcn UI, Lucide React
+*   **Core**: Electron, Vite, React, TypeScript
+*   **Frontend UI**: Tailwind CSS, Shadcn UI, Lucide React
 *   **State Management**: Zustand, TanStack Query
 *   **Database**: better-sqlite3 (SQLite)
 *   **Server**: Node.js HTTP Server + SSE (Server-Sent Events)
+*   **Communication**: tRPC (Abstracts IPC & HTTP for unified codebase)
 
 ### Architecture
-*   **Frontend**: Directory structure adopted from Feature-Sliced Design (FSD). Abstracts IPC and HTTP communication using the `ApiClient` pattern, sharing the codebase between Desktop and Mobile.
-*   **Backend**: A built-in HTTP server runs within the Electron main process. Synchronizes Desktop and Mobile operations in real-time.
+*   **Frontend**: Based on Feature-Sliced Design (FSD).
+*   **Backend**: Built on a Layered Architecture using the Repository Pattern, leveraging an internal Event Bus for Event-Driven Architecture (EDA).
 
 ### Data & Search
 *   **SQLite**: Manages metadata, settings, and playlists in a single `.db` file.
@@ -178,6 +179,7 @@ If this occurs, try one of the following solutions:
 *No guarantees/ETA*
 
 *   Image file support
+*   Headless Server Mode
 
 ## Uninstall
 
@@ -211,16 +213,6 @@ This application runs in portable mode. It does not use the registry; settings a
     npm run dist
     ```
 
-## Feedback & Contribution
-
-Bug reports and feature suggestions are welcome. Please feel free to contact us via the [Discussions page](https://github.com/HoujyouChomei/local-masonry-video-player/discussions).
-
-**Regarding Code Contributions (Pull Requests):**
-Code contributions via Pull Requests are welcome. However, this project is primarily developed with the assistance of AI, and **the author does not possess specialized skills in reading or reviewing code.**
-
-Therefore, it is very difficult to appropriately judge whether proposed code is safe or how it might affect the application as a whole.
-
-Please understand in advance that reviews or replies may be significantly delayed, or that the code may ultimately not be merged. If you wish to use your changes immediately, forking the repository is the most reliable method.
 
 ## License
 

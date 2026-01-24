@@ -1,32 +1,24 @@
 // src/entities/playlist/model/use-playlists.ts
 
 import { useQuery, useMutation } from '@tanstack/react-query';
-import {
-  fetchPlaylists,
-  createPlaylistApi,
-  deletePlaylistApi,
-  addVideoToPlaylistApi,
-  removeVideoFromPlaylistApi,
-  updatePlaylistMetaApi,
-  reorderPlaylistApi,
-} from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 
 export const usePlaylists = () => {
   return useQuery({
     queryKey: ['playlists'],
-    queryFn: fetchPlaylists,
+    queryFn: () => api.playlists.getAll(),
     staleTime: 1000 * 60 * 5,
   });
 };
 
 export const useCreatePlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: (name: string) => createPlaylistApi(name),
+    mutationFn: (name: string) => api.playlists.create(name),
     onSuccess: () => {
       onPlaylistUpdated();
     },
@@ -35,10 +27,10 @@ export const useCreatePlaylist = () => {
 
 export const useDeletePlaylist = () => {
   const { selectedPlaylistId, setViewMode } = useUIStore();
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: (id: string) => deletePlaylistApi(id),
+    mutationFn: (id: string) => api.playlists.delete(id),
     onSuccess: (_, deletedId) => {
       onPlaylistUpdated();
 
@@ -50,11 +42,11 @@ export const useDeletePlaylist = () => {
 };
 
 export const useAddToPlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
-      addVideoToPlaylistApi(playlistId, videoId),
+    mutationFn: ({ playlistId, mediaId }: { playlistId: string; mediaId: string }) =>
+      api.playlists.addMedia(playlistId, mediaId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
         onPlaylistUpdated(updatedPlaylist.id);
@@ -64,11 +56,11 @@ export const useAddToPlaylist = () => {
 };
 
 export const useRemoveFromPlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: ({ playlistId, videoId }: { playlistId: string; videoId: string }) =>
-      removeVideoFromPlaylistApi(playlistId, videoId),
+    mutationFn: ({ playlistId, mediaId }: { playlistId: string; mediaId: string }) =>
+      api.playlists.removeMedia(playlistId, mediaId),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
         onPlaylistUpdated(updatedPlaylist.id);
@@ -78,10 +70,10 @@ export const useRemoveFromPlaylist = () => {
 };
 
 export const useRenamePlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => updatePlaylistMetaApi(id, name),
+    mutationFn: ({ id, name }: { id: string; name: string }) => api.playlists.updateMeta(id, name),
     onSuccess: () => {
       onPlaylistUpdated();
     },
@@ -89,11 +81,11 @@ export const useRenamePlaylist = () => {
 };
 
 export const useReorderPlaylist = () => {
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: ({ playlistId, newVideoIds }: { playlistId: string; newVideoIds: string[] }) =>
-      reorderPlaylistApi(playlistId, newVideoIds),
+    mutationFn: ({ playlistId, newMediaIds }: { playlistId: string; newMediaIds: string[] }) =>
+      api.playlists.reorder(playlistId, newMediaIds),
     onSuccess: (updatedPlaylist) => {
       if (updatedPlaylist) {
         onPlaylistUpdated(updatedPlaylist.id);
@@ -105,14 +97,14 @@ export const useReorderPlaylist = () => {
 export const useCreateAndAddToPlaylist = () => {
   const { setEditingPlaylistId } = useUIStore();
   const { setSidebarOpen } = useSettingsStore();
-  const { onPlaylistUpdated } = useVideoCache();
+  const { onPlaylistUpdated } = useMediaCache();
 
   return useMutation({
-    mutationFn: async (videoId: string) => {
-      const newPlaylist = await createPlaylistApi('New Playlist');
+    mutationFn: async (mediaId: string) => {
+      const newPlaylist = await api.playlists.create('New Playlist');
       if (!newPlaylist) throw new Error('Failed to create playlist');
 
-      const updatedPlaylist = await addVideoToPlaylistApi(newPlaylist.id, videoId);
+      const updatedPlaylist = await api.playlists.addMedia(newPlaylist.id, mediaId);
       return updatedPlaylist || newPlaylist;
     },
     onSuccess: (playlist) => {

@@ -1,15 +1,15 @@
 // src/features/batch-actions/model/use-batch-move.ts
 
 import { useMutation } from '@tanstack/react-query';
-import { selectFolder, moveVideosApi } from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { useSelectionStore } from '@/shared/stores/selection-store';
-import { useVideoCache } from '@/shared/lib/use-video-cache';
+import { useMediaCache } from '@/shared/lib/use-media-cache';
 import { toast } from 'sonner';
 import { logger } from '@/shared/lib/logger';
 
 export const useBatchMove = () => {
   const { clearSelection, exitSelectionMode } = useSelectionStore();
-  const { invalidateAllVideoLists } = useVideoCache();
+  const { invalidateAllMediaLists } = useMediaCache();
 
   const { mutateAsync: performMove, isPending } = useMutation({
     mutationFn: async ({
@@ -19,16 +19,16 @@ export const useBatchMove = () => {
       filePaths: string[];
       targetFolder: string;
     }) => {
-      return await moveVideosApi(filePaths, targetFolder);
+      return await api.media.move(filePaths, targetFolder);
     },
     onSuccess: (data) => {
       const { successCount, results } = data;
 
       if (successCount > 0) {
-        invalidateAllVideoLists();
+        invalidateAllMediaLists();
         clearSelection();
         exitSelectionMode();
-        toast.success(`Moved ${successCount} videos.`);
+        toast.success(`Moved ${successCount} items.`);
       }
 
       const warnings = results.filter((r) => r.warning);
@@ -52,7 +52,7 @@ export const useBatchMove = () => {
   });
 
   const handleBatchMove = async (filePaths: string[]) => {
-    const targetFolder = await selectFolder();
+    const targetFolder = await api.system.selectFolder();
     if (!targetFolder) return;
 
     await performMove({ filePaths, targetFolder });

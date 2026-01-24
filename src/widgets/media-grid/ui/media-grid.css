@@ -1,0 +1,39 @@
+/* src/widgets/media-grid/ui/media-grid.css */
+
+.my-masonry-grid {
+  display: flex;
+  margin-left: -16px;
+  width: calc(100% + 16px);
+}
+.my-masonry-grid_column {
+  padding-left: 16px;
+  background-clip: padding-box;
+}
+
+.my-masonry-grid-tile {
+  display: flex;
+  margin-left: 0;
+  width: auto;
+}
+.my-masonry-grid_column-tile {
+  padding-left: 0;
+  background-clip: padding-box;
+}
+
+.is-selection-mode .media-card {
+  cursor: pointer;
+}
+
+.is-selection-mode .media-card[data-selected='true'] {
+  box-shadow: 0 0 0 3px theme('colors.primary.DEFAULT');
+  z-index: 10;
+}
+
+.is-selection-mode .media-card .group-hover\:opacity-100 {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+body.is-scrolling .media-card {
+  pointer-events: none !important;
+}

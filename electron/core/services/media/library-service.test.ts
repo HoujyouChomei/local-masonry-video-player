@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { VideoLibraryService } from './library-service';
+import { LibraryService } from './library-service';
 import path from 'path';
 
 vi.mock('electron', () => ({
@@ -43,7 +43,7 @@ vi.mock('../../repositories/media/media-repository', () => ({
 }));
 
 vi.mock('../../repositories/media/media-integrity', () => ({
-  VideoIntegrityRepository: class {
+  MediaIntegrityRepository: class {
     updatePath = integrityRepoMocks.updatePath;
     upsertMany = integrityRepoMocks.upsertMany;
     markAsMissing = vi.fn();
@@ -52,7 +52,7 @@ vi.mock('../../repositories/media/media-integrity', () => ({
 }));
 
 vi.mock('../../repositories/media/media-search', () => ({
-  VideoSearchRepository: class {
+  MediaSearchRepository: class {
     search = searchRepoMocks.search;
   },
 }));
@@ -93,21 +93,21 @@ vi.mock('./thumbnail-service', () => ({
 }));
 
 vi.mock('./rebinder', () => ({
-  VideoRebinder: class {
+  MediaRebinder: class {
     findCandidate = vi.fn();
     execute = vi.fn();
   },
 }));
 
-describe('VideoLibraryService Integration', () => {
-  let service: VideoLibraryService;
+describe('LibraryService Integration', () => {
+  let service: LibraryService;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = new VideoLibraryService();
+    service = new LibraryService();
   });
 
-  describe('moveVideos (FileMoveService + DB Integration)', () => {
+  describe('moveMedia (FileMoveService + DB Integration)', () => {
     const srcPath = path.normalize('/source/video.mp4');
     const targetDir = path.normalize('/target');
     const destPath = path.join(targetDir, 'video.mp4');
@@ -120,14 +120,14 @@ describe('VideoLibraryService Integration', () => {
 
       vi.mocked(fs.stat).mockResolvedValue({ mtimeMs: 12345 } as any);
 
-      const response = await service.moveVideos([srcPath], targetDir);
+      const response = await service.moveMedia([srcPath], targetDir);
 
       expect(response.successCount).toBe(1);
       expect(fs.rename).toHaveBeenCalledWith(srcPath, destPath);
       expect(mediaRepoMocks.findByPath).toHaveBeenCalledWith(srcPath);
       expect(integrityRepoMocks.updatePath).toHaveBeenCalledWith('v1', destPath, 12345);
 
-      expect(eventBusMocks.emit).toHaveBeenCalledWith('video:updated', {
+      expect(eventBusMocks.emit).toHaveBeenCalledWith('media:updated', {
         id: 'v1',
         path: destPath,
       });
@@ -137,12 +137,12 @@ describe('VideoLibraryService Integration', () => {
       vi.mocked(fs.access).mockRejectedValue(new Error('ENOENT'));
       vi.mocked(fs.rename).mockRejectedValue(new Error('Permission denied'));
 
-      const response = await service.moveVideos([srcPath], targetDir);
+      const response = await service.moveMedia([srcPath], targetDir);
 
       expect(response.successCount).toBe(0);
       expect(fs.rename).toHaveBeenCalled();
       expect(integrityRepoMocks.updatePath).not.toHaveBeenCalled();
-      expect(eventBusMocks.emit).not.toHaveBeenCalledWith('video:updated', expect.anything());
+      expect(eventBusMocks.emit).not.toHaveBeenCalledWith('media:updated', expect.anything());
     });
   });
 
@@ -183,11 +183,11 @@ describe('VideoLibraryService Integration', () => {
     });
   });
 
-  describe('searchVideos (VideoSearchRepository + Options)', () => {
+  describe('searchMedia (MediaSearchRepository + Options)', () => {
     it('should apply default library folders if scope is not provided', () => {
       searchRepoMocks.search.mockReturnValue([]);
 
-      service.searchVideos('query', [], {});
+      service.searchMedia('query', [], {});
 
       expect(searchRepoMocks.search).toHaveBeenCalledWith(
         'query',

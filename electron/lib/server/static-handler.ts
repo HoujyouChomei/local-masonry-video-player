@@ -23,7 +23,7 @@ const getMimeType = (filePath: string) => {
   return mimeTypes[ext] || 'application/octet-stream';
 };
 
-export const handleStatic = (req: IncomingMessage, res: ServerResponse, url: URL) => {
+export const handleStatic = (_req: IncomingMessage, res: ServerResponse, url: URL) => {
   const appPath = app.getAppPath();
 
   const distPath = path.join(appPath, 'dist');

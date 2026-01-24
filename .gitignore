@@ -55,6 +55,8 @@ run-tests.bat
 start-dev.bat
 public/licenses.json
 
+/coverage
+
 .agent/*
 
 # Test Binaries

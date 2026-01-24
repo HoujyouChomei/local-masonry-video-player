@@ -1,5 +1,4 @@
 // electron/core/services/system/settings-service.test.ts
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SettingsService } from './settings-service';
 
@@ -11,16 +10,6 @@ const storeMocks = vi.hoisted(() => ({
 
 vi.mock('../../../lib/store', () => ({
   store: storeMocks,
-}));
-
-const libraryMocks = vi.hoisted(() => ({
-  scanQuietly: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../media/library-service', () => ({
-  VideoLibraryService: class {
-    scanQuietly = libraryMocks.scanQuietly;
-  },
 }));
 
 vi.mock('../../../lib/logger', () => ({
@@ -98,20 +87,25 @@ describe('SettingsService', () => {
       });
     });
 
-    it('should trigger quiet scan when new library folders are added', async () => {
+    it('should emit settings:library-folders-added when new library folders are added', async () => {
       storeMocks.get.mockReturnValue(['/old']);
 
       await service.updateSetting('libraryFolders', ['/old', '/new']);
 
-      expect(libraryMocks.scanQuietly).toHaveBeenCalledWith('/new');
+      expect(eventBusMocks.emit).toHaveBeenCalledWith('settings:library-folders-added', {
+        folders: ['/new'],
+      });
     });
 
-    it('should not trigger scan when no new folders are added', async () => {
+    it('should not emit settings:library-folders-added when no new folders are added', async () => {
       storeMocks.get.mockReturnValue(['/existing']);
 
       await service.updateSetting('libraryFolders', ['/existing']);
 
-      expect(libraryMocks.scanQuietly).not.toHaveBeenCalled();
+      const libraryAddCalls = eventBusMocks.emit.mock.calls.filter(
+        (call) => call[0] === 'settings:library-folders-added'
+      );
+      expect(libraryAddCalls.length).toBe(0);
     });
   });
 

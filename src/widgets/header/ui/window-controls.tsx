@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
 import { getApiClient } from '@/shared/api/client-factory';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
 
 export const WindowControls = () => {
   const system = getApiClient().system;
@@ -50,13 +50,13 @@ export const WindowControls = () => {
       >
         {windowState.isMaximized ? <Copy size={14} /> : <Square size={14} />}
       </Button>
-      
+
       <button
         onClick={() => system.closeWindow()}
         className={cn(
           'inline-flex h-9 w-9 items-center justify-center rounded-md transition-colors',
           'hover:bg-red-500 hover:text-white',
-          'text-muted-foreground hover:bg-red-500' 
+          'text-muted-foreground hover:bg-red-500'
         )}
         title="Close"
         tabIndex={-1}

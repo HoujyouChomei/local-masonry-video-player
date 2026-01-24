@@ -1,7 +1,7 @@
 // electron/core/repositories/media/media-integrity.test.ts
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { VideoIntegrityRepository } from './media-integrity';
+import { MediaIntegrityRepository } from './media-integrity';
 
 const mockRun = vi.fn();
 const mockGet = vi.fn();
@@ -36,12 +36,12 @@ vi.mock('fs', () => ({
   unlinkSync: vi.fn(),
 }));
 
-describe('VideoIntegrityRepository', () => {
-  let repo: VideoIntegrityRepository;
+describe('MediaIntegrityRepository', () => {
+  let repo: MediaIntegrityRepository;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    repo = new VideoIntegrityRepository();
+    repo = new MediaIntegrityRepository();
   });
 
   it('markAsMissing should update status to missing', () => {
@@ -109,10 +109,10 @@ describe('VideoIntegrityRepository', () => {
     expect(mockRun).toHaveBeenCalledTimes(2);
   });
 
-  it('deleteExpiredMissingVideos should delete old missing videos', () => {
+  it('deleteExpiredMissingMedia should delete old missing media', () => {
     mockAll.mockReturnValue([{ id: 'old-1', path: '/old.mp4' }]);
 
-    repo.deleteExpiredMissingVideos(30);
+    repo.deleteExpiredMissingMedia(30);
 
     expect(mockTransaction).toHaveBeenCalled();
     expect(mockRun).toHaveBeenCalledTimes(4);

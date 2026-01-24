@@ -3,11 +3,11 @@
 import { IncomingMessage, ServerResponse } from 'http';
 import { setCorsHeaders, sendError } from './utils';
 import { handleThumbnail, handleVideo } from './media-handler';
-import { dispatchApiRequest } from './routes';
 import { handleStatic } from './static-handler';
 import { checkRequestAuth } from './security';
 import { SSEHandler } from './sse-handler';
 import { logger } from '../logger';
+import { trpcHandler } from './trpc-handler';
 
 export const handleRequest = async (
   req: IncomingMessage,
@@ -46,10 +46,14 @@ export const handleRequest = async (
     }
 
     if (pathname.startsWith('/api/')) {
+      if (pathname.startsWith('/api/trpc')) {
+        return await trpcHandler(req, res);
+      }
       if (pathname === '/api/events') {
         return SSEHandler.getInstance().handleConnection(req, res);
       }
-      return dispatchApiRequest(req, res, url);
+
+      return sendError(res, 'API Endpoint Not Found', 404);
     }
 
     return handleStatic(req, res, url);

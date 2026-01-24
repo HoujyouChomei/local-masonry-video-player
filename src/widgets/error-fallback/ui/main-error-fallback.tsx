@@ -1,7 +1,7 @@
 // src/widgets/error-fallback/ui/main-error-fallback.tsx
 
 import { RefreshCw, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/shadcn/button';
 
 interface MainErrorFallbackProps {
   error: Error;

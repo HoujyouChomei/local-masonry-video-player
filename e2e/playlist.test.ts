@@ -11,7 +11,7 @@ test.describe('Playlist Management', () => {
   test.beforeAll(async () => {
     ctx = await launchAppWithFakeData();
     page = await ctx.app.firstWindow();
-    await page.waitForSelector('.video-card', { state: 'visible', timeout: 15000 });
+    await page.waitForSelector('.media-card', { state: 'visible', timeout: 5000 });
   });
 
   test.afterAll(async () => {
@@ -21,7 +21,7 @@ test.describe('Playlist Management', () => {
   test('should create, populate, and delete a playlist', async () => {
     const playlistName = 'E2E Playlist';
 
-    const firstCard = page.locator('.video-card').first();
+    const firstCard = page.locator('.media-card').first();
     await firstCard.click({ button: 'right' });
 
     const addToPlaylistMenu = page.getByRole('menuitem', { name: 'Add to Playlist' }).last();
@@ -34,7 +34,7 @@ test.describe('Playlist Management', () => {
 
     const sidebar = page.locator('aside');
     const renameInput = sidebar.locator('input');
-    await expect(renameInput).toBeVisible({ timeout: 10000 });
+    await expect(renameInput).toBeVisible({ timeout: 5000 });
 
     await renameInput.fill(playlistName);
     await renameInput.press('Enter');
@@ -48,7 +48,7 @@ test.describe('Playlist Management', () => {
 
     await expect(playlistSidebarItem).toBeVisible();
 
-    const secondCard = page.locator('.video-card').nth(1);
+    const secondCard = page.locator('.media-card').nth(1);
     await secondCard.click({ button: 'right' });
 
     await expect(addToPlaylistMenu).toBeVisible();
@@ -62,7 +62,7 @@ test.describe('Playlist Management', () => {
 
     await expect(playlistSidebarItem).toHaveClass(/bg-white\/20/);
 
-    const playlistCards = page.locator('.video-card');
+    const playlistCards = page.locator('.media-card');
     await expect(playlistCards).toHaveCount(2);
 
     const cardInPlaylist = playlistCards.first();

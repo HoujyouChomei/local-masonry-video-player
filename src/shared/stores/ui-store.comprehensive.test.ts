@@ -3,9 +3,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useUIStore } from './ui-store';
 import { useSelectionStore } from './selection-store';
-import { VideoFile } from '@/shared/types/video';
+import { Media } from '@/shared/schemas/media';
 
-const createMockVideos = (count: number): VideoFile[] => {
+const createMockVideos = (count: number): Media[] => {
   return Array.from({ length: count }, (_, i) => ({
     id: `v-${i}`,
     name: `Video ${i}`,
@@ -35,7 +35,7 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       });
       useSelectionStore.setState({
         isSelectionMode: true,
-        selectedVideoIds: ['v-1'],
+        selectedMediaIds: ['v-1'],
       });
 
       useUIStore.getState().setViewMode('folder');
@@ -47,7 +47,7 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       expect(uiState.selectedPlaylistId).toBeNull();
 
       expect(selectionState.isSelectionMode).toBe(false);
-      expect(selectionState.selectedVideoIds).toEqual([]);
+      expect(selectionState.selectedMediaIds).toEqual([]);
     });
 
     it('should select playlist and enter playlist mode', () => {
@@ -60,7 +60,7 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       expect(uiState.selectedPlaylistId).toBe('pl-123');
       expect(uiState.selectedTagIds).toEqual([]);
 
-      expect(selectionState.selectedVideoIds).toEqual([]);
+      expect(selectionState.selectedMediaIds).toEqual([]);
     });
 
     it('should toggle tag selection and switch modes', () => {
@@ -92,30 +92,30 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       enterSelectionMode('v-1');
       let state = useSelectionStore.getState();
       expect(state.isSelectionMode).toBe(true);
-      expect(state.selectedVideoIds).toEqual(['v-1']);
-      expect(state.lastSelectedVideoId).toBe('v-1');
+      expect(state.selectedMediaIds).toEqual(['v-1']);
+      expect(state.lastSelectedMediaId).toBe('v-1');
 
       exitSelectionMode();
       state = useSelectionStore.getState();
       expect(state.isSelectionMode).toBe(false);
-      expect(state.selectedVideoIds).toEqual([]);
-      expect(state.lastSelectedVideoId).toBeNull();
+      expect(state.selectedMediaIds).toEqual([]);
+      expect(state.lastSelectedMediaId).toBeNull();
     });
 
     it('should toggle individual items', () => {
       const { toggleSelection } = useSelectionStore.getState();
 
       toggleSelection('v-1');
-      expect(useSelectionStore.getState().selectedVideoIds).toEqual(['v-1']);
-      expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-1');
+      expect(useSelectionStore.getState().selectedMediaIds).toEqual(['v-1']);
+      expect(useSelectionStore.getState().lastSelectedMediaId).toBe('v-1');
 
       toggleSelection('v-2');
-      expect(useSelectionStore.getState().selectedVideoIds).toEqual(['v-1', 'v-2']);
-      expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-2');
+      expect(useSelectionStore.getState().selectedMediaIds).toEqual(['v-1', 'v-2']);
+      expect(useSelectionStore.getState().lastSelectedMediaId).toBe('v-2');
 
       toggleSelection('v-1');
-      expect(useSelectionStore.getState().selectedVideoIds).toEqual(['v-2']);
-      expect(useSelectionStore.getState().lastSelectedVideoId).toBe('v-1');
+      expect(useSelectionStore.getState().selectedMediaIds).toEqual(['v-2']);
+      expect(useSelectionStore.getState().lastSelectedMediaId).toBe('v-1');
     });
 
     it('should handle Select All', () => {
@@ -123,17 +123,17 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
       useSelectionStore.getState().selectAll(allIds);
 
       const state = useSelectionStore.getState();
-      expect(state.selectedVideoIds).toEqual(allIds);
-      expect(state.lastSelectedVideoId).toBe('v-3');
+      expect(state.selectedMediaIds).toEqual(allIds);
+      expect(state.lastSelectedMediaId).toBe('v-3');
     });
 
     it('should clear selection but KEEP selection mode', () => {
-      useSelectionStore.setState({ isSelectionMode: true, selectedVideoIds: ['v-1'] });
+      useSelectionStore.setState({ isSelectionMode: true, selectedMediaIds: ['v-1'] });
 
       useSelectionStore.getState().clearSelection();
 
       const state = useSelectionStore.getState();
-      expect(state.selectedVideoIds).toEqual([]);
+      expect(state.selectedMediaIds).toEqual([]);
       expect(state.isSelectionMode).toBe(true);
     });
 
@@ -148,11 +148,11 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
         selectRange('v-5', mockVideos);
 
         const state = useSelectionStore.getState();
-        expect(state.selectedVideoIds).toHaveLength(4);
-        expect(state.selectedVideoIds).toEqual(
+        expect(state.selectedMediaIds).toHaveLength(4);
+        expect(state.selectedMediaIds).toEqual(
           expect.arrayContaining(['v-2', 'v-3', 'v-4', 'v-5'])
         );
-        expect(state.lastSelectedVideoId).toBe('v-5');
+        expect(state.lastSelectedMediaId).toBe('v-5');
       });
 
       it('should select range backwards', () => {
@@ -163,7 +163,7 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
         selectRange('v-2', mockVideos);
 
         const state = useSelectionStore.getState();
-        expect(state.selectedVideoIds).toEqual(
+        expect(state.selectedMediaIds).toEqual(
           expect.arrayContaining(['v-2', 'v-3', 'v-4', 'v-5'])
         );
       });
@@ -178,7 +178,7 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
         selectRange('v-5', mockVideos);
 
         const state = useSelectionStore.getState();
-        expect(state.selectedVideoIds).toEqual(
+        expect(state.selectedMediaIds).toEqual(
           expect.arrayContaining(['v-0', 'v-3', 'v-4', 'v-5'])
         );
       });
@@ -189,8 +189,8 @@ describe('Store Refactoring Integration Test (Comprehensive)', () => {
         selectRange('v-5', mockVideos);
 
         const state = useSelectionStore.getState();
-        expect(state.selectedVideoIds).toEqual(['v-5']);
-        expect(state.lastSelectedVideoId).toBe('v-5');
+        expect(state.selectedMediaIds).toEqual(['v-5']);
+        expect(state.lastSelectedMediaId).toBe('v-5');
       });
     });
   });

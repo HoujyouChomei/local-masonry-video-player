@@ -1,7 +1,7 @@
 // src/shared/stores/settings/playback-slice.ts
 
 import { SettingsSliceCreator, PlaybackSlice } from './types';
-import { saveSetting } from '@/shared/api/electron';
+import { api } from '@/shared/api';
 import { DEFAULT_SETTINGS } from '@/shared/constants/defaults';
 
 export const createPlaybackSlice: SettingsSliceCreator<PlaybackSlice> = (set, get) => ({
@@ -14,24 +14,24 @@ export const createPlaybackSlice: SettingsSliceCreator<PlaybackSlice> = (set, ge
   toggleAutoPlayNext: async () => {
     const newState = !get().autoPlayNext;
     set({ autoPlayNext: newState });
-    await saveSetting('autoPlayNext', newState);
+    await api.settings.save('autoPlayNext', newState);
   },
 
   togglePlayOnHoverOnly: async () => {
     const newState = !get().playOnHoverOnly;
     set({ playOnHoverOnly: newState });
-    await saveSetting('playOnHoverOnly', newState);
+    await api.settings.save('playOnHoverOnly', newState);
   },
 
   toggleOpenInFullscreen: async () => {
     const newState = !get().openInFullscreen;
     set({ openInFullscreen: newState });
-    await saveSetting('openInFullscreen', newState);
+    await api.settings.save('openInFullscreen', newState);
   },
 
   setVolumeState: async (volume, isMuted) => {
     set({ volume, isMuted });
-    await saveSetting('volume', volume);
-    await saveSetting('isMuted', isMuted);
+    await api.settings.save('volume', volume);
+    await api.settings.save('isMuted', isMuted);
   },
 });

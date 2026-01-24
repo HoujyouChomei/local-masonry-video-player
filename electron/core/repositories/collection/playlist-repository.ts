@@ -1,7 +1,7 @@
 // electron/core/repositories/collection/playlist-repository.ts
 
 import { getDB } from '../../../lib/db';
-import { Playlist } from '../../../../src/shared/types/playlist';
+import { Playlist } from '../../../../src/shared/schemas/playlist';
 
 interface PlaylistRow {
   id: string;
@@ -21,12 +21,12 @@ export class PlaylistRepository {
       | undefined;
     if (!playlist) return null;
 
-    const videoPaths = this.getVideoPaths(id);
+    const mediaPaths = this.getMediaPaths(id);
 
     return {
       id: playlist.id,
       name: playlist.name,
-      videoPaths,
+      mediaPaths,
       createdAt: playlist.created_at,
       updatedAt: playlist.updated_at,
     };
@@ -40,13 +40,13 @@ export class PlaylistRepository {
     return playlists.map((p) => ({
       id: p.id,
       name: p.name,
-      videoPaths: this.getVideoPaths(p.id),
+      mediaPaths: this.getMediaPaths(p.id),
       createdAt: p.created_at,
       updatedAt: p.updated_at,
     }));
   }
 
-  private getVideoPaths(playlistId: string): string[] {
+  private getMediaPaths(playlistId: string): string[] {
     const rows = this.db
       .prepare(
         `
@@ -99,7 +99,7 @@ export class PlaylistRepository {
     this.db.prepare('UPDATE playlists SET updated_at = ? WHERE id = ?').run(now, id);
   }
 
-  addVideo(playlistId: string, videoId: string): void {
+  addMedia(playlistId: string, mediaId: string): void {
     const now = Date.now();
 
     const exists = this.db
@@ -108,7 +108,7 @@ export class PlaylistRepository {
       SELECT 1 FROM playlist_items WHERE playlist_id = ? AND video_id = ?
     `
       )
-      .get(playlistId, videoId);
+      .get(playlistId, mediaId);
 
     if (exists) return;
 
@@ -129,12 +129,12 @@ export class PlaylistRepository {
       VALUES (?, ?, ?, ?)
     `
       )
-      .run(playlistId, videoId, nextRank, now);
+      .run(playlistId, mediaId, nextRank, now);
 
     this.touch(playlistId);
   }
 
-  removeVideo(playlistId: string, videoId: string): void {
+  removeMedia(playlistId: string, mediaId: string): void {
     this.db
       .prepare(
         `
@@ -142,12 +142,12 @@ export class PlaylistRepository {
       WHERE playlist_id = ? AND video_id = ?
     `
       )
-      .run(playlistId, videoId);
+      .run(playlistId, mediaId);
 
     this.touch(playlistId);
   }
 
-  reorderVideos(playlistId: string, videoIdsInOrder: string[]): void {
+  reorderMedia(playlistId: string, mediaIdsInOrder: string[]): void {
     const tx = this.db.transaction(() => {
       const updateStmt = this.db.prepare(`
         UPDATE playlist_items 
@@ -155,8 +155,8 @@ export class PlaylistRepository {
         WHERE playlist_id = ? AND video_id = ?
       `);
 
-      videoIdsInOrder.forEach((vid, index) => {
-        updateStmt.run(index, playlistId, vid);
+      mediaIdsInOrder.forEach((mid, index) => {
+        updateStmt.run(index, playlistId, mid);
       });
 
       this.touch(playlistId);

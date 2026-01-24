@@ -2,7 +2,7 @@
 
 import { Plus, ListMusic } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/shadcn/button';
 import { usePlaylists, useCreatePlaylist } from '@/entities/playlist/model/use-playlists';
 import { SidebarPlaylistItem } from './sidebar-playlist-item';
 

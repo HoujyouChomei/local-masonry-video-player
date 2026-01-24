@@ -12,6 +12,7 @@ import { sendError } from './utils';
 import {
   VIDEO_EXTENSIONS_NATIVE,
   VIDEO_MIME_TYPES,
+  IMAGE_MIME_TYPES,
 } from '../../../src/shared/constants/file-types';
 import { THUMBNAIL } from '../../../src/shared/constants/assets';
 import { logger } from '../logger';
@@ -30,10 +31,10 @@ const getThumbnailDir = () => {
 
 const getMimeType = (filePath: string) => {
   const ext = path.extname(filePath).toLowerCase();
-  return VIDEO_MIME_TYPES[ext] || 'application/octet-stream';
+  return VIDEO_MIME_TYPES[ext] || IMAGE_MIME_TYPES[ext] || 'application/octet-stream';
 };
 
-export const handleThumbnail = async (req: IncomingMessage, res: ServerResponse, url: URL) => {
+export const handleThumbnail = async (_req: IncomingMessage, res: ServerResponse, url: URL) => {
   const filePath = url.searchParams.get('path');
 
   if (!filePath || !isPathAllowed(filePath)) {
@@ -96,8 +97,12 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
   const ext = path.extname(filePath).toLowerCase();
   const canPlayDirectly = DIRECT_STREAM_EXTENSIONS.has(ext);
 
+  const mimeType = getMimeType(filePath);
+  const isImage = mimeType.startsWith('image/');
+
   const ffmpegPath = ffmpegService.ffmpegPath;
-  if (ffmpegPath && !canPlayDirectly) {
+
+  if (ffmpegPath && !canPlayDirectly && !isImage) {
     try {
       const startTimeParam = url.searchParams.get('t');
       const startTime = startTimeParam ? parseFloat(startTimeParam) : 0;
@@ -142,12 +147,11 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
     const stat = fs.statSync(filePath);
     const fileSize = stat.size;
     const range = req.headers.range;
-    const contentType = getMimeType(filePath);
 
     if (req.method === 'HEAD') {
       res.writeHead(200, {
         'Content-Length': fileSize,
-        'Content-Type': contentType,
+        'Content-Type': mimeType,
         'Accept-Ranges': 'bytes',
       });
       res.end();
@@ -172,14 +176,14 @@ export const handleVideo = async (req: IncomingMessage, res: ServerResponse, url
         'Content-Range': `bytes ${start}-${end}/${fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': chunksize,
-        'Content-Type': contentType,
+        'Content-Type': mimeType,
       });
 
       file.pipe(res);
     } else {
       res.writeHead(200, {
         'Content-Length': fileSize,
-        'Content-Type': contentType,
+        'Content-Type': mimeType,
         'Accept-Ranges': 'bytes',
       });
       fs.createReadStream(filePath, { highWaterMark: HIGH_WATER_MARK }).pipe(res);

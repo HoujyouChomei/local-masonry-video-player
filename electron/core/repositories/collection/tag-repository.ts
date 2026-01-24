@@ -40,7 +40,7 @@ export class TagRepository {
     return { id, name: trimmedName, created_at: now };
   }
 
-  getTagsByVideoId(videoId: string): TagRow[] {
+  getTagsByMediaId(mediaId: string): TagRow[] {
     return this.db
       .prepare(
         `
@@ -51,7 +51,7 @@ export class TagRepository {
       ORDER BY t.name ASC
     `
       )
-      .all(videoId) as TagRow[];
+      .all(mediaId) as TagRow[];
   }
 
   getAll(): TagRow[] {
@@ -108,7 +108,7 @@ export class TagRepository {
       .all(`${folderPrefix}%`, offset, path.sep) as TagRow[];
   }
 
-  assignTag(videoId: string, tagId: string): void {
+  assignTag(mediaId: string, tagId: string): void {
     const now = Date.now();
     this.db
       .prepare(
@@ -118,10 +118,10 @@ export class TagRepository {
       ON CONFLICT(video_id, tag_id) DO UPDATE SET assigned_at = excluded.assigned_at
     `
       )
-      .run(videoId, tagId, now);
+      .run(mediaId, tagId, now);
   }
 
-  unassignTag(videoId: string, tagId: string): void {
+  unassignTag(mediaId: string, tagId: string): void {
     this.db
       .prepare(
         `
@@ -129,10 +129,10 @@ export class TagRepository {
       WHERE video_id = ? AND tag_id = ?
     `
       )
-      .run(videoId, tagId);
+      .run(mediaId, tagId);
   }
 
-  assignTagToVideos(videoIds: string[], tagId: string): void {
+  assignTagToMedia(mediaIds: string[], tagId: string): void {
     const now = Date.now();
     const insertStmt = this.db.prepare(`
       INSERT INTO video_tags (video_id, tag_id, assigned_at)
@@ -141,22 +141,22 @@ export class TagRepository {
     `);
 
     const tx = this.db.transaction(() => {
-      for (const videoId of videoIds) {
-        insertStmt.run(videoId, tagId, now);
+      for (const mediaId of mediaIds) {
+        insertStmt.run(mediaId, tagId, now);
       }
     });
     tx();
   }
 
-  unassignTagFromVideos(videoIds: string[], tagId: string): void {
+  unassignTagFromMedia(mediaIds: string[], tagId: string): void {
     const deleteStmt = this.db.prepare(`
       DELETE FROM video_tags
       WHERE video_id = ? AND tag_id = ?
     `);
 
     const tx = this.db.transaction(() => {
-      for (const videoId of videoIds) {
-        deleteStmt.run(videoId, tagId);
+      for (const mediaId of mediaIds) {
+        deleteStmt.run(mediaId, tagId);
       }
     });
     tx();

@@ -37,7 +37,7 @@ export class ThumbnailService {
       this.deleteThumbnail(data.path);
     });
 
-    eventBus.on('video:deleted', (data) => {
+    eventBus.on('media:deleted', (data) => {
       this.deleteThumbnail(data.path);
     });
   }
@@ -49,22 +49,22 @@ export class ThumbnailService {
     return ThumbnailService.instance;
   }
 
-  public deleteThumbnail(videoPath: string): void {
+  public deleteThumbnail(mediaPath: string): void {
     try {
-      const hash = crypto.createHash('md5').update(videoPath).digest('hex');
+      const hash = crypto.createHash('md5').update(mediaPath).digest('hex');
       const thumbPath = path.join(this.thumbDir, `${hash}${THUMBNAIL.EXTENSION}`);
 
       if (fs.existsSync(thumbPath)) {
         fs.unlinkSync(thumbPath);
-        logger.debug(`[ThumbnailService] Deleted thumbnail for: ${path.basename(videoPath)}`);
+        logger.debug(`[ThumbnailService] Deleted thumbnail for: ${path.basename(mediaPath)}`);
       }
     } catch (error) {
-      logger.warn(`[ThumbnailService] Failed to delete thumbnail for: ${videoPath}`, error);
+      logger.warn(`[ThumbnailService] Failed to delete thumbnail for: ${mediaPath}`, error);
     }
   }
 
-  public addToQueue(videoPaths: string[], force = false) {
-    for (const p of videoPaths) {
+  public addToQueue(mediaPaths: string[], force = false) {
+    for (const p of mediaPaths) {
       const existingIndex = this.queue.findIndex((item) => item.path === p);
 
       if (existingIndex !== -1) {

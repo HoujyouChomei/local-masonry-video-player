@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Settings, X } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { validateFFmpegPathApi, validateFFprobePathApi } from '@/shared/api/electron';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
+import { api } from '@/shared/api';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { GridStyleSection } from './sections/grid-style-section';
 import { ExternalToolsSection } from './sections/external-tools-section';
@@ -41,8 +41,8 @@ export const SettingsPanel = ({ onStateChange }: SettingsPanelProps) => {
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       if (!isMobile) {
-        if (ffmpegPath) validateFFmpegPathApi(ffmpegPath).then(setIsFFmpegValid);
-        if (ffprobePath) validateFFprobePathApi(ffprobePath).then(setIsFFprobeValid);
+        if (ffmpegPath) api.system.validateFFmpeg(ffmpegPath).then(setIsFFmpegValid);
+        if (ffprobePath) api.system.validateFFprobe(ffprobePath).then(setIsFFprobeValid);
       }
     }
     return () => {

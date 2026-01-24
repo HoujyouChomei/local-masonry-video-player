@@ -2,7 +2,7 @@
 
 import { Worker } from 'worker_threads';
 import path from 'path';
-import { VideoService } from '../media/media-service';
+import { MediaService } from '../media/media-service';
 import { FFmpegService } from '../video/ffmpeg-service';
 import { logger } from '../../../lib/logger';
 import { eventBus } from '../../events';
@@ -16,12 +16,12 @@ export class FileWatcherService {
   private static instance: FileWatcherService;
 
   private worker: Worker | null = null;
-  private videoService: VideoService;
+  private mediaService: MediaService;
   private ffmpegService = new FFmpegService();
   private currentWatchedPath: string | null = null;
 
   private constructor() {
-    this.videoService = new VideoService();
+    this.mediaService = new MediaService();
     this.initWorker();
   }
 
@@ -97,9 +97,9 @@ export class FileWatcherService {
       switch (msg.type) {
         case 'file-added': {
           logger.debug(`[Watcher] File Added: ${normalizedPath}`);
-          const video = await this.videoService.getVideo(normalizedPath);
-          if (video) {
-            eventBus.emit('video:added', { id: video.id, path: normalizedPath });
+          const media = await this.mediaService.getMedia(normalizedPath);
+          if (media) {
+            eventBus.emit('media:added', { id: media.id, path: normalizedPath });
           }
           break;
         }
@@ -107,21 +107,21 @@ export class FileWatcherService {
         case 'file-deleted': {
           logger.debug(`[Watcher] File Deleted: ${normalizedPath}`);
 
-          const result = await this.videoService.handleFileMissing(normalizedPath);
+          const result = await this.mediaService.handleFileMissing(normalizedPath);
           if (result === 'recovered') {
-            eventBus.emit('video:recovered', { id: '', path: normalizedPath });
-            eventBus.emit('video:updated', { id: '', path: normalizedPath });
+            eventBus.emit('media:recovered', { id: '', path: normalizedPath });
+            eventBus.emit('media:updated', { id: '', path: normalizedPath });
           } else {
-            eventBus.emit('video:deleted', { id: '', path: normalizedPath });
+            eventBus.emit('media:deleted', { id: '', path: normalizedPath });
           }
           break;
         }
 
         case 'file-changed': {
           logger.debug(`[Watcher] File Changed: ${normalizedPath}`);
-          const video = await this.videoService.getVideo(normalizedPath);
-          if (video) {
-            eventBus.emit('video:updated', { id: video.id, path: normalizedPath });
+          const media = await this.mediaService.getMedia(normalizedPath);
+          if (media) {
+            eventBus.emit('media:updated', { id: media.id, path: normalizedPath });
           }
           break;
         }

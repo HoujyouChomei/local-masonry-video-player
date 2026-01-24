@@ -1,18 +1,18 @@
 // electron/core/services/collection/playlist-service.ts
 
 import { PlaylistRepository } from '../../repositories/collection/playlist-repository';
-import { Playlist } from '../../../../src/shared/types/playlist';
-import { VideoFile } from '../../../../src/shared/types/video';
+import { Playlist } from '../../../../src/shared/schemas/playlist';
+import { Media } from '../../../../src/shared/schemas/media';
 import { MediaRepository } from '../../repositories/media/media-repository';
 import crypto from 'crypto';
-import { VideoMapper } from '../media/media-mapper';
+import { MediaMapper } from '../media/media-mapper';
 import { FileIntegrityService } from '../file/file-integrity-service';
 import { eventBus } from '../../events';
 
 export class PlaylistService {
   private playlistRepo = new PlaylistRepository();
   private mediaRepo = new MediaRepository();
-  private mapper = new VideoMapper();
+  private mapper = new MediaMapper();
   private integrityService = new FileIntegrityService();
 
   getAll(): Playlist[] {
@@ -34,7 +34,7 @@ export class PlaylistService {
     const newPlaylist: Playlist = {
       id,
       name: finalName,
-      videoPaths: [],
+      mediaPaths: [],
       createdAt: now,
       updatedAt: now,
     };
@@ -56,32 +56,32 @@ export class PlaylistService {
     return this.playlistRepo.getById(id);
   }
 
-  async addVideo(playlistId: string, videoId: string): Promise<Playlist | null> {
-    const video = this.mediaRepo.findById(videoId);
-    if (!video) return null;
+  async addMedia(playlistId: string, mediaId: string): Promise<Playlist | null> {
+    const media = this.mediaRepo.findById(mediaId);
+    if (!media) return null;
 
-    this.playlistRepo.addVideo(playlistId, videoId);
+    this.playlistRepo.addMedia(playlistId, mediaId);
     eventBus.emit('ui:library-refresh', { force: false });
     return this.playlistRepo.getById(playlistId);
   }
 
-  removeVideo(playlistId: string, videoId: string): Playlist | null {
-    this.playlistRepo.removeVideo(playlistId, videoId);
+  removeMedia(playlistId: string, mediaId: string): Playlist | null {
+    this.playlistRepo.removeMedia(playlistId, mediaId);
     eventBus.emit('ui:library-refresh', { force: false });
     return this.playlistRepo.getById(playlistId);
   }
 
-  reorder(playlistId: string, videoIds: string[]): Playlist | null {
-    this.playlistRepo.reorderVideos(playlistId, videoIds);
+  reorder(playlistId: string, mediaIds: string[]): Playlist | null {
+    this.playlistRepo.reorderMedia(playlistId, mediaIds);
     eventBus.emit('ui:library-refresh', { force: false });
     return this.playlistRepo.getById(playlistId);
   }
 
-  async getVideos(playlistId: string): Promise<VideoFile[]> {
+  async getMedia(playlistId: string): Promise<Media[]> {
     const playlist = this.playlistRepo.getById(playlistId);
     if (!playlist) return [];
 
-    const paths = playlist.videoPaths;
+    const paths = playlist.mediaPaths;
     if (paths.length === 0) return [];
 
     const hasChanges = await this.integrityService.verifyAndRecover(paths);

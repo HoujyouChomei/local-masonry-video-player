@@ -1,5 +1,6 @@
 // src/widgets/header/ui/header.tsx
-import { useEffect, useRef, useCallback } from 'react';
+
+import { useEffect, useRef, useCallback, useState } from 'react';
 import {
   PanelLeft,
   Eye,
@@ -14,17 +15,17 @@ import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { useSelectionStore } from '@/shared/stores/selection-store';
 import { ColumnCounter } from '@/features/change-columns/ui/column-counter';
-import { SortMenu } from '@/features/sort-videos/ui/sort-menu';
-import { SearchBar } from '@/features/search-videos/ui/search-bar';
+import { SortMenu } from '@/features/sort-media/ui/sort-menu';
+import { SearchBar } from '@/features/search-media/ui/search-bar';
 import { SettingsPanel } from '@/features/settings-panel/ui/settings-panel';
 import { SelectionHeader } from './selection-header';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Separator } from '@/shared/ui/shadcn/separator';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
-import { setFullScreenApi } from '@/shared/api/electron';
-import { getApiClient } from '@/shared/api/client-factory';
+import { api } from '@/shared/api';
 import { WindowControls } from './window-controls';
+import { useHotkeys } from '@/shared/lib/use-hotkeys';
 
 export const Header = () => {
   const isSidebarOpen = useSettingsStore((s) => s.isSidebarOpen);
@@ -45,11 +46,25 @@ export const Header = () => {
 
   const isMobile = useIsMobile();
 
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+
+  const isAnyMenuOpen = isSettingsOpen || isSortMenuOpen;
+
   const isVisibleRef = useRef(isHeaderVisible);
 
   const isSettingsPanelOpenRef = useRef(false);
 
+  useHotkeys(
+    'escape',
+    () => {
+      exitSelectionMode();
+    },
+    { enabled: isSelectionMode }
+  );
+
   const handleSettingsStateChange = useCallback((isOpen: boolean) => {
+    setIsSettingsOpen(isOpen);
     isSettingsPanelOpenRef.current = isOpen;
 
     if (isOpen && !isVisibleRef.current) {
@@ -93,23 +108,14 @@ export const Header = () => {
       }
     };
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isSelectionMode) {
-        e.preventDefault();
-        exitSelectionMode();
-      }
-    };
-
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [setHeaderVisible, isSelectionMode, exitSelectionMode]);
+  }, [setHeaderVisible]);
 
   const toggleLayoutMode = () => {
     setLayoutMode(layoutMode === 'masonry' ? 'list' : 'masonry');
@@ -125,19 +131,20 @@ export const Header = () => {
 
   const handleToggleFullscreen = async () => {
     const nextState = !windowState.isFullScreen;
-    await setFullScreenApi(nextState);
+    await api.system.setFullScreen(nextState);
   };
 
   const handleHeaderDoubleClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget && !isMobile) {
-      getApiClient().system.toggleMaximizeWindow();
+      api.system.toggleMaximizeWindow();
     }
   };
 
   return (
     <header
       className={cn(
-        'border-border/40 app-region-drag sticky top-0 z-50 flex h-16 items-center border-b bg-gray-950/80 transition-transform duration-300',
+        'border-border/40 sticky top-0 z-50 flex h-16 items-center border-b bg-gray-950/80 transition-transform duration-300',
+        !isAnyMenuOpen ? 'app-region-drag' : 'app-region-no-drag',
         !isHeaderVisible && !isSelectionMode && '-translate-y-full',
         isSelectionMode && 'border-indigo-900/50 px-0'
       )}
@@ -147,9 +154,7 @@ export const Header = () => {
         <SelectionHeader />
       ) : (
         <>
-          <div
-            className={cn('flex justify-start pl-2 md:pl-6', !isMobile ? 'flex-1' : 'shrink-0')}
-          >
+          <div className={cn('flex justify-start pl-2 md:pl-6', !isMobile ? 'flex-1' : 'shrink-0')}>
             <div className="flex items-center gap-1 md:gap-4">
               <Button
                 variant="ghost"
@@ -174,14 +179,11 @@ export const Header = () => {
           </div>
 
           <div
-            className={cn(
-              'px-2 md:px-8',
-              isMobile ? 'min-w-0 flex-1' : 'w-full max-w-md shrink-0'
-            )}
+            className={cn('px-2 md:px-8', isMobile ? 'min-w-0 flex-1' : 'w-full max-w-md shrink-0')}
           >
             <div className="app-region-no-drag flex w-full items-center gap-2">
               <SearchBar className="flex-1" />
-              <SortMenu />
+              <SortMenu onOpenChange={setIsSortMenuOpen} />
             </div>
           </div>
 

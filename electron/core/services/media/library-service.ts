@@ -7,29 +7,29 @@ import { FileMoveService } from '../file/file-move-service';
 import { FFmpegService } from '../video/ffmpeg-service';
 import { FileIntegrityService } from '../file/file-integrity-service';
 import { MediaRepository } from '../../repositories/media/media-repository';
-import { VideoIntegrityRepository } from '../../repositories/media/media-integrity';
-import { VideoSearchRepository, SearchOptions } from '../../repositories/media/media-search';
+import { MediaIntegrityRepository } from '../../repositories/media/media-integrity';
+import { MediaSearchRepository, SearchOptions } from '../../repositories/media/media-search';
 import { FolderRepository } from '../../repositories/system/folder-repository';
-import { VideoMapper } from './media-mapper';
-import { VideoFile } from '../../../../src/shared/types/video';
+import { MediaMapper } from './media-mapper';
+import { Media } from '../../../../src/shared/schemas/media';
 import { store } from '../../../lib/store';
 import { MoveResponse } from '../../../../src/shared/types/electron';
 import { logger } from '../../../lib/logger';
 import { eventBus } from '../../events';
 
-export class VideoLibraryService {
+export class LibraryService {
   private scanner = new LibraryScanner();
   private watcher = FileWatcherService.getInstance();
   private moveService = new FileMoveService();
   private ffmpegService = new FFmpegService();
   private integrityService = new FileIntegrityService();
   private mediaRepo = new MediaRepository();
-  private integrityRepo = new VideoIntegrityRepository();
-  private searchRepo = new VideoSearchRepository();
+  private integrityRepo = new MediaIntegrityRepository();
+  private searchRepo = new MediaSearchRepository();
   private folderRepo = new FolderRepository();
-  private mapper = new VideoMapper();
+  private mapper = new MediaMapper();
 
-  async loadAndWatch(folderPath: string): Promise<VideoFile[]> {
+  async loadAndWatch(folderPath: string): Promise<Media[]> {
     if (!folderPath) {
       this.watcher.stop();
       return [];
@@ -51,25 +51,25 @@ export class VideoLibraryService {
     }
   }
 
-  async moveVideos(videoPaths: string[], targetFolderPath: string): Promise<MoveResponse> {
-    const results = await this.moveService.moveVideos(videoPaths, targetFolderPath);
+  async moveMedia(mediaPaths: string[], targetFolderPath: string): Promise<MoveResponse> {
+    const results = await this.moveService.moveMedia(mediaPaths, targetFolderPath);
     let successCount = 0;
 
     for (const result of results) {
       if (result.success) {
         successCount++;
         try {
-          const video = this.mediaRepo.findByPath(result.oldPath);
-          if (video) {
+          const media = this.mediaRepo.findByPath(result.oldPath);
+          if (media) {
             const stat = await fs.stat(result.newPath);
             const mtime = Math.floor(stat.mtimeMs);
-            this.integrityRepo.updatePath(video.id, result.newPath, mtime);
-            logger.debug(`[DB] Updated path for ID ${video.id}: ${result.newPath}`);
+            this.integrityRepo.updatePath(media.id, result.newPath, mtime);
+            logger.debug(`[DB] Updated path for ID ${media.id}: ${result.newPath}`);
 
-            eventBus.emit('video:updated', { id: video.id, path: result.newPath });
+            eventBus.emit('media:updated', { id: media.id, path: result.newPath });
           }
         } catch (e) {
-          logger.error(`[DB] Failed to update DB for moved video: ${result.oldPath}`, e);
+          logger.error(`[DB] Failed to update DB for moved media: ${result.oldPath}`, e);
         }
       }
     }
@@ -77,13 +77,13 @@ export class VideoLibraryService {
     return { successCount, results };
   }
 
-  async normalizeVideo(filePath: string): Promise<VideoFile | null> {
+  async normalizeVideo(filePath: string): Promise<Media | null> {
     const outputPath = await this.ffmpegService.normalizeVideo(filePath);
     if (!outputPath) return null;
     return this.integrityService.processNewFile(outputPath);
   }
 
-  searchVideos(query: string, tagIds: string[], options: SearchOptions): VideoFile[] {
+  searchMedia(query: string, tagIds: string[], options: SearchOptions): Media[] {
     try {
       if (!options.folderPath) {
         const libraryFolders = (store.get('libraryFolders') as string[]) || [];
@@ -93,13 +93,13 @@ export class VideoLibraryService {
       const rows = this.searchRepo.search(query, tagIds, options);
       return this.mapper.toEntities(rows);
     } catch (error) {
-      logger.error('[VideoLibraryService] Search failed:', error);
+      logger.error('[LibraryService] Search failed:', error);
       return [];
     }
   }
 
-  saveFolderOrder(folderPath: string, videoPaths: string[]): void {
-    this.folderRepo.saveSortOrder(folderPath, videoPaths);
+  saveFolderOrder(folderPath: string, mediaPaths: string[]): void {
+    this.folderRepo.saveSortOrder(folderPath, mediaPaths);
   }
 
   getFolderOrder(folderPath: string): string[] {

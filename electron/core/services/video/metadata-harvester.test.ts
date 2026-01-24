@@ -26,17 +26,17 @@ const metaRepoMocks = vi.hoisted(() => ({
   updateMetadataStatus: vi.fn(),
   updateGenerationParams: vi.fn(),
   updateMetadata: vi.fn(),
-  getPendingVideos: vi.fn(),
+  getPendingMedia: vi.fn(),
   resetIncompleteMetadataStatus: vi.fn(),
   resetStuckProcessingStatus: vi.fn(),
 }));
 
 vi.mock('../../repositories/media/media-metadata', () => ({
-  VideoMetadataRepository: class {
+  MediaMetadataRepository: class {
     updateMetadataStatus = metaRepoMocks.updateMetadataStatus;
     updateGenerationParams = metaRepoMocks.updateGenerationParams;
     updateMetadata = metaRepoMocks.updateMetadata;
-    getPendingVideos = metaRepoMocks.getPendingVideos;
+    getPendingMedia = metaRepoMocks.getPendingMedia;
     resetIncompleteMetadataStatus = metaRepoMocks.resetIncompleteMetadataStatus;
     resetStuckProcessingStatus = metaRepoMocks.resetStuckProcessingStatus;
   },
@@ -84,7 +84,7 @@ describe('MetadataHarvester', () => {
 
     metaRepoMocks.resetIncompleteMetadataStatus.mockReturnValue(0);
     metaRepoMocks.resetStuckProcessingStatus.mockReturnValue(0);
-    metaRepoMocks.getPendingVideos.mockReturnValue([]);
+    metaRepoMocks.getPendingMedia.mockReturnValue([]);
     ffmpegMocks.ffprobePath = '/usr/bin/ffprobe';
 
     (MetadataHarvester as any).instance = undefined;
@@ -98,8 +98,8 @@ describe('MetadataHarvester', () => {
   });
 
   it('should start loop and process batch queue', async () => {
-    const mockVideo = { id: 'v1', path: '/video.mp4', name: 'video.mp4', status: 'available' };
-    metaRepoMocks.getPendingVideos.mockReturnValue([mockVideo]);
+    const mockMedia = { id: 'v1', path: '/video.mp4', name: 'video.mp4', status: 'available' };
+    metaRepoMocks.getPendingMedia.mockReturnValue([mockMedia]);
 
     ffmpegMocks.extractMetadata.mockResolvedValue({
       duration: 120,
@@ -110,7 +110,7 @@ describe('MetadataHarvester', () => {
       tags: { prompt: 'masterpiece' },
     });
 
-    mediaRepoMocks.findById.mockReturnValue(mockVideo);
+    mediaRepoMocks.findById.mockReturnValue(mockMedia);
 
     harvester = MetadataHarvester.getInstance();
 
@@ -131,16 +131,16 @@ describe('MetadataHarvester', () => {
       'h264'
     );
 
-    expect(eventBusMocks.emit).toHaveBeenCalledWith('video:updated', {
+    expect(eventBusMocks.emit).toHaveBeenCalledWith('media:updated', {
       id: 'v1',
       path: '/video.mp4',
     });
   });
 
   it('should handle extraction failure', async () => {
-    const mockVideo = { id: 'v2', path: '/fail.mp4', name: 'fail.mp4', status: 'available' };
-    metaRepoMocks.getPendingVideos.mockReturnValue([mockVideo]);
-    mediaRepoMocks.findById.mockReturnValue(mockVideo);
+    const mockMedia = { id: 'v2', path: '/fail.mp4', name: 'fail.mp4', status: 'available' };
+    metaRepoMocks.getPendingMedia.mockReturnValue([mockMedia]);
+    mediaRepoMocks.findById.mockReturnValue(mockMedia);
 
     ffmpegMocks.extractMetadata.mockResolvedValue(null);
 
@@ -154,19 +154,19 @@ describe('MetadataHarvester', () => {
   });
 
   it('should process on-demand request with higher priority', async () => {
-    const batchVideo = { id: 'batch', path: '/batch.mp4', status: 'available', name: 'batch' };
-    const priorityVideo = {
+    const batchMedia = { id: 'batch', path: '/batch.mp4', status: 'available', name: 'batch' };
+    const priorityMedia = {
       id: 'priority',
       path: '/priority.mp4',
       status: 'available',
       name: 'priority',
     };
 
-    metaRepoMocks.getPendingVideos.mockReturnValueOnce([]).mockReturnValue([batchVideo]);
+    metaRepoMocks.getPendingMedia.mockReturnValueOnce([]).mockReturnValue([batchMedia]);
 
     mediaRepoMocks.findById.mockImplementation((id: string) => {
-      if (id === 'priority') return priorityVideo;
-      if (id === 'batch') return batchVideo;
+      if (id === 'priority') return priorityMedia;
+      if (id === 'batch') return batchMedia;
       return undefined;
     });
 
@@ -184,11 +184,11 @@ describe('MetadataHarvester', () => {
     expect(metaRepoMocks.updateMetadataStatus).toHaveBeenNthCalledWith(2, 'batch', 'processing');
   });
 
-  it('should skip processing if video is not available or deleted', async () => {
-    const mockVideo = { id: 'v3', path: '/deleted.mp4', status: 'available' };
-    metaRepoMocks.getPendingVideos.mockReturnValue([mockVideo]);
+  it('should skip processing if media is not available or deleted', async () => {
+    const mockMedia = { id: 'v3', path: '/deleted.mp4', status: 'available' };
+    metaRepoMocks.getPendingMedia.mockReturnValue([mockMedia]);
 
-    mediaRepoMocks.findById.mockReturnValue({ ...mockVideo, status: 'missing' });
+    mediaRepoMocks.findById.mockReturnValue({ ...mockMedia, status: 'missing' });
 
     harvester = MetadataHarvester.getInstance();
 
@@ -205,8 +205,8 @@ describe('MetadataHarvester', () => {
 
   it('should wait if ffprobe path is not set', async () => {
     ffmpegMocks.ffprobePath = '';
-    const mockVideo = { id: 'v1', path: '/video.mp4', status: 'available' };
-    metaRepoMocks.getPendingVideos.mockReturnValue([mockVideo]);
+    const mockMedia = { id: 'v1', path: '/video.mp4', status: 'available' };
+    metaRepoMocks.getPendingMedia.mockReturnValue([mockMedia]);
 
     harvester = MetadataHarvester.getInstance();
 
@@ -216,14 +216,14 @@ describe('MetadataHarvester', () => {
     expect(ffmpegMocks.extractMetadata).not.toHaveBeenCalled();
   });
 
-  it('should skip processing if on-demand video is already completed', async () => {
-    const completedVideo = {
+  it('should skip processing if on-demand media is already completed', async () => {
+    const completedMedia = {
       id: 'completed',
       path: '/completed.mp4',
       status: 'available',
       metadata_status: 'completed',
     };
-    mediaRepoMocks.findById.mockReturnValue(completedVideo);
+    mediaRepoMocks.findById.mockReturnValue(completedMedia);
 
     harvester = MetadataHarvester.getInstance();
 

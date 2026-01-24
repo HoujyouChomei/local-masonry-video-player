@@ -2,8 +2,8 @@
 
 import { Minus, Plus, Grid2x2, RectangleVertical } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 
 interface ColumnCounterProps {

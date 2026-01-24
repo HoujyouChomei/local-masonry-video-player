@@ -1,7 +1,8 @@
 // src/features/settings-panel/ui/sections/grid-style-section.tsx
+
 import { LayoutTemplate } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { GridStyle } from '@/shared/types/electron';
 
 export const GridStyleSection = () => {

@@ -1,11 +1,11 @@
 // electron/core/services/system/background-verification-service.ts
 
-import { VideoIntegrityRepository } from '../../repositories/media/media-integrity';
+import { MediaIntegrityRepository } from '../../repositories/media/media-integrity';
 import { FileIntegrityService } from '../file/file-integrity-service';
 import { eventBus } from '../../events';
 
 export class BackgroundVerificationService {
-  private integrityRepo = new VideoIntegrityRepository();
+  private integrityRepo = new MediaIntegrityRepository();
   private integrityService = new FileIntegrityService();
   private intervalId: NodeJS.Timeout | null = null;
   private isRunning = false;

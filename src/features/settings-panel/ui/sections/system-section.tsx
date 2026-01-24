@@ -2,8 +2,8 @@
 
 import { Cpu, AlertTriangle, RefreshCw, Maximize } from 'lucide-react';
 import { useSettingsStore } from '@/shared/stores/settings-store';
-import { Button } from '@/components/ui/button';
-import { relaunchAppApi } from '@/shared/api/electron';
+import { Button } from '@/shared/ui/shadcn/button';
+import { api } from '@/shared/api';
 import { SettingsSwitch } from '../components/settings-switch';
 
 interface SystemSectionProps {
@@ -20,7 +20,7 @@ export const SystemSection = ({ isMobile = false }: SystemSectionProps) => {
 
   const handleRelaunch = async () => {
     if (confirm('The app will restart to apply hardware acceleration settings. Continue?')) {
-      await relaunchAppApi();
+      await api.system.relaunchApp();
     }
   };
 
@@ -51,7 +51,7 @@ export const SystemSection = ({ isMobile = false }: SystemSectionProps) => {
               Open in Fullscreen
             </div>
             <div className="text-muted-foreground text-[10px]">
-              Automatically enter fullscreen when opening a video.
+              Automatically enter fullscreen when opening media.
             </div>
           </div>
           <SettingsSwitch checked={openInFullscreen} onCheckedChange={toggleOpenInFullscreen} />

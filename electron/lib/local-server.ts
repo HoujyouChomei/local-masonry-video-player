@@ -1,5 +1,4 @@
 // electron/lib/local-server.ts
-
 import http from 'http';
 import os from 'os';
 import { AddressInfo } from 'net';
@@ -14,14 +13,21 @@ const DEFAULT_PORT = 54321;
 
 const getLocalIp = (): string => {
   const nets = os.networkInterfaces();
+  let firstCandidate: string | null = null;
+
   for (const name of Object.keys(nets)) {
     for (const net of nets[name] || []) {
       if (net.family === 'IPv4' && !net.internal) {
-        return net.address;
+        if (net.address.startsWith('192.168.')) {
+          return net.address;
+        }
+        if (!firstCandidate) {
+          firstCandidate = net.address;
+        }
       }
     }
   }
-  return '127.0.0.1';
+  return firstCandidate || '127.0.0.1';
 };
 
 export const startLocalServer = (host = '127.0.0.1'): Promise<number> => {
@@ -53,8 +59,8 @@ const createNewServer = (
       handleRequest(req, res, currentPort);
     });
 
-    server.keepAliveTimeout = 1000;
-    server.headersTimeout = 2000;
+    server.keepAliveTimeout = 60000;
+    server.headersTimeout = 61000;
 
     server.once('error', (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {

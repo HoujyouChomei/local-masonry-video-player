@@ -33,7 +33,7 @@ const integrityRepoMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../repositories/media/media-integrity', () => ({
-  VideoIntegrityRepository: class {
+  MediaIntegrityRepository: class {
     resetMetadata = integrityRepoMocks.resetMetadata;
     restore = integrityRepoMocks.restore;
     markAsMissing = integrityRepoMocks.markAsMissing;
@@ -69,7 +69,7 @@ const rebinderMocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../media/rebinder', () => ({
-  VideoRebinder: class {
+  MediaRebinder: class {
     findCandidate = rebinderMocks.findCandidate;
     execute = rebinderMocks.execute;
   },

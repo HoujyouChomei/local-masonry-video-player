@@ -1,6 +1,6 @@
 // src/shared/api/base/http-base.ts
 
-import { VideoFile } from '@/shared/types/video';
+import { Media } from '@/shared/schemas/media';
 import { logger } from '@/shared/lib/logger';
 
 export class HttpBase {
@@ -86,13 +86,13 @@ export class HttpBase {
     return text ? JSON.parse(text) : ({} as T);
   }
 
-  protected adaptVideo(video: VideoFile): VideoFile {
-    let thumb = video.thumbnailSrc;
+  protected adaptMedia(media: Media): Media {
+    let thumb = media.thumbnailSrc;
 
     if (typeof window !== 'undefined') {
       if (thumb.startsWith('file://')) {
         const origin = window.location.origin;
-        thumb = `${origin}/thumbnail?path=${encodeURIComponent(video.path)}&t=${video.updatedAt}&size=${video.size}`;
+        thumb = `${origin}/thumbnail?path=${encodeURIComponent(media.path)}&t=${media.updatedAt}&size=${media.size}`;
         if (this.token) {
           thumb += `&token=${this.token}`;
         }
@@ -114,11 +114,11 @@ export class HttpBase {
       }
     }
 
-    const streamUrlPath = `/video?path=${encodeURIComponent(video.path)}`;
+    const streamUrlPath = `/video?path=${encodeURIComponent(media.path)}`;
     const streamUrl = this.token ? `${streamUrlPath}&token=${this.token}` : streamUrlPath;
 
     return {
-      ...video,
+      ...media,
       thumbnailSrc: thumb,
       src: streamUrl,
     };

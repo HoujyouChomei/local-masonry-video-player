@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
-import { Providers } from './providers';
 import { HomePage } from '@/pages/home/ui/home-page';
 import { ScrollbarManager } from '@/features/scrollbar-manager/ui/scrollbar-manager';
 import { useUIStore } from '@/shared/stores/ui-store';
@@ -45,11 +44,11 @@ export const App = () => {
   }
 
   return (
-    <Providers>
+    <>
       <ScrollbarManager />
       <Routes>
         <Route path="/" element={<HomePage />} />
       </Routes>
-    </Providers>
+    </>
   );
 };

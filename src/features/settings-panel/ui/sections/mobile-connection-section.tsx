@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Smartphone, RefreshCw, AlertCircle, ShieldCheck, Lock } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Button } from '@/components/ui/button';
-import { getConnectionInfoApi } from '@/shared/api/electron';
+import { Button } from '@/shared/ui/shadcn/button';
+import { api } from '@/shared/api';
 import { ConnectionInfo } from '@/shared/types/electron';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { SettingsSwitch } from '../components/settings-switch';
@@ -21,7 +21,7 @@ export const MobileConnectionSection = () => {
       const fetchInfo = async () => {
         setLoading(true);
         try {
-          const info = await getConnectionInfoApi();
+          const info = await api.system.getConnectionInfo();
           if (info) {
             setConnectionInfo(info);
           }

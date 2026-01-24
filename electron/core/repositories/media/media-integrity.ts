@@ -9,7 +9,7 @@ import { THUMBNAIL } from '../../../../src/shared/constants/assets';
 import { MediaRow, MediaCreateInput, MediaUpdateInput } from './media-repository';
 import { logger } from '../../../lib/logger';
 
-export class VideoIntegrityRepository {
+export class MediaIntegrityRepository {
   private get db() {
     return getDB();
   }
@@ -103,7 +103,7 @@ export class VideoIntegrityRepository {
     if (ids.length === 0) return;
     const now = Date.now();
     const placeholders = ids.map(() => '?').join(',');
-    logger.debug(`[Repo] Marking ${ids.length} videos as missing.`);
+    logger.debug(`[Repo] Marking ${ids.length} media as missing.`);
     this.db
       .prepare(
         `
@@ -133,7 +133,7 @@ export class VideoIntegrityRepository {
     if (ids.length === 0) return;
     const now = Date.now();
     const placeholders = ids.map(() => '?').join(',');
-    logger.debug(`[Repo] Marking ${ids.length} videos as scan attempted.`);
+    logger.debug(`[Repo] Marking ${ids.length} media as scan attempted.`);
     this.db
       .prepare(
         `
@@ -207,7 +207,7 @@ export class VideoIntegrityRepository {
     return rows.map((r) => r.path);
   }
 
-  deleteExpiredMissingVideos(retentionPeriodDays: number): number {
+  deleteExpiredMissingMedia(retentionPeriodDays: number): number {
     const thresholdMs = Date.now() - retentionPeriodDays * 24 * 60 * 60 * 1000;
 
     const rows = this.db
@@ -259,7 +259,7 @@ export class VideoIntegrityRepository {
 
     try {
       tx();
-      logger.debug(`[Repo] GC deleted ${rows.length} expired videos.`);
+      logger.debug(`[Repo] GC deleted ${rows.length} expired media.`);
       return rows.length;
     } catch (error) {
       logger.error('[Repo] GC failed:', error);

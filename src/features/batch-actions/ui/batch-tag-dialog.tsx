@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '@/components/ui/dialog';
+} from '@/shared/ui/shadcn/dialog';
 import {
   Command,
   CommandInput,
@@ -18,15 +18,15 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from '@/components/ui/command';
+} from '@/shared/ui/shadcn/command';
 
 interface BatchTagDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  selectedVideoIds: string[];
+  selectedMediaIds: string[];
 }
 
-export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: BatchTagDialogProps) => {
+export const BatchTagDialog = ({ isOpen, onOpenChange, selectedMediaIds }: BatchTagDialogProps) => {
   const [inputValue, setInputValue] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -37,9 +37,9 @@ export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: Batch
     if (isPending) return;
 
     batchAssign(
-      { videoIds: selectedVideoIds, tagId },
+      { mediaIds: selectedMediaIds, tagId },
       {
-        onSuccess: () => showFeedback(`Added #${tagName} to ${selectedVideoIds.length} videos`),
+        onSuccess: () => showFeedback(`Added #${tagName} to ${selectedMediaIds.length} items`),
       }
     );
     setInputValue('');
@@ -53,7 +53,7 @@ export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: Batch
       const newTag = await createTagAsync(trimmed);
       if (newTag) {
         batchAssign(
-          { videoIds: selectedVideoIds, tagId: newTag.id },
+          { mediaIds: selectedMediaIds, tagId: newTag.id },
           {
             onSuccess: () => showFeedback(`Created & Added #${newTag.name}`),
           }
@@ -79,7 +79,7 @@ export const BatchTagDialog = ({ isOpen, onOpenChange, selectedVideoIds }: Batch
             Add Tags
           </DialogTitle>
           <DialogDescription>
-            Add tags to {selectedVideoIds.length} selected items
+            Add tags to {selectedMediaIds.length} selected items
           </DialogDescription>
         </DialogHeader>
 

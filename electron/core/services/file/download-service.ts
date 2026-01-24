@@ -6,13 +6,13 @@ import path from 'path';
 import { pipeline } from 'stream/promises';
 import { Readable } from 'stream';
 import { FileIntegrityService } from './file-integrity-service';
-import { VideoFile } from '../../../../src/shared/types/video';
+import { Media } from '../../../../src/shared/schemas/media';
 import { logger } from '../../../lib/logger';
 
 export class DownloadService {
   private integrityService = new FileIntegrityService();
 
-  async download(url: string, targetFolderPath: string): Promise<VideoFile | null> {
+  async download(url: string, targetFolderPath: string): Promise<Media | null> {
     logger.debug(`[Download] Starting download from: ${url}`);
 
     try {

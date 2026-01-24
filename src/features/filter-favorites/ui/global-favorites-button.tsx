@@ -2,8 +2,8 @@
 
 import { Star } from 'lucide-react';
 import { useUIStore } from '@/shared/stores/ui-store';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/shadcn/button';
+import { cn } from '@/shared/lib/utils';
 
 export const GlobalFavoritesButton = () => {
   const { viewMode, setViewMode } = useUIStore();
