@@ -1,4 +1,5 @@
 // electron/lib/local-server.ts
+
 import http from 'http';
 import os from 'os';
 import { AddressInfo } from 'net';
@@ -16,6 +17,26 @@ const getLocalIp = (): string => {
   let firstCandidate: string | null = null;
 
   for (const name of Object.keys(nets)) {
+    const lowerName = name.toLowerCase();
+
+    if (
+      lowerName.includes('docker') ||
+      lowerName.includes('vethernet') ||
+      lowerName.includes('wsl') ||
+      lowerName.includes('virtual') ||
+      lowerName.includes('vmware') ||
+      lowerName.includes('vbox') ||
+      lowerName.includes('tun') ||
+      lowerName.includes('tap') ||
+      lowerName.includes('ppp') ||
+      lowerName.includes('vpn') ||
+      lowerName.includes('tailscale') ||
+      lowerName.includes('zerotier') ||
+      lowerName.includes('proton')
+    ) {
+      continue;
+    }
+
     for (const net of nets[name] || []) {
       if (net.family === 'IPv4' && !net.internal) {
         if (net.address.startsWith('192.168.')) {
