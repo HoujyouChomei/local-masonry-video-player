@@ -213,12 +213,18 @@ This application runs in portable mode. It does not use the registry; settings a
     npm install
     ```
 
-3.  **Run in Development Mode**
+3.  **Build (First run)**
+    Required to generate necessary assets.
+    ```bash
+    npm run build
+    ```
+
+4.  **Run in Development Mode**
     ```bash
     npm run dev
     ```
 
-4.  **Build for Production**
+5.  **Build for Production**
     (Output will be in the `release` folder)
     ```bash
     npm run dist

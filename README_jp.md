@@ -212,12 +212,18 @@ Windows および macOS の場合、設定画面からワンクリックで導�
     npm install
     ```
 
-3.  **開発モードで起動**
+3.  **Build (First run)**
+    Required to generate necessary assets.
+    ```bash
+    npm run build
+    ```
+
+4.  **開発モードで起動**
     ```bash
     npm run dev
     ```
 
-4.  **配布用にビルド**
+5.  **配布用にビルド**
     (成果物は `release` フォルダに出力されます)
     ```bash
     npm run dist
