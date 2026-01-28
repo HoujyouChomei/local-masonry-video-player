@@ -24,6 +24,7 @@
     "dev:vite": "vite",
     "dev:electron": "concurrently -k \"node build-electron.mjs --dev\" \"wait-on dist-electron/main.js && electron .\"",
     "build": "npm run licenses && tsc -b && vite build && node build-electron.mjs",
+    "rebuild": "electron-builder install-app-deps",
     "preview": "vite preview",
     "lint": "eslint .",
     "pack": "npm run build && electron-builder --dir",

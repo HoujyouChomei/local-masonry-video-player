@@ -213,10 +213,10 @@ This application runs in portable mode. It does not use the registry; settings a
     npm install
     ```
 
-3.  **Build (First run)**
+3.  **Rebuild native modules for Electron**
     Required to generate necessary assets.
     ```bash
-    npm run build
+    npm run rebuild
     ```
 
 4.  **Run in Development Mode**

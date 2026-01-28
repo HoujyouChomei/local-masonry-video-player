@@ -212,10 +212,10 @@ Windows および macOS の場合、設定画面からワンクリックで導�
     npm install
     ```
 
-3.  **Build (First run)**
+3.  **Electron用ネイティブモジュールの再ビルド**
     Required to generate necessary assets.
     ```bash
-    npm run build
+    npm run rebuild
     ```
 
 4.  **開発モードで起動**
