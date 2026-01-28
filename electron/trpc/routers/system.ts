@@ -3,13 +3,16 @@
 import { z } from 'zod';
 import { app, shell } from 'electron';
 import path from 'path';
+import { observable } from '@trpc/server/observable';
 import { router, publicProcedure } from '../init';
 import { AppSettingsSchema } from '../../../src/shared/schemas/settings';
 import { SettingsService } from '../../core/services/system/settings-service';
 import { UIService } from '../../core/services/system/ui-service';
 import { FileSystemService } from '../../core/services/file/file-system-service';
 import { FFmpegService } from '../../core/services/video/ffmpeg-service';
+import { FFmpegInstallerService } from '../../core/services/system/ffmpeg-installer-service';
 import { getLocalIpAddress, getServerPort } from '../../lib/local-server';
+import { eventBus } from '../../core/events';
 
 const settingsRouter = router({
   get: publicProcedure.query(async () => {
@@ -143,6 +146,22 @@ const ffmpegRouter = router({
     .query(async ({ input }) => {
       return new FFmpegService().validatePath(input.path, 'ffprobe');
     }),
+
+  install: publicProcedure.mutation(async () => {
+    return FFmpegInstallerService.getInstance().install();
+  }),
+
+  onInstallProgress: publicProcedure.subscription(() => {
+    return observable<{ progress: number; status: string }>((emit) => {
+      const onProgress = (data: { progress: number; status: string }) => {
+        emit.next(data);
+      };
+      eventBus.on('system:install-progress', onProgress);
+      return () => {
+        eventBus.off('system:install-progress', onProgress);
+      };
+    });
+  }),
 });
 
 const applicationRouter = router({

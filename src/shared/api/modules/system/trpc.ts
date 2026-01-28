@@ -21,6 +21,37 @@ export class TRPCSystem implements SystemApi {
     return trpcClient.system.ffmpeg.validateFfprobe.query({ path });
   }
 
+  async installFFmpeg(): Promise<{ success: boolean; error?: string }> {
+    return trpcClient.system.ffmpeg.install.mutate();
+  }
+
+  onInstallProgress(callback: (data: { progress: number; status: string }) => void): () => void {
+    if (typeof window === 'undefined' || !window.electron) {
+      return () => {};
+    }
+
+    const id = `install-progress-${Date.now()}`;
+
+    const handleData = (_event: unknown, messageRaw: unknown) => {
+      const message = messageRaw as { type: string; data?: { progress: number; status: string } };
+      if (message.type === 'data' && message.data) {
+        callback(message.data);
+      }
+    };
+
+    window.electron.ipcRenderer.on(`trpc:data:${id}`, handleData);
+    window.electron.trpc.subscribe({
+      id,
+      path: 'system.ffmpeg.onInstallProgress',
+      input: undefined,
+    });
+
+    return () => {
+      window.electron.trpc.unsubscribe({ id });
+      window.electron.ipcRenderer.off(`trpc:data:${id}`, handleData);
+    };
+  }
+
   async relaunchApp(): Promise<void> {
     return trpcClient.system.app.relaunch.mutate();
   }

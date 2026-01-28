@@ -17,9 +17,9 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 *   **Drag & Drop**: Supports dropping files to external tools (e.g., ComfyUI) and organizing files within the app.
 *   **Mobile Connect**: **(Experimental)** Connect from a smartphone on the same network via QR code to stream videos from your PC.
 *   **Organization**: Create playlists, add tags, and favorite your videos.
-*   **Metadata Harvesting**: **(Requires FFmpeg)** Automatically extracts and displays AI generation prompts (JSON), FPS, Codec, and other technical information for search and filtering.
+*   **Metadata Harvesting**: **(Requires FFmpeg - One-click install available in settings)** Automatically extracts and displays AI generation prompts (JSON), FPS, Codec, and other technical information for search and filtering.
 
-### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
+### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases) | [Building from Source](#building-from-source)
 
 > **Note**: This application has been tested on Windows only.
 >
@@ -72,7 +72,7 @@ If you cannot connect from your smartphone, please check the following:
 ## Playback Specifications & FFmpeg
 
 To avoid license issues, **FFmpeg is not included** with this application.
-Therefore, functionality is limited by default. To use all features, users must install FFmpeg themselves.
+Therefore, functionality is limited by default. To use all features, you must install FFmpeg via the one-click option in settings or manually.
 
 ### Playback Modes
 
@@ -84,10 +84,21 @@ Therefore, functionality is limited by default. To use all features, users must 
 
 ### FFmpeg Installation Steps
 
-1.  Download `ffmpeg-release-essentials.zip` (for Windows) from the following site:
-    *   [Gyan.dev (FFmpeg Builds)](https://www.gyan.dev/ffmpeg/builds/)
-2.  Extract the zip file and save `ffmpeg.exe` and `ffprobe.exe` (found in the `bin` folder) to a location of your choice.
-3.  Open the app's `Settings` > `External Tools` section and specify the paths for both files.
+#### Method 1: One-Click Install (Recommended)
+Available for Windows and macOS.
+This automatically performs the same steps as the manual installation below.
+
+1.  Go to `Settings` > `External Tools` section in the app.
+2.  Click the `Auto Install` button.
+3.  Download and configuration will proceed automatically.
+
+#### Method 2: Manual Install (For security-conscious users)
+1.  Install FFmpeg for your OS:
+    *   **Windows**: Download from [Gyan.dev](https://www.gyan.dev/ffmpeg/builds/).
+    *   **macOS**: Download from [Evermeet.cx](https://evermeet.cx/ffmpeg/).
+    *   **Linux**: Use your package manager (e.g., `sudo apt install ffmpeg`).
+2.  **For Windows/macOS**: Extract the zip file and save the `ffmpeg` and `ffprobe` binaries to a location of your choice.
+3.  Open the app's `Settings` > `External Tools` section and specify the paths. (For Linux, usually found at `/usr/bin/ffmpeg`)
 
 ## Data Collection & Search Indexing
 
@@ -139,7 +150,7 @@ If this occurs, try one of the following solutions:
 
 2.  **Re-encode the Video (Requires FFmpeg)**
     To use this feature:
-    1.  Set up `ffmpeg.exe` and `ffprobe.exe` in `Settings` > `External Tools`.
+    1.  First, install FFmpeg (one-click via settings or manual).
     2.  Once FFmpeg is recognized, an `Experimental Features` section will appear in the settings panel.
     3.  Enable `Enable "Normalize Video"`.
     

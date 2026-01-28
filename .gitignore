@@ -61,3 +61,6 @@ public/licenses.json
 
 # Test Binaries
 /bin
+
+# Local User Data (Dev Mode)
+/userData

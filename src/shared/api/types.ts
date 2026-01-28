@@ -67,6 +67,8 @@ export interface SystemApi {
   selectFile(): Promise<string | null>;
   validateFFmpeg(path: string): Promise<boolean>;
   validateFFprobe(path: string): Promise<boolean>;
+  installFFmpeg(): Promise<{ success: boolean; error?: string }>;
+  onInstallProgress(callback: (data: { progress: number; status: string }) => void): () => void;
   relaunchApp(): Promise<void>;
   setFullScreen(enable: boolean): Promise<void>;
   minimizeWindow(): Promise<void>;

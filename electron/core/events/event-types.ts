@@ -20,6 +20,8 @@ export interface AppEvents {
   'library:scan-completed': { folderPath: string; count: number };
 
   'ui:library-refresh': { force?: boolean };
+
+  'system:install-progress': { progress: number; status: string };
 }
 
 export type AppEventName = keyof AppEvents;

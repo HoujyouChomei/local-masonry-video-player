@@ -18,9 +18,9 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 *   **ドラッグ＆ドロップ**: アプリ外（ComfyUI等の外部ツール）へのファイルドロップや、アプリ内でのフォルダ移動に対応しています。
 *   **モバイル連携**: **(実験機能)** 同一ネットワーク内のスマートフォンからQRコードで接続し、PC内の動画をストリーミング再生できます。
 *   **整理機能**: プレイリスト作成、タグ付け、お気に入り登録機能があります。
-*   **メタデータ収集**: **(要FFmpeg)** AI生成動画のプロンプト情報（JSON）、FPS、Codec等の技術情報を自動取得して表示・検索に使用できます。
+*   **メタデータ収集**: **(要FFmpeg - 設定からワンクリックで導入可)** AI生成動画のプロンプト情報（JSON）、FPS、Codec等の技術情報を自動取得して表示・検索に使用できます。
 
-### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases)
+### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases) | [ソースからのビルド](#ソースからのビルド)
 
 > **Note**:
 > 本アプリケーションはWindowsでのみ動作確認をしています。
@@ -73,7 +73,7 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 ## 再生仕様とFFmpegについて
 
 本アプリはライセンス回避のため、**FFmpegを含めずに配布しています。**
-そのため、初期状態では機能に制限があります。すべての機能を利用するには、ユーザー自身でFFmpegを導入する必要があります。
+そのため、初期状態では機能に制限があります。すべての機能を利用するには、設定からワンクリックで導入するか、ユーザー自身でffmpegのパスを設定する必要があります。
 
 ### 再生モードの仕様
 
@@ -85,10 +85,21 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
 ### FFmpeg 導入手順
 
-1.  以下のサイトから `ffmpeg-release-essentials.zip` (Windows用) をダウンロードしてください。
-    *   [Gyan.dev (FFmpeg Builds)](https://www.gyan.dev/ffmpeg/builds/)
-2.  解凍したフォルダ内の `bin` フォルダにある `ffmpeg.exe` と `ffprobe.exe` を任意の場所に保存します。
-3.  アプリの設定画面 (Settings) > External Tools セクションを開き、それぞれのパスを指定してください。
+#### 方法1: ワンクリックインストール (推奨)
+Windows および macOS の場合、設定画面からワンクリックで導入できます。
+下記のマニュアルインストールと同じことを自動でします。
+
+1.  アプリの `設定 (Settings) > External Tools` セクションを開きます。
+2.  `Auto Install` ボタンをクリックします。
+3.  ダウンロードと設定が自動的に行われます。
+
+#### 方法2: 手動インストール(セキュリティが不安な方向け)
+1.  OSに対応した FFmpeg を導入してください。
+    *   **Windows**: [Gyan.dev](https://www.gyan.dev/ffmpeg/builds/) からダウンロード。
+    *   **macOS**: [Evermeet.cx](https://evermeet.cx/ffmpeg/) からダウンロード。
+    *   **Linux**: パッケージマネージャーを使用してください（例: `sudo apt install ffmpeg`）。
+2.  **Windows/macOSの場合**: 解凍したフォルダ内にある `ffmpeg` (Windowsなら `ffmpeg.exe`) と `ffprobe` (Windowsなら `ffprobe.exe`) を任意の場所に保存します。
+3.  アプリの設定画面 (Settings) > External Tools セクションを開き、それぞれのパスを指定してください。（Linuxの場合は通常 `/usr/bin/ffmpeg` 等にあります）
 
 ## データ収集と検索インデックスの仕様
 
@@ -142,7 +153,7 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 
 2.  **動画を再エンコードする (要FFmpeg)**
     この機能を利用するには、以下の手順が必要です。
-    1.  まず、`ffmpeg.exe` と `ffprobe.exe` の両方をアプリの `設定 (Settings) > External Tools` から設定してください。
+    1.  FFmpegを導入してください。
     2.  FFmpegが正しく認識されると、設定パネル内に `Experimental Features` という項目が表示されます。
     3.  その中にある `Enable "Normalize Video"` の項目を有効にしてください。
     

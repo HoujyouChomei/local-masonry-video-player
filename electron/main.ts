@@ -4,7 +4,11 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 
-if (!process.env.NODE_ENV && app.isPackaged) {
+if (!app.isPackaged) {
+  const devUserDataPath = path.join(__dirname, '../userData');
+  app.setPath('userData', devUserDataPath);
+  console.log(`[Main] Development Mode: userData set to ${devUserDataPath}`);
+} else if (!process.env.NODE_ENV) {
   const portableUserDataPath = path.join(path.dirname(app.getPath('exe')), 'userData');
   app.setPath('userData', portableUserDataPath);
 }
@@ -136,7 +140,7 @@ app.whenReady().then(async () => {
 
   eventBus.on('settings:library-folders-added', (data: { folders: string[] }) => {
     logger.info('[Main] Received library-folders-added event. Triggering quiet scan...');
-    Promise.all(data.folders.map((folder) => libraryService.scanQuietly(folder)))
+    Promise.all(data.folders.map((folder: string) => libraryService.scanQuietly(folder)))
       .then(() => logger.info('[Main] Quiet scan for new folders completed.'))
       .catch((err) => logger.error('[Main] Quiet scan failed:', err));
   });
