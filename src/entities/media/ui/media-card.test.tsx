@@ -5,7 +5,8 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MediaCard } from './media-card';
 import { Media } from '@/shared/schemas/media';
-import { useMediaDrag } from '@/features/drag-and-drop/model/use-media-drag';
+
+// Feature層への依存(useMediaDrag)を削除し、テスト内でロジックを模倣することでFSD違反を解消
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
@@ -178,12 +179,37 @@ const mockMedia: Media = {
 };
 
 const TestMediaCardWrapper = (props: React.ComponentProps<typeof MediaCard>) => {
-  const { handleDragStart, handleDragEnd } = useMediaDrag({
-    mediaPath: props.media.path,
-    mediaId: props.media.id,
-  });
+  const handleDragStart = (e: React.DragEvent) => {
+    e.preventDefault();
 
-  return <MediaCard {...props} onDragStart={handleDragStart} onDragEnd={handleDragEnd} />;
+    const { isSelectionMode, selectedMediaIds } = mocks.selectionState;
+    const isSelected = selectedMediaIds.includes(props.media.id);
+
+    let dragPayloadPath: string | string[] = props.media.path;
+    let dragPayloadId: string | string[] = props.media.id;
+
+    if (isSelectionMode && isSelected) {
+      const cacheData = mockQueryCache.findAll()[0]?.state?.data || [];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pathMap = new Map(cacheData.map((m: any) => [m.id, m.path]));
+
+      const paths = selectedMediaIds
+        .map((id) => pathMap.get(id))
+        .filter((p): p is string => !!p);
+
+      if (paths.length > 0) {
+        dragPayloadPath = paths;
+        dragPayloadId = selectedMediaIds;
+      }
+    }
+
+    // ストアのモック関数を直接呼び出す
+    mocks.setDraggedFilePath(dragPayloadPath);
+    mocks.setDraggedMediaId(dragPayloadId);
+    mocks.startDrag(dragPayloadPath);
+  };
+
+  return <MediaCard {...props} onDragStart={handleDragStart} onDragEnd={vi.fn()} />;
 };
 
 describe('MediaCard', () => {

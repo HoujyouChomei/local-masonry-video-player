@@ -6,6 +6,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 import boundaries from 'eslint-plugin-boundaries';
+import importPlugin from 'eslint-plugin-import';
 
 export default [
   { ignores: ['dist', 'dist-electron', 'release', 'src/components/ui'] },
@@ -31,8 +32,15 @@ export default [
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
       'boundaries': boundaries,
+      'import': importPlugin,
     },
     settings: {
+      'import/resolver': {
+        typescript: {
+          alwaysTryTypes: true,
+          project: './tsconfig.json',
+        },
+      },
       'boundaries/include': ['src/**/*'],
       'boundaries/elements': [
         { type: 'app', pattern: 'src/app' },

@@ -1,9 +1,10 @@
 // src/widgets/sidebar/ui/sidebar.test.tsx
 
+import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Sidebar } from './sidebar';
-import { Providers } from '@/app/providers';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 
@@ -52,7 +53,20 @@ global.ResizeObserver = class ResizeObserver {
 };
 
 const renderWithProviders = (ui: React.ReactNode) => {
-  return render(<Providers>{ui}</Providers>);
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        staleTime: 0,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      {ui}
+    </QueryClientProvider>
+  );
 };
 
 const resizeWindow = (width: number) => {
