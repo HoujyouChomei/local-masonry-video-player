@@ -6,8 +6,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MediaCard } from './media-card';
 import { Media } from '@/shared/schemas/media';
 
-// Feature層への依存(useMediaDrag)を削除し、テスト内でロジックを模倣することでFSD違反を解消
-
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
