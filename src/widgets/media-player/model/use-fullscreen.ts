@@ -34,24 +34,6 @@ export const useFullscreen = (isOpen: boolean) => {
     };
   }, []);
 
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      const isDocFullscreen = !!document.fullscreenElement;
-      if (isDocFullscreen !== isFullscreenRef.current) {
-        setIsFullscreen(isDocFullscreen);
-        isFullscreenRef.current = isDocFullscreen;
-      }
-    };
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-    };
-  }, []);
-
   return useMemo(
     () => ({
       isFullscreen,

@@ -5,9 +5,14 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 
 if (!app.isPackaged) {
-  const devUserDataPath = path.join(__dirname, '../userData');
-  app.setPath('userData', devUserDataPath);
-  console.log(`[Main] Development Mode: userData set to ${devUserDataPath}`);
+  const hasUserDataDirArg = process.argv.some((arg) => arg.startsWith('--user-data-dir='));
+  const isTestEnv = process.env.NODE_ENV === 'test';
+
+  if (!hasUserDataDirArg && !isTestEnv) {
+    const devUserDataPath = path.join(__dirname, '../userData');
+    app.setPath('userData', devUserDataPath);
+    console.log(`[Main] Development Mode: userData set to ${devUserDataPath}`);
+  }
 } else if (!process.env.NODE_ENV) {
   const portableUserDataPath = path.join(path.dirname(app.getPath('exe')), 'userData');
   app.setPath('userData', portableUserDataPath);

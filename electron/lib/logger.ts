@@ -10,6 +10,10 @@ export type ILogger = Pick<
 >;
 
 export const initializeLogger = () => {
+  if (typeof (log as unknown as { initialize?: () => void }).initialize === 'function') {
+    (log as unknown as { initialize: () => void }).initialize();
+  }
+
   const userDataPath = app.getPath('userData');
   const logsDir = path.join(userDataPath, 'logs');
 
@@ -45,7 +49,7 @@ export const initializeLogger = () => {
     };
   });
 
-  log.transports.file.level = 'info';
+  log.transports.file.level = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
   log.transports.console.level = process.env.NODE_ENV === 'development' ? 'debug' : 'info';
 
   log.info('===========================================================');

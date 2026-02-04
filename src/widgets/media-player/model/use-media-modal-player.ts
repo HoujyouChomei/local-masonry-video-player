@@ -1,6 +1,6 @@
 // src/widgets/media-player/model/use-media-modal-player.ts
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useMediaPlayerStore } from '@/entities/player/model/store';
 import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useFullscreen } from './use-fullscreen';
@@ -9,6 +9,7 @@ import { usePlayerControls } from './use-player-controls';
 import { usePlayerSync } from './use-player-sync';
 import { usePlayerHistory } from './use-player-history';
 import { usePlayerGestures } from './use-player-gestures';
+import { api } from '@/shared/api';
 
 export const useMediaModalPlayer = () => {
   const { selectedMedia } = useMediaPlayerStore();
@@ -26,6 +27,11 @@ export const useMediaModalPlayer = () => {
 
   const fullscreen = useFullscreen(isPlaybackOpen);
 
+  const isFullscreenRef = useRef(fullscreen.isFullscreen);
+  useEffect(() => {
+    isFullscreenRef.current = fullscreen.isFullscreen;
+  }, [fullscreen.isFullscreen]);
+
   const handleToggleFullscreen = useCallback(() => {
     if (fullscreen.isFullscreen) {
       fullscreen.toggleFullscreen();
@@ -37,6 +43,13 @@ export const useMediaModalPlayer = () => {
     }
   }, [fullscreen, openInFullscreen, closeMedia]);
 
+  const handleClose = useCallback(() => {
+    if (isFullscreenRef.current) {
+      api.system.setFullScreen(false);
+    }
+    closeMedia();
+  }, [closeMedia]);
+
   const controls = usePlayerControls({
     isOpen: isPlaybackOpen,
     selectedMedia: playback.selectedMedia,
@@ -45,13 +58,13 @@ export const useMediaModalPlayer = () => {
     playNext: playback.playNext,
     playPrev: playback.playPrev,
     togglePlay: playback.togglePlay,
-    closeMedia: playback.closeMedia,
+    closeMedia: handleClose,
     toggleFullscreen: handleToggleFullscreen,
     toggleInfoPanel,
   });
 
   usePlayerSync(isPlaybackOpen, selectedMedia);
-  usePlayerHistory(isPlaybackOpen, closeMedia);
+  usePlayerHistory(isPlaybackOpen, handleClose);
 
   const gestures = usePlayerGestures({
     onSwipeLeft: playNext,
@@ -93,7 +106,7 @@ export const useMediaModalPlayer = () => {
       toggleAutoPlayNext: playback.toggleAutoPlayNext,
       playNext: playback.playNext,
       playPrev: playback.playPrev,
-      closeMedia: playback.closeMedia,
+      closeMedia: handleClose,
 
       handleVolumeChange: playback.handleVolumeChange,
       handleMediaEnded: playback.handleMediaEnded,
@@ -125,6 +138,7 @@ export const useMediaModalPlayer = () => {
       handleToggleFullscreen,
       toggleInfoPanel,
       gestures,
+      handleClose,
     ]
   );
 };

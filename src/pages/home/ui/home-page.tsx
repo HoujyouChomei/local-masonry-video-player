@@ -9,13 +9,21 @@ import { cn } from '@/shared/lib/utils';
 import { useScrollDirection } from '@/shared/lib/use-scroll-direction';
 import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { useDirectoryTree } from '@/entities/directory/model/use-directory-tree';
-import { MediaContextMenu } from '@/widgets/context-menu/ui/media-context-menu';
-import { FolderContextMenu } from '@/widgets/context-menu/ui/folder-context-menu';
 import { useHotkeys } from '@/shared/lib/use-hotkeys';
 
 const MediaModal = lazy(() =>
   import('@/widgets/media-player/ui/media-modal').then((module) => ({
     default: module.MediaModal,
+  }))
+);
+const MediaContextMenu = lazy(() =>
+  import('@/widgets/context-menu/ui/media-context-menu').then((module) => ({
+    default: module.MediaContextMenu,
+  }))
+);
+const FolderContextMenu = lazy(() =>
+  import('@/widgets/context-menu/ui/folder-context-menu').then((module) => ({
+    default: module.FolderContextMenu,
   }))
 );
 
@@ -70,7 +78,13 @@ export const HomePage = () => {
     <div className="min-h-screen bg-black text-white">
       <Header />
 
-      <Sidebar renderFolderContextMenu={(path) => <FolderContextMenu path={path} />} />
+      <Sidebar
+        renderFolderContextMenu={(path) => (
+          <Suspense fallback={null}>
+            <FolderContextMenu path={path} />
+          </Suspense>
+        )}
+      />
 
       <main
         className={cn(
@@ -82,13 +96,23 @@ export const HomePage = () => {
           <MediaGrid
             folderPath={folderPath}
             columnCount={columnCount}
-            renderContextMenu={(props) => <MediaContextMenu {...props} />}
+            renderContextMenu={(props) => (
+              <Suspense fallback={null}>
+                <MediaContextMenu {...props} />
+              </Suspense>
+            )}
           />
         </div>
       </main>
 
       <Suspense fallback={null}>
-        <MediaModal renderContextMenu={(props) => <MediaContextMenu {...props} />} />
+        <MediaModal
+          renderContextMenu={(props) => (
+            <Suspense fallback={null}>
+              <MediaContextMenu {...props} />
+            </Suspense>
+          )}
+        />
       </Suspense>
     </div>
   );
