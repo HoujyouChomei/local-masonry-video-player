@@ -98,4 +98,10 @@ export default [
       ],
     },
   },
+  {
+    files: ['src/shared/ui/shadcn/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ];

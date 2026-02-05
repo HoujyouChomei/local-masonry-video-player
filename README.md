@@ -25,7 +25,7 @@ https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
 >
 > Since this is a personal open-source project and does not use a paid code signing certificate, a **SmartScreen warning** will appear upon the first launch.
 >
-> If you have any security concerns, use is not recommended. As with any software, it is recommended to verify the safety of the source code (e.g., using AI tools) before running it.
+> Use at your own risk. If you have concerns, please review the source code.
 
 ## Search Functionality
 
