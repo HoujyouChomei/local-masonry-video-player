@@ -1,5 +1,7 @@
 [ [English](README.md) | 日本語 ]
 
+![CI](https://github.com/HoujyouChomei/local-masonry-video-player/actions/workflows/ci.yml/badge.svg)
+
 # Local Masonry Video Player
 
 ![Electron](https://img.shields.io/badge/Electron-191970?style=for-the-badge&logo=Electron&logoColor=white) ![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white) ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
