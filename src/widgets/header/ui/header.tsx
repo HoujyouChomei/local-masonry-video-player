@@ -54,6 +54,7 @@ export const Header = () => {
   const isVisibleRef = useRef(isHeaderVisible);
 
   const isSettingsPanelOpenRef = useRef(false);
+  const lastScrollYRef = useRef(0);
 
   useHotkeys(
     'escape',
@@ -99,7 +100,7 @@ export const Header = () => {
       }
     };
 
-    const handleScroll = () => {
+    const handleDesktopScroll = () => {
       if (isSettingsPanelOpenRef.current) return;
 
       if (window.scrollY < 10 && !isVisibleRef.current) {
@@ -108,14 +109,47 @@ export const Header = () => {
       }
     };
 
+    const handleMobileScroll = () => {
+      if (isSettingsPanelOpenRef.current) return;
+
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollYRef.current;
+      lastScrollYRef.current = currentScrollY;
+
+      if (currentScrollY < 10 && !isVisibleRef.current) {
+        setHeaderVisible(true);
+        isVisibleRef.current = true;
+        return;
+      }
+
+      if (delta > 0 && isVisibleRef.current) {
+        setHeaderVisible(false);
+        isVisibleRef.current = false;
+        return;
+      }
+
+      if (delta < 0 && !isVisibleRef.current) {
+        setHeaderVisible(true);
+        isVisibleRef.current = true;
+      }
+    };
+
+    if (isMobile) {
+      lastScrollYRef.current = window.scrollY;
+      window.addEventListener('scroll', handleMobileScroll, { passive: true });
+      return () => {
+        window.removeEventListener('scroll', handleMobileScroll);
+      };
+    }
+
     window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleDesktopScroll, { passive: true });
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleDesktopScroll);
     };
-  }, [setHeaderVisible]);
+  }, [isMobile, setHeaderVisible]);
 
   const toggleLayoutMode = () => {
     setLayoutMode(layoutMode === 'masonry' ? 'list' : 'masonry');
