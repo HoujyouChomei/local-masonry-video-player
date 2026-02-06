@@ -60,6 +60,10 @@ export class TRPCSystem implements SystemApi {
     return trpcClient.system.window.setFullscreen.mutate({ enable });
   }
 
+  async toggleFullScreen(): Promise<void> {
+    return trpcClient.system.window.toggleFullscreen.mutate();
+  }
+
   async minimizeWindow(): Promise<void> {
     return trpcClient.system.window.minimize.mutate();
   }
@@ -76,7 +80,6 @@ export class TRPCSystem implements SystemApi {
     return trpcClient.system.window.getState.query() as Promise<WindowState>;
   }
 
-  // Use tRPC Subscription for window state changes
   onWindowStateChange(callback: (state: WindowState) => void): () => void {
     if (typeof window === 'undefined' || !window.electron) {
       return () => {};

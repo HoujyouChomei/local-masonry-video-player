@@ -27,6 +27,57 @@ test.describe('File Watcher & Auto-Update', () => {
 
     fs.copyFileSync(srcPath, destPath);
 
+    await page.evaluate((fileName) => {
+      return new Promise<void>((resolve, reject) => {
+        const electronWindow = window as Window & {
+          electron?: {
+            ipcRenderer: {
+              on: (channel: string, listener: (...args: unknown[]) => void) => void;
+              off: (channel: string, listener: (...args: unknown[]) => void) => void;
+            };
+            trpc: {
+              subscribe: (payload: { id: string; path: string; input: unknown }) => void;
+              unsubscribe: (payload: { id: string }) => void;
+            };
+          };
+        };
+
+        if (!electronWindow.electron) {
+          resolve();
+          return;
+        }
+
+        const id = `media-update-${Date.now()}`;
+        const timeout = setTimeout(() => {
+          electronWindow.electron!.trpc.unsubscribe({ id });
+          electronWindow.electron!.ipcRenderer.off(`trpc:data:${id}`, handleData);
+          reject(new Error(`Timeout waiting for media update: ${fileName}`));
+        }, 8000);
+
+        const handleData = (_event: unknown, messageRaw: unknown) => {
+          const message = messageRaw as { type: string; data?: { type: string; path: string }[] };
+          if (message.type === 'data' && Array.isArray(message.data)) {
+            const hit = message.data.some(
+              (event) => event.type === 'add' && event.path.endsWith(fileName)
+            );
+            if (hit) {
+              clearTimeout(timeout);
+              electronWindow.electron!.trpc.unsubscribe({ id });
+              electronWindow.electron!.ipcRenderer.off(`trpc:data:${id}`, handleData);
+              resolve();
+            }
+          }
+        };
+
+        electronWindow.electron.ipcRenderer.on(`trpc:data:${id}`, handleData);
+        electronWindow.electron.trpc.subscribe({
+          id,
+          path: 'subscription.onMediaUpdate',
+          input: undefined,
+        });
+      });
+    }, newFileName);
+
     const newCard = page.locator('.media-card', { hasText: newFileName });
     await expect(newCard).toBeVisible({ timeout: 5000 });
 

@@ -71,6 +71,7 @@ export interface SystemApi {
   onInstallProgress(callback: (data: { progress: number; status: string }) => void): () => void;
   relaunchApp(): Promise<void>;
   setFullScreen(enable: boolean): Promise<void>;
+  toggleFullScreen(): Promise<void>;
   minimizeWindow(): Promise<void>;
   toggleMaximizeWindow(): Promise<void>;
   closeWindow(): Promise<void>;

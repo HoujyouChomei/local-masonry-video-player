@@ -9,6 +9,7 @@ import { THUMBNAIL } from '../../../../src/shared/constants/assets';
 export class UIService {
   private static fullScreenLocks = new Map<number, number>();
   private static initialWindowStates = new Map<number, boolean>();
+  private static initialMaximizedStates = new Map<number, boolean>();
 
   async selectFolder(parentWindow: BrowserWindow): Promise<string | null> {
     const { canceled, filePaths } = await dialog.showOpenDialog(parentWindow, {
@@ -43,6 +44,7 @@ export class UIService {
     if (enable) {
       if (count === 0) {
         UIService.initialWindowStates.set(windowId, window.isFullScreen());
+        UIService.initialMaximizedStates.set(windowId, window.isMaximized());
       }
       count++;
     } else {
@@ -57,12 +59,24 @@ export class UIService {
       }
     } else {
       const wasFullScreen = UIService.initialWindowStates.get(windowId) ?? false;
+      const wasMaximized = UIService.initialMaximizedStates.get(windowId) ?? false;
 
       if (window.isFullScreen() !== wasFullScreen) {
         window.setFullScreen(wasFullScreen);
       }
 
+      if (!window.isFullScreen()) {
+        if (wasMaximized && !window.isMaximized()) {
+          window.maximize();
+        }
+
+        if (!wasMaximized && window.isMaximized()) {
+          window.unmaximize();
+        }
+      }
+
       UIService.initialWindowStates.delete(windowId);
+      UIService.initialMaximizedStates.delete(windowId);
     }
   }
 

@@ -164,8 +164,7 @@ export const Header = () => {
   };
 
   const handleToggleFullscreen = async () => {
-    const nextState = !windowState.isFullScreen;
-    await api.system.setFullScreen(nextState);
+    await api.system.toggleFullScreen();
   };
 
   const handleHeaderDoubleClick = (e: React.MouseEvent) => {

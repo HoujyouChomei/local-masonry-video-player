@@ -48,6 +48,13 @@ const windowRouter = router({
       }
     }),
 
+  toggleFullscreen: publicProcedure.mutation(async ({ ctx }) => {
+    if (ctx.window) {
+      const isFullScreen = ctx.window.isFullScreen();
+      new UIService().setFullscreen(ctx.window, !isFullScreen);
+    }
+  }),
+
   minimize: publicProcedure.mutation(async ({ ctx }) => {
     if (ctx.window) ctx.window.minimize();
   }),
