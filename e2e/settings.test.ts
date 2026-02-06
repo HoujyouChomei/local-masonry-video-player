@@ -24,26 +24,29 @@ test.describe('Settings & External Tools', () => {
   });
 
   test('should validate FFmpeg/FFprobe paths if available', async () => {
-    test.skip(!ctx.hasFFmpeg, 'FFmpeg binary not found in bin/ folder');
-
     const settingsPanel = page.locator('.bg-popover');
     await expect(settingsPanel).toBeVisible();
 
     await expect(page.getByText('EXTERNAL TOOLS')).toBeVisible();
 
-    await expect(page.getByText('Valid').first()).toBeVisible();
+    if (!ctx.hasFFmpeg) {
+      return;
+    }
 
+    await expect(page.getByText('Valid').first()).toBeVisible();
     await expect(page.getByText('Valid').nth(1)).toBeVisible();
   });
 
   test('should show experimental normalize option if FFmpeg is valid', async () => {
-    test.skip(!ctx.hasFFmpeg, 'FFmpeg binary not found in bin/ folder');
-
     const expButton = page.getByText('EXPERIMENTAL');
     await expButton.click();
 
     await page.waitForTimeout(300);
 
-    await expect(page.getByText('Enable "Normalize Video"')).toBeVisible();
+    if (ctx.hasFFmpeg) {
+      await expect(page.getByText('Enable "Normalize Video"')).toBeVisible();
+    } else {
+      await expect(page.getByText('Enable "Normalize Video"')).toHaveCount(0);
+    }
   });
 });

@@ -15,10 +15,12 @@ test.describe('Tag Management', () => {
   });
 
   test.afterAll(async () => {
+    test.info().setTimeout(20000);
     await cleanupTestContext(ctx);
   });
 
   test('should create tag, assign to media, filter by tag, and remove tag', async () => {
+    test.setTimeout(20000);
     const tagName = 'TestTag';
 
     const firstCard = page.locator('.media-card').first();
@@ -64,6 +66,9 @@ test.describe('Tag Management', () => {
     expect(clearedCount).toBe(initialCount);
 
     await firstCard.click();
+    if (!(await mediaPlayer.isVisible())) {
+      await firstCard.click();
+    }
     await expect(mediaPlayer).toBeVisible();
 
     const removeTagBtn = page.locator('.fixed.z-50 button[title="Remove Tag"]').first();

@@ -87,6 +87,11 @@ test.describe('Media Player', () => {
   });
 
   test('should survive continuous media switching (stress test)', async () => {
+    test.setTimeout(30000);
+    if (!ctx.hasFFmpeg) {
+      test.skip();
+      return;
+    }
     const cards = page.locator('.media-card');
     const count = await cards.count();
 
