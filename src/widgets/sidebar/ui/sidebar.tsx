@@ -5,7 +5,6 @@ import { useSettingsStore } from '@/shared/stores/settings-store';
 import { useUIStore } from '@/shared/stores/ui-store';
 import { Button } from '@/shared/ui/shadcn/button';
 import { Separator } from '@/shared/ui/shadcn/separator';
-import { ScrollArea } from '@/shared/ui/shadcn/scroll-area';
 import { cn } from '@/shared/lib/utils';
 import { LibrarySection } from './library-section';
 import { PlaylistSection } from './playlist-section';
@@ -107,7 +106,7 @@ export const Sidebar = ({ renderFolderContextMenu }: SidebarProps) => {
 
       <Separator className="bg-border/40 mx-4 w-auto shrink-0" />
 
-      <ScrollArea className="flex-1 overflow-hidden *:data-[slot=scroll-area-viewport]:overscroll-contain">
+      <div className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
         <div className="flex flex-col pb-4">
           <PlaylistSection />
 
@@ -119,7 +118,7 @@ export const Sidebar = ({ renderFolderContextMenu }: SidebarProps) => {
 
           <TagSection />
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 

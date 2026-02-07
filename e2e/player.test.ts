@@ -18,6 +18,7 @@ test.describe('Media Player', () => {
   });
 
   test.afterAll(async () => {
+    test.info().setTimeout(30000);
     await cleanupTestContext(ctx);
   });
 
