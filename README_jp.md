@@ -8,7 +8,7 @@
 
 **動画素材や動画生成AI用ローカルビデオプレイヤー。**
 
-https://github.com/user-attachments/assets/8b670533-baa1-4f8d-9675-9951359a915e
+https://github.com/user-attachments/assets/c2824043-3381-43f9-ab7e-340a6c568248
 
 
 ## 主な機能
