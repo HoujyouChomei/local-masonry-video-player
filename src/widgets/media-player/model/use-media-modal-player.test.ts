@@ -112,6 +112,7 @@ describe('useMediaModalPlayer Integration Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
+    (window as { electron?: unknown }).electron = {};
 
     mockFetchMediaDetails.mockResolvedValue(null);
     mockHarvestMetadata.mockResolvedValue(undefined);
@@ -154,6 +155,7 @@ describe('useMediaModalPlayer Integration Test', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    delete (window as { electron?: unknown }).electron;
   });
 
   const renderAndInit = () => {
@@ -267,6 +269,18 @@ describe('useMediaModalPlayer Integration Test', () => {
       });
       expect(result.current.isFullscreen).toBe(true);
       expect(mockSetFullScreen).toHaveBeenCalledWith(true);
+    });
+
+    it('should toggle fullscreen without calling system API when electron is not available', () => {
+      delete (window as { electron?: unknown }).electron;
+      const { result } = renderAndInit();
+
+      act(() => {
+        result.current.toggleFullscreen();
+      });
+
+      expect(result.current.isFullscreen).toBe(true);
+      expect(mockSetFullScreen).not.toHaveBeenCalled();
     });
 
     it('should toggle info panel on "i" key', () => {

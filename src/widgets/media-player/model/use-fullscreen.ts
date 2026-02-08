@@ -6,33 +6,40 @@ import { api } from '@/shared/api';
 export const useFullscreen = (isOpen: boolean) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isFullscreenRef = useRef(false);
+  const canUseElectron = typeof window !== 'undefined' && !!window.electron;
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => {
       const next = !prev;
       isFullscreenRef.current = next;
-      api.system.setFullScreen(next);
+      if (canUseElectron) {
+        api.system.setFullScreen(next);
+      }
       return next;
     });
-  }, []);
+  }, [canUseElectron]);
 
   useEffect(() => {
     if (!isOpen && isFullscreen) {
-      api.system.setFullScreen(false);
+      if (canUseElectron) {
+        api.system.setFullScreen(false);
+      }
       setTimeout(() => {
         setIsFullscreen(false);
         isFullscreenRef.current = false;
       }, 0);
     }
-  }, [isOpen, isFullscreen]);
+  }, [isOpen, isFullscreen, canUseElectron]);
 
   useEffect(() => {
     return () => {
       if (isFullscreenRef.current) {
-        api.system.setFullScreen(false);
+        if (canUseElectron) {
+          api.system.setFullScreen(false);
+        }
       }
     };
-  }, []);
+  }, [canUseElectron]);
 
   return useMemo(
     () => ({

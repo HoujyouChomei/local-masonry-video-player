@@ -70,7 +70,7 @@ export const AboutSection = () => {
         </h3>
 
         <div className="text-muted-foreground mb-3 text-[10px] leading-relaxed">
-          <p>Local Masonry Video Player v1.0.5</p>
+          <p>Local Masonry Video Player v1.0.6</p>
           <p>Powered by Electron, Vite & Open Source Software.</p>
         </div>
 

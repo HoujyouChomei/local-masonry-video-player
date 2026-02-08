@@ -70,11 +70,13 @@ vi.mock('@/entities/player/model/store', () => ({
   })),
 }));
 
+const settingsState = {
+  openInFullscreen: false,
+  enableExperimentalNormalize: false,
+};
+
 vi.mock('@/shared/stores/settings-store', () => ({
-  useSettingsStore: () => ({
-    openInFullscreen: false,
-    enableExperimentalNormalize: false,
-  }),
+  useSettingsStore: () => settingsState,
 }));
 
 vi.mock('@/shared/lib/use-is-mobile', () => ({
@@ -105,6 +107,7 @@ const createWrapper = () => {
 describe('MediaModal Integration Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    settingsState.openInFullscreen = false;
     (useMediaModalPlayerModule.useMediaModalPlayer as ReturnType<typeof vi.fn>).mockReturnValue(
       defaultHookValues
     );
@@ -137,8 +140,21 @@ describe('MediaModal Integration Test', () => {
   it('calls closeMedia when clicking the close button', () => {
     render(<MediaModal />, { wrapper: createWrapper() });
 
-    const closeButtons = document.querySelectorAll('button');
-    const closeButton = closeButtons[1];
+    const container = screen.getByTestId('media-modal-container') as HTMLDivElement;
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: 0,
+      width: 1000,
+      height: 600,
+      bottom: 600,
+      right: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    fireEvent.mouseMove(container, { clientY: 10 });
+    const closeButton = screen.getByTitle('Close (Esc)');
 
     fireEvent.click(closeButton);
     expect(mockCloseMedia).toHaveBeenCalled();
@@ -147,7 +163,7 @@ describe('MediaModal Integration Test', () => {
   it('calls toggleFullscreen when clicking the maximize button', () => {
     render(<MediaModal />, { wrapper: createWrapper() });
 
-    const fullscreenButton = document.querySelectorAll('button')[0];
+    const fullscreenButton = screen.getByTitle('Enter Fullscreen (F)');
     fireEvent.click(fullscreenButton);
     expect(mockToggleFullscreen).toHaveBeenCalled();
   });
@@ -194,6 +210,58 @@ describe('MediaModal Integration Test', () => {
     expect(screen.queryByText('Test Video.mp4')).toBeNull();
 
     expect(screen.queryByTestId('metadata-panel')).toBeNull();
+  });
+
+  it('shows close button only when hovering near the top edge', () => {
+    render(<MediaModal />, { wrapper: createWrapper() });
+
+    const container = screen.getByTestId('media-modal-container') as HTMLDivElement;
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: 0,
+      width: 1000,
+      height: 600,
+      bottom: 600,
+      right: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+
+    expect(screen.queryByTitle('Close (Esc)')).toBeNull();
+
+    fireEvent.mouseMove(container, { clientY: 10 });
+    expect(screen.getByTitle('Close (Esc)')).toBeTruthy();
+
+    fireEvent.mouseMove(container, { clientY: 200 });
+    expect(screen.queryByTitle('Close (Esc)')).toBeNull();
+  });
+
+  it('hides fullscreen toggle when openInFullscreen is enabled', () => {
+    settingsState.openInFullscreen = true;
+    (useMediaModalPlayerModule.useMediaModalPlayer as ReturnType<typeof vi.fn>).mockReturnValue({
+      ...defaultHookValues,
+      isFullscreen: true,
+    });
+
+    render(<MediaModal />, { wrapper: createWrapper() });
+
+    const container = screen.getByTestId('media-modal-container') as HTMLDivElement;
+    vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+      top: 0,
+      left: 0,
+      width: 1000,
+      height: 600,
+      bottom: 600,
+      right: 1000,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    });
+    fireEvent.mouseMove(container, { clientY: 10 });
+
+    expect(screen.queryByTitle('Exit Fullscreen (F)')).toBeNull();
+    expect(screen.getByTitle('Close (Esc)')).toBeTruthy();
   });
 
   it('preloads next video if playlist has next item', () => {

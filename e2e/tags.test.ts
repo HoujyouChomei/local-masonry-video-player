@@ -42,8 +42,9 @@ test.describe('Tag Management', () => {
     const tagChip = page.locator('.fixed.z-50').getByText(tagName, { exact: false });
     await expect(tagChip).toBeVisible();
 
-    const closeButton = page.locator('.fixed.z-50').getByTitle('Close (Esc)');
-    await closeButton.click();
+    const modalContainer = page.getByTestId('media-modal-container');
+    await modalContainer.dispatchEvent('mousemove', { clientX: 10, clientY: 10 });
+    await modalContainer.getByTitle('Close (Esc)').click();
     await expect(mediaPlayer).toBeHidden();
 
     const sidebar = page.locator('aside');
@@ -77,7 +78,8 @@ test.describe('Tag Management', () => {
 
     await expect(page.locator('.fixed.z-50').getByText(`#${tagName}`)).toBeHidden();
 
-    await page.locator('.fixed.z-50').getByTitle('Close (Esc)').click();
+    await modalContainer.dispatchEvent('mousemove', { clientX: 10, clientY: 10 });
+    await modalContainer.getByTitle('Close (Esc)').click();
 
     await expect(sidebarTag).toBeHidden({ timeout: 5000 });
   });

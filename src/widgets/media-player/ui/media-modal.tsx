@@ -1,6 +1,6 @@
 // src/widgets/media-player/ui/media-modal.tsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/shared/ui/shadcn/button';
 import { cn } from '@/shared/lib/utils';
@@ -10,37 +10,54 @@ import { RenameMediaDialog } from '@/features/rename-media/ui/rename-media-dialo
 import { MediaModalFooter } from './media-modal-footer';
 import { MediaMetadataPanel } from './media-metadata-panel';
 import { useMediaPlayerStore } from '@/entities/player/model/store';
+import { useSettingsStore } from '@/shared/stores/settings-store';
 import { Media } from '@/shared/schemas/media';
 import { ContextMenuRenderer } from '@/shared/types/ui';
 
 interface PlayerHeaderButtonsProps {
   isFullscreen: boolean;
+  showCloseButton: boolean;
+  showFullscreenToggle: boolean;
   onToggleFullscreen: () => void;
   onClose: () => void;
 }
 
 const PlayerHeaderButtons = React.memo(
-  ({ isFullscreen, onToggleFullscreen, onClose }: PlayerHeaderButtonsProps) => (
-    <div className="absolute top-4 right-4 z-10 flex gap-2">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onToggleFullscreen}
-        className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-        title={isFullscreen ? 'Exit Fullscreen (F)' : 'Enter Fullscreen (F)'}
-      >
-        {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
-      </Button>
+  ({
+    isFullscreen,
+    showCloseButton,
+    showFullscreenToggle,
+    onToggleFullscreen,
+    onClose,
+  }: PlayerHeaderButtonsProps) => (
+    <div className="pointer-events-none absolute inset-0 z-10">
+      {showFullscreenToggle && (
+        <div className="pointer-events-auto absolute top-4 right-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleFullscreen}
+            className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
+            title={isFullscreen ? 'Exit Fullscreen (F)' : 'Enter Fullscreen (F)'}
+          >
+            {isFullscreen ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
+          </Button>
+        </div>
+      )}
 
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={onClose}
-        className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-        title="Close (Esc)"
-      >
-        <X className="h-5 w-5" />
-      </Button>
+      {showCloseButton && (
+        <div className="pointer-events-auto absolute top-4 left-1/2 -translate-x-1/2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onClose}
+            className="rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
+            title="Close (Esc)"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
     </div>
   )
 );
@@ -165,7 +182,26 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
   } = useMediaModalPlayer();
 
   const [isRenameOpen, setIsRenameOpen] = useState(false);
+  const [showCloseButton, setShowCloseButton] = useState(false);
   const { playlist } = useMediaPlayerStore();
+  const { openInFullscreen } = useSettingsStore();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleContainerMouseMove = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      handleMouseMove();
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const isNearTop = event.clientY - rect.top <= 48;
+      setShowCloseButton(isNearTop);
+    },
+    [handleMouseMove]
+  );
+
+  const handleContainerMouseLeave = useCallback(() => {
+    handleMouseLeave();
+    setShowCloseButton(false);
+  }, [handleMouseLeave]);
 
   const nextVideoUrl = useMemo(() => {
     if (!selectedMedia || playlist.length === 0) return undefined;
@@ -208,12 +244,18 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
                   ? 'fixed inset-0 h-full w-full max-w-none rounded-none'
                   : 'h-auto w-full rounded-xl'
               )}
+              data-testid="media-modal-container"
+              ref={containerRef}
+              onMouseMove={handleContainerMouseMove}
+              onMouseLeave={handleContainerMouseLeave}
               onClick={(e) => e.stopPropagation()}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
               <PlayerHeaderButtons
                 isFullscreen={isFullscreen}
+                showCloseButton={showCloseButton}
+                showFullscreenToggle={!(openInFullscreen && isFullscreen)}
                 onToggleFullscreen={toggleFullscreen}
                 onClose={closeMedia}
               />

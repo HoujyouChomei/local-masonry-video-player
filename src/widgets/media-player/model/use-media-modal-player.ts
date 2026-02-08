@@ -45,7 +45,9 @@ export const useMediaModalPlayer = () => {
 
   const handleClose = useCallback(() => {
     if (isFullscreenRef.current) {
-      api.system.setFullScreen(false);
+      if (typeof window !== 'undefined' && window.electron) {
+        api.system.setFullScreen(false);
+      }
     }
     closeMedia();
   }, [closeMedia]);
