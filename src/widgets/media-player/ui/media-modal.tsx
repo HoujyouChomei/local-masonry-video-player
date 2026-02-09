@@ -1,6 +1,6 @@
 // src/widgets/media-player/ui/media-modal.tsx
 
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, forwardRef } from 'react';
 import { X, Maximize2, Minimize2 } from 'lucide-react';
 import { Button } from '@/shared/ui/shadcn/button';
 import { cn } from '@/shared/lib/utils';
@@ -150,10 +150,24 @@ interface PreloadPlayerProps {
   url?: string;
 }
 
-const PreloadPlayer = React.memo(({ url }: PreloadPlayerProps) => {
-  if (!url) return null;
-  return <video key={url} src={url} className="hidden" preload="auto" muted width="0" height="0" />;
-});
+const PreloadPlayer = React.memo(
+  forwardRef<HTMLVideoElement, PreloadPlayerProps>(({ url }, ref) => {
+    if (!url) return null;
+    return (
+      <video
+        ref={ref}
+        key={url}
+        src={url}
+        className="hidden"
+        preload="auto"
+        muted
+        playsInline
+        width="0"
+        height="0"
+      />
+    );
+  })
+);
 PreloadPlayer.displayName = 'PreloadPlayer';
 
 interface MediaModalProps {
@@ -195,6 +209,7 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
   const { openInFullscreen } = useSettingsStore();
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const preloadVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const handleContainerMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -223,6 +238,42 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
 
     return nextVideo.src;
   }, [selectedMedia, playlist]);
+
+  const handleUserInitiatedPreload = useCallback(() => {
+    if (!nextVideoUrl) return;
+    const preloadVideo = preloadVideoRef.current;
+    if (!preloadVideo) return;
+
+    preloadVideo.muted = true;
+    preloadVideo.playsInline = true;
+
+    try {
+      const playPromise = preloadVideo.play();
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise
+          .then(() => {
+            preloadVideo.pause();
+            preloadVideo.currentTime = 0;
+          })
+          .catch(() => {
+            // ignore autoplay restrictions
+          });
+      } else {
+        preloadVideo.pause();
+        preloadVideo.currentTime = 0;
+      }
+    } catch {
+      // ignore autoplay restrictions
+    }
+  }, [nextVideoUrl]);
+
+  const handleMediaClickWithPreload = useCallback(
+    (event: React.MouseEvent<HTMLVideoElement>) => {
+      handleUserInitiatedPreload();
+      handleMediaClick(event);
+    },
+    [handleUserInitiatedPreload, handleMediaClick]
+  );
 
   if (!isOpen || !selectedMedia) return null;
 
@@ -282,7 +333,7 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
                 onDoubleClick={handleDoubleClick}
                 onVolumeChange={handleVolumeChange}
                 onEnded={handleMediaEnded}
-                onClick={handleMediaClick}
+                onClick={handleMediaClickWithPreload}
                 onError={handleError}
               />
 
@@ -308,7 +359,7 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
         )}
       </div>
 
-      <PreloadPlayer url={nextVideoUrl} />
+      <PreloadPlayer ref={preloadVideoRef} url={nextVideoUrl} />
 
       {isRenameOpen && (
         <RenameMediaDialog

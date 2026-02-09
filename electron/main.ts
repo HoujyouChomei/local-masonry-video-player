@@ -47,6 +47,7 @@ const createWindow = () => {
   const mainWindowState = windowStateKeeper({
     defaultWidth: 1280,
     defaultHeight: 800,
+    fullScreen: false,
   });
 
   mainWindow = new BrowserWindow({
