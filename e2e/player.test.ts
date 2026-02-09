@@ -68,21 +68,21 @@ test.describe('Media Player', () => {
   test('should navigate to next media', async () => {
     const cards = page.locator('.media-card');
     await cards.nth(0).click();
-    await page.waitForTimeout(500);
+
+    const mediaPlayer = page.locator('.fixed.z-50 video:not(.hidden)');
+    await expect(mediaPlayer).toBeVisible();
 
     const titleEl = page.locator('h2');
     const firstTitle = await titleEl.innerText();
 
-    const nextButton = page.locator('.fixed.z-50').getByTitle('Next Media');
+    const modal = page.locator('.fixed.z-50');
+    const nextButton = modal.getByTitle('Next Media');
 
-    await page.waitForTimeout(1000);
-    await page.mouse.move(200, 200);
+    await modal.hover();
+    await expect(nextButton).toBeVisible();
 
-    await nextButton.click();
-    await page.waitForTimeout(500);
-
-    const secondTitle = await titleEl.innerText();
-    expect(firstTitle).not.toBe(secondTitle);
+    await nextButton.click({ force: true });
+    await expect(titleEl).not.toHaveText(firstTitle);
 
     await page.keyboard.press('Escape');
   });
