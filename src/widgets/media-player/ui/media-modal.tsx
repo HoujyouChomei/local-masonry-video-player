@@ -209,7 +209,8 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
   const { openInFullscreen } = useSettingsStore();
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const preloadVideoRef = useRef<HTMLVideoElement | null>(null);
+  const preloadNextRef = useRef<HTMLVideoElement | null>(null);
+  const preloadPrevRef = useRef<HTMLVideoElement | null>(null);
 
   const handleContainerMouseMove = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
@@ -239,33 +240,52 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
     return nextVideo.src;
   }, [selectedMedia, playlist]);
 
+  const prevVideoUrl = useMemo(() => {
+    if (!selectedMedia || playlist.length === 0) return undefined;
+
+    const currentIndex = playlist.findIndex((v) => v.id === selectedMedia.id);
+    if (currentIndex === -1) return undefined;
+
+    const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+    const prevVideo = playlist[prevIndex];
+
+    return prevVideo.src;
+  }, [selectedMedia, playlist]);
+
   const handleUserInitiatedPreload = useCallback(() => {
-    if (!nextVideoUrl) return;
-    const preloadVideo = preloadVideoRef.current;
-    if (!preloadVideo) return;
+    const preloadTargets = [
+      { url: nextVideoUrl, ref: preloadNextRef },
+      { url: prevVideoUrl, ref: preloadPrevRef },
+    ];
 
-    preloadVideo.muted = true;
-    preloadVideo.playsInline = true;
+    preloadTargets.forEach(({ url, ref }) => {
+      if (!url) return;
+      const preloadVideo = ref.current;
+      if (!preloadVideo) return;
 
-    try {
-      const playPromise = preloadVideo.play();
-      if (playPromise && typeof playPromise.then === 'function') {
-        playPromise
-          .then(() => {
-            preloadVideo.pause();
-            preloadVideo.currentTime = 0;
-          })
-          .catch(() => {
-            // ignore autoplay restrictions
-          });
-      } else {
-        preloadVideo.pause();
-        preloadVideo.currentTime = 0;
+      preloadVideo.muted = true;
+      preloadVideo.playsInline = true;
+
+      try {
+        const playPromise = preloadVideo.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+          playPromise
+            .then(() => {
+              preloadVideo.pause();
+              preloadVideo.currentTime = 0;
+            })
+            .catch(() => {
+              // ignore autoplay restrictions
+            });
+        } else {
+          preloadVideo.pause();
+          preloadVideo.currentTime = 0;
+        }
+      } catch {
+        // ignore autoplay restrictions
       }
-    } catch {
-      // ignore autoplay restrictions
-    }
-  }, [nextVideoUrl]);
+    });
+  }, [nextVideoUrl, prevVideoUrl]);
 
   const handleMediaClickWithPreload = useCallback(
     (event: React.MouseEvent<HTMLVideoElement>) => {
@@ -273,6 +293,14 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
       handleMediaClick(event);
     },
     [handleUserInitiatedPreload, handleMediaClick]
+  );
+
+  const handleTouchEndWithPreload = useCallback(
+    (event: React.TouchEvent<HTMLDivElement>) => {
+      handleUserInitiatedPreload();
+      handleTouchEnd(event);
+    },
+    [handleUserInitiatedPreload, handleTouchEnd]
   );
 
   if (!isOpen || !selectedMedia) return null;
@@ -310,7 +338,7 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
               onMouseLeave={handleContainerMouseLeave}
               onClick={(e) => e.stopPropagation()}
               onTouchStart={handleTouchStart}
-              onTouchEnd={handleTouchEnd}
+              onTouchEnd={handleTouchEndWithPreload}
             >
               <PlayerHeaderButtons
                 isFullscreen={isFullscreen}
@@ -359,7 +387,8 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
         )}
       </div>
 
-      <PreloadPlayer ref={preloadVideoRef} url={nextVideoUrl} />
+      <PreloadPlayer ref={preloadNextRef} url={nextVideoUrl} />
+      <PreloadPlayer ref={preloadPrevRef} url={prevVideoUrl} />
 
       {isRenameOpen && (
         <RenameMediaDialog
