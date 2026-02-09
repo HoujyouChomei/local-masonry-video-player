@@ -7,6 +7,7 @@ export const useFullscreen = (isOpen: boolean) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const isFullscreenRef = useRef(false);
   const canUseElectron = typeof window !== 'undefined' && !!window.electron;
+  const isProd = import.meta.env.PROD;
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => {
@@ -14,10 +15,16 @@ export const useFullscreen = (isOpen: boolean) => {
       isFullscreenRef.current = next;
       if (canUseElectron) {
         api.system.setFullScreen(next);
+        // NOTE: In dev (StrictMode), state updaters can run twice, effectively issuing
+        // an extra setFullScreen(true). To keep exe (PROD) behavior aligned with dev,
+        // we intentionally duplicate the enable call only in PROD.
+        if (isProd && next) {
+          api.system.setFullScreen(true);
+        }
       }
       return next;
     });
-  }, [canUseElectron]);
+  }, [canUseElectron, isProd]);
 
   useEffect(() => {
     if (!isOpen && isFullscreen) {

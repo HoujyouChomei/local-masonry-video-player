@@ -64,3 +64,6 @@ public/licenses.json
 
 # Local User Data (Dev Mode)
 /userData
+
+# Docs
+/docs
