@@ -277,10 +277,12 @@ describe('MediaModal Integration Test', () => {
     const { container } = render(<MediaModal />, { wrapper: createWrapper() });
 
     const videos = container.querySelectorAll('video');
-    expect(videos.length).toBe(2);
+    expect(videos.length).toBe(3);
 
-    const hiddenVideo = videos[1];
-    expect(hiddenVideo.classList.contains('hidden')).toBe(true);
-    expect(hiddenVideo.getAttribute('src')).toBe('file:///v2.mp4');
+    const hiddenVideos = Array.from(videos).slice(1);
+    hiddenVideos.forEach((hiddenVideo) => {
+      expect(hiddenVideo.classList.contains('hidden')).toBe(true);
+      expect(hiddenVideo.getAttribute('src')).toBe('file:///v2.mp4');
+    });
   });
 });
