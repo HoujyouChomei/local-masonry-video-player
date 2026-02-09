@@ -11,11 +11,13 @@ import { MediaModalFooter } from './media-modal-footer';
 import { MediaMetadataPanel } from './media-metadata-panel';
 import { useMediaPlayerStore } from '@/entities/player/model/store';
 import { useSettingsStore } from '@/shared/stores/settings-store';
+import { useIsMobile } from '@/shared/lib/use-is-mobile';
 import { Media } from '@/shared/schemas/media';
 import { ContextMenuRenderer } from '@/shared/types/ui';
 
 interface PlayerHeaderButtonsProps {
   isFullscreen: boolean;
+  isMobile: boolean;
   showCloseButton: boolean;
   showFullscreenToggle: boolean;
   onToggleFullscreen: () => void;
@@ -25,6 +27,7 @@ interface PlayerHeaderButtonsProps {
 const PlayerHeaderButtons = React.memo(
   ({
     isFullscreen,
+    isMobile,
     showCloseButton,
     showFullscreenToggle,
     onToggleFullscreen,
@@ -46,7 +49,12 @@ const PlayerHeaderButtons = React.memo(
       )}
 
       {showCloseButton && (
-        <div className="pointer-events-auto absolute top-4 left-1/2 -translate-x-1/2">
+        <div
+          className={cn(
+            'pointer-events-auto absolute top-4',
+            isMobile ? 'right-4' : 'left-1/2 -translate-x-1/2'
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"
@@ -185,6 +193,7 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
   const [showCloseButton, setShowCloseButton] = useState(false);
   const { playlist } = useMediaPlayerStore();
   const { openInFullscreen } = useSettingsStore();
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const handleContainerMouseMove = useCallback(
@@ -254,7 +263,8 @@ export const MediaModal = ({ renderContextMenu }: MediaModalProps) => {
             >
               <PlayerHeaderButtons
                 isFullscreen={isFullscreen}
-                showCloseButton={showCloseButton}
+                isMobile={isMobile}
+                showCloseButton={isMobile ? true : showCloseButton}
                 showFullscreenToggle={!(openInFullscreen && isFullscreen)}
                 onToggleFullscreen={toggleFullscreen}
                 onClose={closeMedia}
