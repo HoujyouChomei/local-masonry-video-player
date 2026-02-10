@@ -35,7 +35,12 @@ const PlayerHeaderButtons = React.memo(
   }: PlayerHeaderButtonsProps) => (
     <div className="pointer-events-none absolute inset-0 z-10">
       {showFullscreenToggle && (
-        <div className="pointer-events-auto absolute top-4 right-4">
+        <div
+          className={cn(
+            'pointer-events-auto absolute',
+            isMobile ? 'top-4 right-16' : 'top-4 right-4'
+          )}
+        >
           <Button
             variant="ghost"
             size="icon"

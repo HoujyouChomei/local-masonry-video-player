@@ -29,7 +29,9 @@ export const App = () => {
 
   useEffect(() => {
     const MOBILE_BREAKPOINT = 768;
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const mql = window.matchMedia(
+      `(max-width: ${MOBILE_BREAKPOINT - 1}px), (pointer: coarse)`
+    );
 
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
 
