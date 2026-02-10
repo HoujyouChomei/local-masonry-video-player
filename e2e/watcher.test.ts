@@ -25,9 +25,7 @@ test.describe('File Watcher & Auto-Update', () => {
     const srcPath = path.join(ctx.mediaDir, 'test-media-1.mp4');
     const destPath = path.join(ctx.mediaDir, newFileName);
 
-    fs.copyFileSync(srcPath, destPath);
-
-    await page.evaluate((fileName) => {
+    const waitForMediaUpdate = page.evaluate((fileName) => {
       return new Promise<void>((resolve, reject) => {
         const electronWindow = window as Window & {
           electron?: {
@@ -77,6 +75,9 @@ test.describe('File Watcher & Auto-Update', () => {
         });
       });
     }, newFileName);
+
+    fs.copyFileSync(srcPath, destPath);
+    await waitForMediaUpdate;
 
     const newCard = page.locator('.media-card', { hasText: newFileName });
     await expect(newCard).toBeVisible({ timeout: 5000 });
