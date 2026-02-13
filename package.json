@@ -1,7 +1,7 @@
 {
   "name": "local-masonry-video-player",
   "productName": "Local Masonry Video Player",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "A local video player designed for browsing and managing collections of AI-generated content and video assets, featuring a dynamic masonry grid layout.",
   "private": true,
   "author": "HoujyouChomei",

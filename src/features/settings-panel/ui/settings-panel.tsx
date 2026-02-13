@@ -34,6 +34,14 @@ export const SettingsPanel = ({ onStateChange }: SettingsPanelProps) => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest('[data-slot="dialog-content"]') ||
+        target?.closest('[data-slot="dialog-overlay"]')
+      ) {
+        return;
+      }
+      
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }

@@ -66,7 +66,7 @@ export const Sidebar = ({ renderFolderContextMenu }: SidebarProps) => {
   };
 
   const SidebarContent = (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
       <div className="shrink-0 space-y-1 p-4 pb-2">
         <h3 className="text-muted-foreground mb-2 px-2 text-xs font-semibold tracking-wider">
           VIEWS
@@ -142,7 +142,7 @@ export const Sidebar = ({ renderFolderContextMenu }: SidebarProps) => {
   if (!isSidebarOpen) return null;
 
   return (
-    <aside className="border-border/40 bg-background/95 supports-backdrop-filter:bg-background/60 fixed top-0 bottom-0 left-0 z-40 flex w-64 flex-col border-r pt-16 backdrop-blur">
+    <aside className="border-border/40 bg-background/95 supports-backdrop-filter:bg-background/60 fixed top-0 bottom-0 left-0 z-40 flex w-64 flex-col overflow-hidden border-r pt-16 backdrop-blur">
       {SidebarContent}
     </aside>
   );
