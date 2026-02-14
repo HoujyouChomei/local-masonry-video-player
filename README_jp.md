@@ -21,7 +21,7 @@ https://github.com/user-attachments/assets/a5b6266b-440a-41cd-8256-88c5ad88e9a2
 *   **整理機能**: プレイリスト作成、タグ付け、お気に入り登録機能があります。
 *   **メタデータ収集**: **(要FFmpeg - 設定からワンクリックで導入可)** AI生成動画のプロンプト情報（JSON）、FPS、Codec等の技術情報を自動取得して表示・検索に使用できます。
 
-### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases) | [🌐 インストール不要デモ](https://local-masonry-video-player-demo.pages.dev) | [ソースからのビルド](#ソースからのビルド)
+### [🌐 インストール不要デモ](https://local-masonry-video-player-demo.pages.dev) | [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases) | [ソースからのビルド](#ソースからのビルド)
 
 > **デモについて**: WebデモはUI確認用です。パフォーマンスのため自動再生は無効化しています。
 

@@ -21,7 +21,7 @@ https://github.com/user-attachments/assets/a5b6266b-440a-41cd-8256-88c5ad88e9a2
 *   **Organization**: Create playlists, add tags, and favorite your videos.
 *   **Metadata Harvesting**: **(Requires FFmpeg - One-click install available in settings)** Automatically extracts and displays AI generation prompts (JSON), FPS, Codec, and other technical information for search and filtering.
 
-### [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases) | [🌐 Try Web Demo (No Install)](https://local-masonry-video-player-demo.pages.dev) | [Building from Source](#building-from-source)
+### [🌐 Try Web Demo (No Install)](https://local-masonry-video-player-demo.pages.dev) | [⬇️ Download Latest Version](https://github.com/HoujyouChomei/local-masonry-video-player/releases) | [Building from Source](#building-from-source)
 
 > **Demo Note**: The web demo is for UI preview only. Autoplay is disabled for performance.
 
